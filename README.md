@@ -6,7 +6,9 @@
 
 Quantum signal processing performs spectral transformation of any unitary $U$, given access to an ancilla qubit, a controlled version of $U$ and single-qubit rotations on the ancilla qubit. It first truncates an arbitrary spectral transformation function into a Laurent polynomial, then finds a way to decompose the Laurent polynomial into a sequence of products of controlled-$U$ and single qubit rotations (by certain "QSP phase angles") on the ancilla. Such routines achieve optimal gate complexity for many of the quantum algorithmic tasks mentioned above.  The task achieved is essentially entirely defined by the QSP phase angles employed in the QSP operation sequence, and as such a central task is finding these QSP phase angles, given the desired Laurent polynomial.
 
-This python package genrates QSP phase angles using the code based on [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extending the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  Two QSP model conventions are used in the literature: Wx, where the signal W(a) is an X-rotation and QSP phase shifts are Z-rotations, and Wz, where the signal W(a) is a Z-rotation and QSP phase shifts are X-rotations.  Specifically, in the Wx convention, the QSP operation sequence is:
+This python package genrates QSP phase angles using the code based on [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extending the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  Two QSP model conventions are used in the literature: Wx, where the signal W(a) is an X-rotation and QSP phase shifts are Z-rotations, and Wz, where the signal W(a) is a Z-rotation and QSP phase shifts are X-rotations.
+
+Specifically, in the Wx convention, the QSP operation sequence is:
 
 <!-- U_x = e^{i\phi_0 Z} \sum_{k=1}^L W(a) e^{i\phi_k Z} ~~~~{\rm where} ~~~ W(x)=\left[ \begin{array}{cc} a & i\sqrt{1-a^2} \\ i\sqrt{1-a^2} & a  \end{array} \right ] -->
 
