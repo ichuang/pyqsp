@@ -14,14 +14,14 @@ with open("README.md", "r") as fh:
 
 setup(
     name='pyqsp',
-    version='0.0.1',
+    version='0.0.2',
     author='I. Chuang',
     author_email='ichuang@mit.edu',
     packages=['pyqsp', 'pyqsp.test'],
     scripts=[],
     url='http://pypi.python.org/pypi/pyqsp/',
     license='LICENSE.txt',
-    description='Converter from latex to catsoop markdown format',
+    description='Generate phase angles for quantum signal processing algorithms',
     long_description=long_description,
     long_description_content_type="text/markdown",
     include_package_data=True,
