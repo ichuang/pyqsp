@@ -4,7 +4,7 @@
 
 [Quantum signal processing](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.118.010501) is a framework for quantum algorithms including Hamiltonian simulation, quantum linear system solving, amplitude amplification, etc. 
 
-Quantum signal processing performs spectral transformation of any unitary $U$, given access to an ancilla qubit, a controlled version of $U$ and single-qubit rotations on the ancilla qubit. It first truncates an arbitrary spectral transformation function into a Laurent polynomial, then finds a way to decompose the Laurent polynomial into a sequence of products of controlled-$U$ and single qubit rotations on the ancilla. Such routines achieve optimal gate complexity for many of the quantum algorithmic tasks mentioned above.
+Quantum signal processing performs spectral transformation of any unitary $U$, given access to an ancilla qubit, a controlled version of $U$ and single-qubit rotations on the ancilla qubit. It first truncates an arbitrary spectral transformation function into a Laurent polynomial, then finds a way to decompose the Laurent polynomial into a sequence of products of controlled-$U$ and single qubit rotations (by certain "QSP phase angles") on the ancilla. Such routines achieve optimal gate complexity for many of the quantum algorithmic tasks mentioned above.  The task achieved is essentially entirely defined by the QSP phase angles employed in the QSP operation sequence, and as such a central task is finding these QSP phase angles, given the desired Laurent polynomial.
 
 This python package genrates QSP phase angles using the code based on [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extending the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  Two QSP model conventions are used in the literature: Wz, where the signal is a Z-rotation and QSP phase shifts are X-rotations, and Wx, where the signal is a X-rotation and QSP phase shifts are Z-rotations.  Specifically, in the Wx convention, the QSP operation sequence is:
 
@@ -101,6 +101,7 @@ Examples:
     pyqsp --poly=-1,0,2 --plot --align-first-point-phase poly2angles
     pyqsp --model=Wz --poly=0,0,0,1 --plot  poly2angles
     pyqsp --plot --tau 10 hamsim
+    pyqsp --plot invert
 
 positional arguments:
   cmd                   command

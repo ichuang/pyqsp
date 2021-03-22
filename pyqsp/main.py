@@ -38,6 +38,7 @@ Examples:
     pyqsp --poly=-1,0,2 --plot --align-first-point-phase poly2angles
     pyqsp --model=Wz --poly=0,0,0,1 --plot  poly2angles
     pyqsp --plot --tau 10 hamsim
+    pyqsp --plot invert
 
 """.format(version)
 
