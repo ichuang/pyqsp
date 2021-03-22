@@ -1,6 +1,6 @@
-from LPoly import LPoly, LAlg, w
 import numpy
 from scipy.linalg import toeplitz
+from pyqsp.LPoly import LPoly, LAlg, w
 
 def linear_system(g, ldeg):
     """

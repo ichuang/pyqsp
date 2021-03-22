@@ -7,6 +7,10 @@ class LPoly():
     '''
 
     def __init__(self, coefs, dmin=0):
+        '''
+        coefs = one-dimensional list or array of coefficients for the Laurent polynomial
+        dmin = minimum power for the polynomial, e.g. 0 or -1 or -4
+        '''
         self.coefs = numpy.array(coefs)
         if len(self.coefs) == 0:
             self.dmin = dmin
@@ -147,6 +151,22 @@ class LPoly():
             return True
         return a.parity == b.parity
 
+    def __eq__(self, other):
+        '''
+        Equality test between two LPoly instances.
+        Note that this doesn't check for when two LPoly's are equal but have different dmin 
+        and different coefficients, e.g. because of zeros in the coefficients
+        '''
+        iseq = abs(self.coefs - other.coefs).sum() < 0.001
+        iseq = iseq and (self.dmin == other.dmin)
+        return iseq
+
+    def round_zeros(self, thresh=1.0e-5):
+        '''
+        round small coefficients down to zero
+        '''
+        self.coefs[self.coefs < thresh] = 0
+
 class LAlg():
     '''
     Low algebra elements with parity constraints.
@@ -283,8 +303,32 @@ class LAlg():
             res = res * w * cls.rotation(i)
         return res
 
+#-----------------------------------------------------------------------------
 
+def PolynomialToLaurentForm(coefs):
+    '''
+    Given coefficients of a polynomial in a = cos(theta), return the Laurent form of the polynomial, as an instance of LPoly
+    coefs[0] = constant term, coefs[1] ~= a, coefs[2] ~= a^2, ...
+    We substitute a = (w + 1/w)/2, based on w = exp[i * theta], where theta = arccos[a]
+    Note i sqrt(1-a^2) = (w - 1/w)/2
+    '''
+    lp = LPoly([])
+    for k, c in enumerate(coefs):
+        if c==0:
+            continue
+        if k==0:
+            lpcoefs = [1]
+            dmin = 0
+        else:
+            lpcoefs = [1/2, 1/2]
+            dmin = -1
+        nlp = LPoly(lpcoefs, dmin)
+        for j in range(k-1):
+            nlp = nlp * LPoly(lpcoefs, dmin)
+        lp = lp + c * nlp
+    return lp
 
+#-----------------------------------------------------------------------------
 # Definition of elements
 
 Id = LPoly([1])

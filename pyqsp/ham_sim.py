@@ -1,9 +1,8 @@
-from scipy.special import jn
-import numpy
 import time
-from angle_sequence import angle_sequence
-from LPoly import LPoly
-
+import numpy
+from scipy.special import jn
+from pyqsp.LPoly import LPoly
+from pyqsp.angle_sequence import angle_sequence
 
 def hamiltonian_coefficients(tau, eps):
     n = 2*int(numpy.e / 4 * tau - numpy.log(eps) / 2)
@@ -14,4 +13,5 @@ def ham_sim(tau, eps, suc):
     a = hamiltonian_coefficients(tau, eps / 10)
     return angle_sequence(a, .9 * eps, suc), time.time()-t
 
-ham_sim(100, 1e-4, 1-1e-4)
+if __name__=="__main__":
+    ham_sim(100, 1e-4, 1-1e-4)

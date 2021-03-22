@@ -1,5 +1,5 @@
-from LPoly import LPoly, LAlg, Id
 import numpy
+from pyqsp.LPoly import LPoly, LAlg, Id
 
 def root_classes(p):
     '''
