@@ -62,6 +62,15 @@ produces the QSP phase angles for a degree 19 polynomial approximation, using th
 
 ![Example QSP response function approximating the sign function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-sign-kappa-10-degree-19.png?raw=true)
 
+A threshold function is useful, for example, for distinguishing eigenvalues and singular values.  Running
+```
+pyqsp --plot-real-only --plot --polyargs=20,20 --polyname poly_thresh poly
+```
+produces the QSP phase angles for a degree 20 polynomial approximation, using two error functions kappa 20, with a response function as shown in this plot:
+
+![Example QSP response function approximating a threshold function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-threshold-polynomial-degree-20-kappa-20.png?raw=true)
+
+
 ## Code design
 
 * `angle_sequence.py` is the main module of the algorithm.
