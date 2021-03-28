@@ -58,7 +58,7 @@ The sign function is also useful to approximate, e.g. for oblivious amplitude am
 ```
 pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
 ```
-produces this plot:
+produces the QSP phase angles for a degree 19 polynomial approximation, using the error function of kappa * a, where kappa is 10, with a response function as shown in this plot:
 
 ![Example QSP response function approximating the sign function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-sign-kappa-10-degree-19.png?raw=true)
 
