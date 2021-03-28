@@ -33,7 +33,11 @@ def PolyOneOverX(kappa=3, epsilon=0.1, return_coef=True, ensure_bounded=True):
         pmin = res.x
         print(f"[PolyOneOverX] minimum {g(pmin)} is at {pmin}: normalizing")
         scale = 1/abs(g(pmin))
-        scale = scale * 0.9
+        if 0:
+            scale = scale * 0.9
+        else:
+            scale = scale * 0.5
+            print(f"[PolyOneOverX] bounding to 0.5")
         g = scale * g
 
     if return_coef:
@@ -50,6 +54,8 @@ def PolyErf(degree=7, kappa=2, ensure_bounded=True):
     '''
     Approximation to sign function, using erf(kappa * x)
     '''
+    if not (degree % 2):
+        raise Exception("[PolyErf] degree must be odd")
     def erf_kappa(x):
         return scipy.special.erf(x*kappa)
     poly_erf = approximate_taylor_polynomial(erf_kappa, 0, degree, 1)
@@ -58,10 +64,16 @@ def PolyErf(degree=7, kappa=2, ensure_bounded=True):
         res = scipy.optimize.minimize(-poly_erf, (0.1,), bounds=[(-1, 1)])
         pmax = res.x
         scale = 1/abs(poly_erf(pmax))
-        scale = scale * 0.99
+        scale = scale * 0.5	# use this for the new QuantumSignalProcessingWxPhases code, which employs np.polynomial.chebyshev.poly2cheb(pcoefs)
+        if kappa > 4:
+            scale = scale * 0.7	# smaller, to handle imperfect approximation
         print(f"[PolyErf] max {scale} is at {pmax}: normalizing")
         poly_erf = scale * poly_erf
-    # print(f"p(0) = {poly_erf(0)}")
+    print(f"p(0) = {poly_erf(0)}")
     pcoefs = poly_erf.coef
-    pcoefs[abs(pcoefs) < 1.0e-10] = 0
+    if 0:
+        pcoefs[abs(pcoefs) < 1.0e-9] = 0
+    else:
+        # force even coefficients to be zero, since the polynomial must be odd
+        pcoefs[0::2] = 0
     return pcoefs

@@ -65,7 +65,7 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
     return ret
 
 def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, show=True, align_first_point_phase=True,
-                    plot_magnitude=False, plot_positive_only=False):
+                    plot_magnitude=False, plot_positive_only=False, plot_real_only=False):
     '''
     Generate plot of QSP response function polynomial, i.e. Re( <0| U |0> )
     For values of model, see ComputeQSPResponse.
@@ -82,10 +82,13 @@ def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, show=True, align_
     if plot_magnitude:
         plt.plot(adat, abs(pdat), 'k')
         ytext = "magnitude (black)"
+    elif plot_real_only:
+        plt.plot(adat, np.real(pdat), 'r')
+        ytext = "real (red)"
     else:
         plt.plot(adat, np.real(pdat), 'r')
         plt.plot(adat, np.imag(pdat), 'g')
-        ytext = "red=real, green=imag"
+        ytext = "real (red), imag (green)"
 
     # plt.plot(adat, abs(pdat), 'k')
 
@@ -97,5 +100,7 @@ def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, show=True, align_
 
     plt.ylabel(ytext)
     plt.xlabel("a")
+    plt.legend(loc="upper right")
+
     if show:
         plt.show()    

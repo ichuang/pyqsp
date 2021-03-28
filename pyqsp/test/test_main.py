@@ -33,3 +33,8 @@ class Test_main(unittest.TestCase):
         cmdline = "--return-angles --hide-plot invert"
         phiset = main.CommandLine(arglist=cmdline.split(" "))
         assert len(phiset)
+
+    def test_main6(self):
+        cmdline = "--return-angles --hide-plot --plot-positive-only --plot --kappa=10 --degree 19 --plot-real-only poly_erf"
+        phiset = main.CommandLine(arglist=cmdline.split(" "))
+        assert len(phiset)
