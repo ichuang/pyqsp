@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.special
 import scipy.optimize
+from scipy.interpolate import approximate_taylor_polynomial
 
 def PolyOneOverX(kappa=3, epsilon=0.1, return_coef=True, ensure_bounded=True):
     '''
@@ -40,6 +41,27 @@ def PolyOneOverX(kappa=3, epsilon=0.1, return_coef=True, ensure_bounded=True):
             pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
         else:
             pcoefs = g.coef
+        print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
         return pcoefs
 
     return g
+
+def PolyErf(degree=7, kappa=2, ensure_bounded=True):
+    '''
+    Approximation to sign function, using erf(kappa * x)
+    '''
+    def erf_kappa(x):
+        return scipy.special.erf(x*kappa)
+    poly_erf = approximate_taylor_polynomial(erf_kappa, 0, degree, 1)
+    poly_erf = np.polynomial.Polynomial(poly_erf.coef[::-1])
+    if ensure_bounded:
+        res = scipy.optimize.minimize(-poly_erf, (0.1,), bounds=[(-1, 1)])
+        pmax = res.x
+        scale = 1/abs(poly_erf(pmax))
+        scale = scale * 0.99
+        print(f"[PolyErf] max {scale} is at {pmax}: normalizing")
+        poly_erf = scale * poly_erf
+    # print(f"p(0) = {poly_erf(0)}")
+    pcoefs = poly_erf.coef
+    pcoefs[abs(pcoefs) < 1.0e-10] = 0
+    return pcoefs

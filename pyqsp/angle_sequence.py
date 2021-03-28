@@ -72,18 +72,19 @@ def QuantumSignalProcessingPhasesOptimizer(pcoefs=None, max_nretries=1, toleranc
     best_error = None
     for k in range(max_nretries):
         phiset = QuantumSignalProcessingPhases(pcoefs=pcoefs, max_nretries=0, verbose=False, model=model)
-        qspr = response.ComputeQSPResponse(phiset, model="Wx", npts=100)
+        qspr = response.ComputeQSPResponse(phiset, model=model, npts=100, align_first_point_phase=False)
         adat = qspr['adat']
         pdat = qspr['pdat']
         poly = np.polynomial.Polynomial(pcoefs)
         expected = poly(adat)
-        if 0:
+        if 1:
             def error_func(b):
                 return abs(expected - np.real(pdat * np.exp((0+1j)*b))).mean()
-            res = scipy.optimize.minimize(error_func, (0.2,), bounds=[(0, 2*np.pi)])
+            res = scipy.optimize.minimize(error_func, (0,), bounds=[(-np.pi, np.pi)])
             bmin = res.x
-            phiset[0] = phiset[0] + bmin
-            qspr = response.ComputeQSPResponse(phiset, model=model, npts=100)
+            print(f"bin={bmin}, error at bmin={error_func(bmin)}")
+            phiset[-1] = phiset[-1] + bmin
+            qspr = response.ComputeQSPResponse(phiset, model=model, npts=100, align_first_point_phase=False)
             pdat = qspr['pdat']
             avg_error = abs(expected - np.real(pdat)).mean()
         else:
@@ -170,7 +171,7 @@ def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, max_nretries
 
     g_recon = LPoly.LAlg.unitary_from_angles(seq)
     final_error = (1/suc * g_recon.IPoly - Pprime_lp).inf_norm
-    print(f"[QuantumSignalProcessingWxPhases] Error in reconstruction from QSP angles = {final_error}")
+    print(f"[QuantumSignalProcessingWxPhases] Reconstruction from QSP angles error = {final_error}")
     if verbose:
         print(f"QSP angles = {seq}")
     seq = np.array(seq)

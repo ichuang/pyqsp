@@ -37,6 +37,7 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
     pmats = [np.exp(i * phiset[0]) * np.eye(2)]
     for phi in phiset[1:]:
         pmats.append( scipy.linalg.expm(i * phi * s_phase))
+    # print(f"pm[-1] = {pmats[-1]}")
     for a in adat:
         ao = i * np.sqrt(1-a**2)
         if model in ["Wx", "WxH"]:
