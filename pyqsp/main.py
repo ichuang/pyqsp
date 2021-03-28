@@ -45,8 +45,8 @@ Examples:
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles
-    pyqsp --plot --degree 17 --niter 10 --tolerance=0.01 poly_erf
-    pyqsp --plot-positive-only --plot --kappa=10 --degree 19 --plot-real-only poly_erf
+    pyqsp --plot --degree 17 --niter 10 --tolerance=0.01 poly_sign
+    pyqsp --plot-positive-only --plot --kappa=10 --degree 19 --plot-real-only poly_sign
 
 """.format(version)
 
@@ -112,7 +112,7 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(phiset, pcoefs=pcoefs, model="Wx", **plot_args)
 
-    elif args.cmd=="poly_erf":
+    elif args.cmd=="poly_sign":
         pcoefs = pyqsp.poly.PolyErf(args.degree, args.kappa)
         print(f"[pyqsp] polynomial coefs = {pcoefs}")
         phiset = angle_sequence.QuantumSignalProcessingPhases(pcoefs, max_nretries=args.niter, tolerance=args.tolerance)
