@@ -167,6 +167,27 @@ class LPoly():
         '''
         self.coefs[self.coefs < thresh] = 0
 
+    def pos_half(self):
+        '''
+        Return Laurent polynomial with coefficients of only positive exponents
+        The negative (and zero) exponent coefficients are set to zero.
+        '''
+        new_coefs = numpy.copy(self.coefs)
+        nhalf = int(numpy.ceil(len(new_coefs)/2))
+        new_coefs[:nhalf] = 0
+        return LPoly(new_coefs, self.dmin)
+
+    def neg_half(self):
+        '''
+        Return Laurent polynomial with coefficients of only negative (or zero) exponents
+        The positive exponent coefficients are set to zero.
+        '''
+        new_coefs = numpy.copy(self.coefs)
+        nhalf = int(numpy.ceil(len(new_coefs)/2))
+        new_coefs[nhalf:] = 0
+        return LPoly(new_coefs, self.dmin)
+
+
 class LAlg():
     '''
     Low algebra elements with parity constraints.

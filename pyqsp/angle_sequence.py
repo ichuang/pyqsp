@@ -148,8 +148,19 @@ def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, max_nretries
     if verbose:
         print(f"Laurent Q poly {Qlp}")
     
-    Pprime_lp = Plp + Qlp
-    Qprime_lp = Plp - Qlp
+    if 1:
+        Pprime_lp = Plp + Qlp
+        Qprime_lp = Plp - Qlp
+    elif 0:
+        Pr = 0.5 * (Plp + ~Plp)
+        Pi = 0.5 * (Plp - ~Plp)
+        Qr = 0.5 * (Qlp + ~Qlp)
+        Qi = 0.5 * (Qlp - ~Qlp)
+        Pprime_lp = Pr + Qr.pos_half() - Qr.neg_half() 
+        Qprime_lp = Pi + Qi.pos_half() - Qi.neg_half()
+    else:
+        Pprime_lp =  0.5 * (Plp + (~Plp) - (Qlp + (~Qlp)))
+        Qprime_lp = -0.5 * (Plp - (~Plp) +  Qlp - (~Qlp) )
     if verbose:
         print(f"Laurent Pprime poly {Pprime_lp}")
 
