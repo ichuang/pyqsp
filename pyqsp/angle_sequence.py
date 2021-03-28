@@ -58,9 +58,9 @@ def QuantumSignalProcessingPhases(pcoefs=None, max_nretries=1, tolerance=0.1, ve
                                                       model=model)
     
     if model=="Wx":
-        return QuantumSignalProcessingWxPhases(pcoefs, max_nretries=max_nretries, tolerance=tolerance, verbose=verbose)        
+        return QuantumSignalProcessingWxPhases(pcoefs, verbose=verbose)        
     elif model=="Wz":
-        return QuantumSignalProcessingWzPhases(pcoefs, max_nretries=max_nretries, tolerance=tolerance, verbose=verbose)
+        return QuantumSignalProcessingWzPhases(pcoefs, verbose=verbose)
     else:
         raise Exception(f"[QuantumSignalProcessingPhases] Unknown model {model}: must be Wx or Wz")
 
@@ -77,7 +77,7 @@ def QuantumSignalProcessingPhasesOptimizer(pcoefs=None, max_nretries=1, toleranc
         pdat = qspr['pdat']
         poly = np.polynomial.Polynomial(pcoefs)
         expected = poly(adat)
-        if 1:
+        if 0:
             def error_func(b):
                 return abs(expected - np.real(pdat * np.exp((0+1j)*b))).mean()
             res = scipy.optimize.minimize(error_func, (0,), bounds=[(-np.pi, np.pi)])
@@ -109,7 +109,65 @@ def QuantumSignalProcessingWzPhases(pcoefs=None, max_nretries=1, tolerance=0.1, 
     '''
     return angle_sequence(pcoefs)
 
-def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, max_nretries=1, tolerance=0.1, verbose=True):
+def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, eps=1e-4, suc=1-1e-4, verbose=True):
+    '''
+    Take a polynomial P(a) as specified by pcoefs, convert to Laurent Poly, 
+    complete to find Q Laurent Poly, perform Hadamard transform to get P' = P + Q.  
+    Generate QSP phases for P'
+    These phases should be the QSP phases for the W(x) = Rx convention of QSP.
+
+    pcoefs       - a list, with coefficients for [constant, a, a^2, a^3, ...]
+    laurent_poly - if provided, use this instead of pcoefs
+    '''
+    # convert polynomial coefficients to laurent
+    if laurent_poly is None:
+        cheb_coefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
+        pcoefs = cheb_coefs
+
+        # determine parity of polynomial
+        is_even = np.max(np.abs(pcoefs[0::2])) > 1e-8
+        is_odd = np.max(np.abs(pcoefs[1::2])) > 1e-8
+        
+        if is_even and is_odd:
+            raise Exception(f"[QuantumSignalProcessingWxPhases] Polynomial must have definite parity: {str(pcoefs)}")
+        
+        if is_odd:
+            p = pcoefs[1::2]
+            p = np.r_[np.zeros(p.size), p]
+        else:
+            p = pcoefs[0::2]
+            p = np.r_[np.zeros(p.size-1), p]
+    else:
+        p = laurent_poly
+        
+    # find angle sequence
+    p = LPoly.LPoly(p, -len(p) + 1)
+    # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
+    p_new = suc * (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
+
+    # Completion phase
+    t = time.time()
+    g = completion.completion_from_root_finding(p_new)
+    t_comp = time.time()
+    print("Completion part finished within time ", t_comp - t)
+
+    # Decomposition phase
+    seq = decomposition.angseq(g)
+    t_dec = time.time()
+    print("Decomposition part finished within time ", t_dec - t_comp)
+    print(seq)
+    seq = np.array(seq)
+
+    # Make sure that the reconstructed element lies in the desired error tolerance regime
+    g_recon = LPoly.LAlg.unitary_from_angles(seq)
+    final_error = (1/suc * g_recon.IPoly - p).inf_norm
+    print(f"Final error = {final_error}")
+    if  final_error < eps:
+        return seq
+    else:
+        raise ValueError("The angle finding program failed on given instance, with an error of {}. Please relax the error budget and/ or the success probability.".format(final_error))
+
+def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretries=1, tolerance=0.1, verbose=True):
     '''
     Take a polynomial P(a) as specified by pcoefs, convert to Laurent Poly, 
     complete to find Q Laurent Poly, perform Hadamard transform to get P' = P + Q.  
