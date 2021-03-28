@@ -3,77 +3,150 @@ import scipy.special
 import scipy.optimize
 from scipy.interpolate import approximate_taylor_polynomial
 
-def PolyOneOverX(kappa=3, epsilon=0.1, return_coef=True, ensure_bounded=True):
+class PolyGenerator:
     '''
-    Approximation to 1/x polynomial, using sums of Chebyshev polynomials,
-    from Quantum algorithm for systems of linear equations with exponentially
-    improved dependence on precision, by Childs, Kothari, and Somma, 
-    https://arxiv.org/abs/1511.02306v2 
-
-    Define region D_kappa to be from 1/kappa to 1, and from -1/kappa to -1.  A good
-    approximation is desired only in this region.
-
-    ensure_bounded: True if polynomial should be normalized to be between +/- 1 
+    Abstract base class for polynomial generators
     '''
-    b = int(kappa**2  * np.log(kappa/epsilon))
-    j0 = int(np.sqrt(b * np.log(4 * b/ epsilon)))
-    print(f"b={b}, j0={j0}")
+    def __init__(self, verbose=True):
+        self.verbose = verbose
+        return
 
-    g = np.polynomial.chebyshev.Chebyshev([0])
-    for j in range(j0+1):
-        gcoef = 0
-        for i in range(j+1, b+1):
-            gcoef += scipy.special.binom(2*b, b+i) / 2**(2*b)
-        deg = 2*j + 1
-        g += (-1)**j * gcoef * np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
-    g = 4 * g
+    def help(self):
+        '''
+        return help text
+        '''
+        return "help text about the expected polynomial arguments"
 
-    if ensure_bounded:
-        res = scipy.optimize.minimize(g, (-0.1,), bounds=[(-0.8, 0.8)])
-        pmin = res.x
-        print(f"[PolyOneOverX] minimum {g(pmin)} is at {pmin}: normalizing")
-        scale = 1/abs(g(pmin))
-        if 0:
-            scale = scale * 0.9
-        else:
-            scale = scale * 0.5
-            print(f"[PolyOneOverX] bounding to 0.5")
-        g = scale * g
+    def generate(self):
+        '''
+        return list of floats specifying the [const, a, a^2, ...] coefficients of the polynomial
+        '''
+        return [0, 0]
 
-    if return_coef:
-        if 1:
-            pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
-        else:
-            pcoefs = g.coef
-        print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
-        return pcoefs
 
-    return g
+#-----------------------------------------------------------------------------
 
-def PolyErf(degree=7, kappa=2, ensure_bounded=True):
+class PolyOneOverX(PolyGenerator):
+
+    def help(self):
+        return "Region of validity is from 1/kappa to 1, and from -1/kappa to -1.  Error is epsilon"
+
+    def generate(self, kappa=3, epsilon=0.1, return_coef=True, ensure_bounded=True):
+        '''
+        Approximation to 1/x polynomial, using sums of Chebyshev polynomials,
+        from Quantum algorithm for systems of linear equations with exponentially
+        improved dependence on precision, by Childs, Kothari, and Somma, 
+        https://arxiv.org/abs/1511.02306v2 
+    
+        Define region D_kappa to be from 1/kappa to 1, and from -1/kappa to -1.  A good
+        approximation is desired only in this region.
+    
+        ensure_bounded: True if polynomial should be normalized to be between +/- 1 
+        '''
+        b = int(kappa**2  * np.log(kappa/epsilon))
+        j0 = int(np.sqrt(b * np.log(4 * b/ epsilon)))
+        print(f"b={b}, j0={j0}")
+    
+        g = np.polynomial.chebyshev.Chebyshev([0])
+        for j in range(j0+1):
+            gcoef = 0
+            for i in range(j+1, b+1):
+                gcoef += scipy.special.binom(2*b, b+i) / 2**(2*b)
+            deg = 2*j + 1
+            g += (-1)**j * gcoef * np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
+        g = 4 * g
+    
+        if ensure_bounded:
+            res = scipy.optimize.minimize(g, (-0.1,), bounds=[(-0.8, 0.8)])
+            pmin = res.x
+            print(f"[PolyOneOverX] minimum {g(pmin)} is at {pmin}: normalizing")
+            scale = 1/abs(g(pmin))
+            if 0:
+                scale = scale * 0.9
+            else:
+                scale = scale * 0.5
+                print(f"[PolyOneOverX] bounding to 0.5")
+            g = scale * g
+    
+        if return_coef:
+            if 1:
+                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            else:
+                pcoefs = g.coef
+            print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
+            return pcoefs
+    
+        return g
+
+class PolyTaylorSeries(PolyGenerator):
     '''
-    Approximation to sign function, using erf(kappa * x)
+    Base clas for PolySign and PolyThreshold
     '''
-    if not (degree % 2):
-        raise Exception("[PolyErf] degree must be odd")
-    def erf_kappa(x):
-        return scipy.special.erf(x*kappa)
-    poly_erf = approximate_taylor_polynomial(erf_kappa, 0, degree, 1)
-    poly_erf = np.polynomial.Polynomial(poly_erf.coef[::-1])
-    if ensure_bounded:
-        res = scipy.optimize.minimize(-poly_erf, (0.1,), bounds=[(-1, 1)])
-        pmax = res.x
-        scale = 1/abs(poly_erf(pmax))
-        scale = scale * 0.5	# use this for the new QuantumSignalProcessingWxPhases code, which employs np.polynomial.chebyshev.poly2cheb(pcoefs)
+
+    def taylor_series(self, func, degree, ensure_bounded=True):
+        the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
+        the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
+        if ensure_bounded:
+            res = scipy.optimize.minimize(-the_poly, (0.1,), bounds=[(-1, 1)])
+            pmax = res.x
+            scale = 1/abs(the_poly(pmax))
+            scale = scale * 0.5	# use this for the new QuantumSignalProcessingWxPhases code, which employs np.polynomial.chebyshev.poly2cheb(pcoefs)
+            print(f"[PolyErf] max {scale} is at {pmax}: normalizing")
+            the_poly = scale * the_poly
+        return the_poly
+        
+
+class PolySign(PolyTaylorSeries):
+
+    def help(self):
+        return "degree and kappa"
+    
+    def generate(self, degree=7, kappa=2, ensure_bounded=True):
+        '''
+        Approximation to sign function, using erf(kappa * x)
+        '''
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolySign] degree={degree}, kappa={kappa}")
+        if not (degree % 2):
+            raise Exception("[PolyErf] degree must be odd")
+        def erf_kappa(x):
+            return scipy.special.erf(x*kappa)
+        the_poly = self.taylor_series(erf_kappa, degree, ensure_bounded=ensure_bounded)
         if kappa > 4:
-            scale = scale * 0.7	# smaller, to handle imperfect approximation
-        print(f"[PolyErf] max {scale} is at {pmax}: normalizing")
-        poly_erf = scale * poly_erf
-    print(f"p(0) = {poly_erf(0)}")
-    pcoefs = poly_erf.coef
-    if 0:
-        pcoefs[abs(pcoefs) < 1.0e-9] = 0
-    else:
+             the_poly = 0.7 * the_poly	# smaller, to handle imperfect approximation
+        pcoefs = the_poly.coef
         # force even coefficients to be zero, since the polynomial must be odd
         pcoefs[0::2] = 0
-    return pcoefs
+        return pcoefs
+
+class PolyThreshold(PolyTaylorSeries):
+
+    def help(self):
+        return "degree and kappa"
+
+    def generate(self, degree=6, kappa=2, ensure_bounded=True):
+        '''
+        Approximation to threshold function at a=1/2; use a bandpass built from two erf's
+        '''
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolyThreshold] degree={degree}, kappa={kappa}")
+        if (degree % 2):
+            raise Exception("[PolyErf] degree must be even")
+        def erf_kappa(x):
+            return scipy.special.erf(x*kappa)
+        def threshold(x):
+            return (erf_kappa(x+0.5) - erf_kappa(x-0.5))/2
+        the_poly = self.taylor_series(threshold, degree, ensure_bounded=ensure_bounded)
+        if kappa > 4:
+             the_poly = 0.7 * the_poly	# smaller, to handle imperfect approximation
+        pcoefs = the_poly.coef
+        # force odd coefficients to be zero, since the polynomial must be odd
+        pcoefs[1::2] = 0
+        return pcoefs
+
+#-----------------------------------------------------------------------------
+
+polynomial_generators = {'invert': PolyOneOverX,
+                          'poly_sign': PolySign,
+                          'poly_thresh': PolyThreshold,
+}
