@@ -33,9 +33,8 @@ Commands:
     poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
     hamsim      - compute QSP phase angles for Hamiltonian simulation using the Jacobi-Anger expansion of exp(-i tau sin(2 theta))
     invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given kappa and epsilon parameter values
-    poly_sign   - compute QSP phase angles for a polynomial approximation to the sign function, using erf(kappa*x)
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
-    poly        - generate QSP phase angles for the specified --polyname and --polyargs
+    poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
 
 Examples:
 
