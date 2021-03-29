@@ -212,9 +212,55 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
 
 #-----------------------------------------------------------------------------
 
+class PolyRelu(PolyTaylorSeries):
+    '''
+    Relu function
+    '''
+    def help(self):
+        return "symmetric Relu function sigma(|a-delta|) = 0 if |a| < delta, else |a|-delta ; specify degree, delta"
+
+    def generate(self, degree=6, delta=0.2, max_scale=0.99, ensure_bounded=True):
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolyRelu] degree={degree}, delta={delta}")
+        if (degree % 2):
+            raise Exception("[PolyRelu] degree must be even")
+        def cdf(x):
+            return (1+scipy.special.erf(x/np.sqrt(2)))/2
+        def gelu(x):
+            return abs(x) * cdf(abs(x)-delta)
+        the_poly = self.taylor_series(gelu, degree, ensure_bounded=ensure_bounded, max_scale=max_scale)
+        pcoefs = the_poly.coef
+        # force odd coefficients to be zero, since the polynomial must be even
+        pcoefs[1::2] = 0
+        return pcoefs
+
+class PolySoftPlus(PolyTaylorSeries):
+    '''
+    SoftPlus function
+    '''
+    def help(self):
+        return "symmetric softplus function sigma(|a-delta|) = 0 if |a| < delta, else |a| ; specify degree, delta"
+
+    def generate(self, degree=6, delta=0.2, kappa=1, max_scale=0.99, ensure_bounded=True):
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolySoftPlus] degree={degree}, delta={delta}, kappa={kappa}")
+        if (degree % 2):
+            raise Exception("[PolySoftPlus] degree must be even")
+        def func(x):
+            return np.log(1 + np.exp(kappa*(abs(x)-delta)))/kappa
+        the_poly = self.taylor_series(func, degree, ensure_bounded=ensure_bounded, max_scale=max_scale)
+        pcoefs = the_poly.coef
+        # force odd coefficients to be zero, since the polynomial must be even
+        pcoefs[1::2] = 0
+        return pcoefs
+
+#-----------------------------------------------------------------------------
+
 polynomial_generators = {'invert': PolyOneOverX,
                          'poly_sign': PolySign,
                          'poly_thresh': PolyThreshold,
                          'gibbs': PolyGibbs,
                          'efilter': PolyEigenstateFiltering,
+                         'relu': PolyRelu,
+                         'softplus': PolySoftPlus,
 }
