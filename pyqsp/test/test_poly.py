@@ -63,4 +63,13 @@ class Test_poly(unittest.TestCase):
         assert (poly(0) > 0.3)
         assert (poly(0.9) < 0.1)
         
+    def test_poly_gibbs1(self):
+        pg = pyqsp.poly.PolyGibbs()
+        pcoefs = pg.generate(30, 4.5)
+        poly = np.polynomial.Polynomial(pcoefs)
+        print(f"gibbs poly at 0.9 = {poly(0.9)}")
+        print(f"gibbs poly at 0 = {poly(0)}")
+        assert (poly(0.9) < 0.3)
+        assert (poly(0) > 0.9)
+        
         

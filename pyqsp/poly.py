@@ -78,28 +78,40 @@ class PolyOneOverX(PolyGenerator):
     
         return g
 
+#-----------------------------------------------------------------------------
+
 class PolyTaylorSeries(PolyGenerator):
     '''
     Base clas for PolySign and PolyThreshold
     '''
 
-    def taylor_series(self, func, degree, ensure_bounded=True):
+    def taylor_series(self, func, degree, ensure_bounded=True, npts=100, max_scale=0.5):
+        '''
+        Return numpy Polynomial approximation for func, constructed using taylor series, of specified degree.
+        Evaluate approximation using mean absolut difference on npts points in the domain from -1 to 1.
+        '''
         the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
         the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
         if ensure_bounded:
             res = scipy.optimize.minimize(-the_poly, (0.1,), bounds=[(-1, 1)])
             pmax = res.x
             scale = 1/abs(the_poly(pmax))
-            scale = scale * 0.5	# use this for the new QuantumSignalProcessingWxPhases code, which employs np.polynomial.chebyshev.poly2cheb(pcoefs)
-            print(f"[PolyErf] max {scale} is at {pmax}: normalizing")
+            scale = scale * max_scale	# use this for the new QuantumSignalProcessingWxPhases code, which employs np.polynomial.chebyshev.poly2cheb(pcoefs)
+            print(f"[PolyTaylorSeries] max {scale} is at {pmax}: normalizing")
             the_poly = scale * the_poly
+        adat = np.linspace(-1, 1, npts)
+        pdat = the_poly(adat)
+        edat = func(adat)
+        avg_err = abs(edat - pdat).mean()
+        print(f"[PolyTaylorSeries] average error = {avg_err} in the domain [-1, 1] using degree {degree}")
         return the_poly
         
+#-----------------------------------------------------------------------------
 
 class PolySign(PolyTaylorSeries):
 
     def help(self):
-        return "degree and kappa"
+        return "approximation to the sign function using erf(kappa*a) ; give degree and kappa"
     
     def generate(self, degree=7, kappa=2, ensure_bounded=True):
         '''
@@ -111,7 +123,7 @@ class PolySign(PolyTaylorSeries):
             raise Exception("[PolyErf] degree must be odd")
         def erf_kappa(x):
             return scipy.special.erf(x*kappa)
-        the_poly = self.taylor_series(erf_kappa, degree, ensure_bounded=ensure_bounded)
+        the_poly = self.taylor_series(erf_kappa, degree, ensure_bounded=ensure_bounded, max_scale=0.5)
         if kappa > 4:
              the_poly = 0.7 * the_poly	# smaller, to handle imperfect approximation
         pcoefs = the_poly.coef
@@ -122,7 +134,7 @@ class PolySign(PolyTaylorSeries):
 class PolyThreshold(PolyTaylorSeries):
 
     def help(self):
-        return "degree and kappa"
+        return "approximation to a thresholding function at threshold 1/2, using linear combination of erf(kappa * a); give degree and kappa"
 
     def generate(self, degree=6, kappa=2, ensure_bounded=True):
         '''
@@ -131,22 +143,48 @@ class PolyThreshold(PolyTaylorSeries):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyThreshold] degree={degree}, kappa={kappa}")
         if (degree % 2):
-            raise Exception("[PolyErf] degree must be even")
+            raise Exception("[PolyThreshold] degree must be even")
         def erf_kappa(x):
             return scipy.special.erf(x*kappa)
         def threshold(x):
             return (erf_kappa(x+0.5) - erf_kappa(x-0.5))/2
-        the_poly = self.taylor_series(threshold, degree, ensure_bounded=ensure_bounded)
+        the_poly = self.taylor_series(threshold, degree, ensure_bounded=ensure_bounded, max_scale=0.5)
         if kappa > 4:
              the_poly = 0.7 * the_poly	# smaller, to handle imperfect approximation
         pcoefs = the_poly.coef
-        # force odd coefficients to be zero, since the polynomial must be odd
+        # force odd coefficients to be zero, since the polynomial must be even
+        pcoefs[1::2] = 0
+        return pcoefs
+
+#-----------------------------------------------------------------------------
+
+class PolyGibbs(PolyTaylorSeries):
+    '''
+    exponential decay polynomial
+    '''
+
+    def help(self):
+        return "approximation to exp(-beta*a) ; specify degree and beta"
+
+    def generate(self, degree=6, beta=2, ensure_bounded=True):
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolyGibbs] degree={degree}, beta={beta}")
+        if (degree % 2):
+            raise Exception("[PolyGibbs] degree must be even")
+        def gibbs(x):
+            return np.exp(-beta * abs(x))
+        the_poly = self.taylor_series(gibbs, degree, ensure_bounded=ensure_bounded, max_scale=1)
+        if 0:
+             the_poly = 0.8 * the_poly	# smaller, to handle imperfect approximation
+        pcoefs = the_poly.coef
+        # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
         return pcoefs
 
 #-----------------------------------------------------------------------------
 
 polynomial_generators = {'invert': PolyOneOverX,
-                          'poly_sign': PolySign,
-                          'poly_thresh': PolyThreshold,
+                         'poly_sign': PolySign,
+                         'poly_thresh': PolyThreshold,
+                         'gibbs': PolyGibbs,
 }
