@@ -48,6 +48,7 @@ Examples:
     pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-real-only --plot --polyargs=20,20 --polyname poly_thresh poly
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
+    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
 
 """.format(version)
 
