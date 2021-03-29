@@ -183,8 +183,38 @@ class PolyGibbs(PolyTaylorSeries):
 
 #-----------------------------------------------------------------------------
 
+class PolyEigenstateFiltering(PolyTaylorSeries):
+    '''
+    Lin and Tong's eigenstate filtering polynomial
+    '''
+
+    def help(self):
+        return "Lin and Tong's eigenstate filtering polynomial ; specify degree, delta, max_scale"
+
+    def generate(self, degree=6, delta=0.2, max_scale=0.99, ensure_bounded=True):
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolyEfilter] degree={degree}, delta={delta}")
+        if (degree % 2):
+            raise Exception("[PolyEfilter] degree must be even")
+        def cheb(x):
+            Tk = np.polynomial.chebyshev.Chebyshev([0] * degree + [1])
+            return Tk(-1 + 2 * (x**2 - delta**2)/(1-delta**2))
+        scale = 1/cheb(0)
+        def efpoly(x):
+            return scale * cheb(x**2)
+        the_poly = self.taylor_series(efpoly, degree, ensure_bounded=ensure_bounded, max_scale=max_scale)
+        if 0:
+             the_poly = 0.8 * the_poly	# smaller, to handle imperfect approximation
+        pcoefs = the_poly.coef
+        # force odd coefficients to be zero, since the polynomial must be even
+        pcoefs[1::2] = 0
+        return pcoefs
+
+#-----------------------------------------------------------------------------
+
 polynomial_generators = {'invert': PolyOneOverX,
                          'poly_sign': PolySign,
                          'poly_thresh': PolyThreshold,
                          'gibbs': PolyGibbs,
+                         'efilter': PolyEigenstateFiltering,
 }

@@ -48,3 +48,8 @@ class Test_main(unittest.TestCase):
         cmdline = "--return-angles --hide-plot --plot-real-only --plot --polyargs=20,3.5 --polyname gibbs poly"
         phiset = main.CommandLine(arglist=cmdline.split(" "))
         assert len(phiset)
+
+    def test_main9(self):
+        cmdline = "--return-angles --hide-plot --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly"
+        phiset = main.CommandLine(arglist=cmdline.split(" "))
+        assert len(phiset)

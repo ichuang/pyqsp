@@ -49,6 +49,7 @@ Examples:
     pyqsp --plot-real-only --plot --polyargs=20,20 --polyname poly_thresh poly
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
+    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
 
 """.format(version)
 
