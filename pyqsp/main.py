@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import pyqsp
 import argparse
 from pyqsp import ham_sim
@@ -77,6 +78,7 @@ Examples:
     parser.add_argument("--align-first-point-phase", help="when plotting change overall complex phase such that the first point has zero phase", action="store_true")
     parser.add_argument("--plot-magnitude", help="when plotting only show magnitude, instead of separate imaginary and real components", action="store_true")
     parser.add_argument("--plot-real-only", help="when plotting only real component, and not imaginary", action="store_true")
+    parser.add_argument("--output-json", help="output QSP phase angles in JSON format", action="store_true")
     parser.add_argument("--plot-positive-only", help="when plotting only a-values (x-axis) from 0 to +1, instead of from -1 to +1 ", action="store_true")
     parser.add_argument("--plot-npts", help="number of points to use in plotting", type=int, default=100)
     parser.add_argument("--niter", help="number of iterations to use in trying to compute phase angles", type=int, default=2)
@@ -149,5 +151,10 @@ Examples:
         print(f"[pyqsp.main] Unknown command {args.cmd}")
         print(help_text)
 
-    if (phiset is not None) and args.return_angles:
-        return phiset
+    if (phiset is not None):
+        if  args.return_angles:
+            return phiset
+        if args.output_json:
+            print(f"QSP Phase angles in JSON format:")
+            phiset = phiset.tolist()
+            print(json.dumps(phiset, indent=4))
