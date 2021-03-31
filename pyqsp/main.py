@@ -155,6 +155,6 @@ Examples:
         if  args.return_angles:
             return phiset
         if args.output_json:
-            print(f"QSP Phase angles in JSON format:")
+            print(f"QSP Phase angles (for model={args.model}) in JSON format:")
             phiset = phiset.tolist()
             print(json.dumps(phiset, indent=4))
