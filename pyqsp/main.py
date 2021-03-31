@@ -80,6 +80,7 @@ Examples:
     parser.add_argument("--plot-real-only", help="when plotting only real component, and not imaginary", action="store_true")
     parser.add_argument("--output-json", help="output QSP phase angles in JSON format", action="store_true")
     parser.add_argument("--plot-positive-only", help="when plotting only a-values (x-axis) from 0 to +1, instead of from -1 to +1 ", action="store_true")
+    parser.add_argument("--plot-tight-y", help="when plotting scale y-axis tightly to real part of data", action="store_true")
     parser.add_argument("--plot-npts", help="number of points to use in plotting", type=int, default=100)
     parser.add_argument("--niter", help="number of iterations to use in trying to compute phase angles", type=int, default=2)
     parser.add_argument("--tolerance", help="error tolerance for phase angle optimizer", type=float, default=0.1)
@@ -92,6 +93,7 @@ Examples:
                      plot_magnitude=args.plot_magnitude,
                      plot_positive_only=args.plot_positive_only,
                      plot_real_only=args.plot_real_only,
+                     plot_tight_y=args.plot_tight_y,
                      npts=args.plot_npts,
                      show=(not args.hide_plot)
     )

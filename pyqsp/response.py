@@ -67,7 +67,7 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
     return ret
 
 def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show=True, align_first_point_phase=False,
-                    plot_magnitude=False, plot_positive_only=False, plot_real_only=False):
+                    plot_magnitude=False, plot_positive_only=False, plot_real_only=False, plot_tight_y=False):
     '''
     Generate plot of QSP response function polynomial, i.e. Re( <0| U |0> )
     For values of model, see ComputeQSPResponse.
@@ -77,6 +77,7 @@ def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show
     align_first_point_phase - if True, change the complex phase of phase such that the first point has phase angle zero
     plot_magnitude - if True, show magnitude instead of real and imaginary parts
     plot_positive_only - if True, then only show positive ordinate values
+    plot_tight_y - if True, set y-axis scale to be from min to max of real part; else go from +1.5 max to -1.5 max
     '''
     qspr = ComputeQSPResponse(phiset, model, npts, align_first_point_phase=align_first_point_phase, positive_only=plot_positive_only)
     adat = qspr['adat']
@@ -108,8 +109,12 @@ def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show
     plt.legend(loc="upper right")
 
     ymax = np.max(np.abs(np.real(pdat)))
+    ymin = np.min(np.abs(np.real(pdat)))
     plt.xlim([np.min(adat), np.max(adat)])
-    plt.ylim([-1.5*ymax, 1.5*ymax])
+    if plot_tight_y:
+        plt.ylim([1.05*ymin, 1.05*ymax])
+    else:
+        plt.ylim([-1.5*ymax, 1.5*ymax])
     
     if show:
         plt.show()
