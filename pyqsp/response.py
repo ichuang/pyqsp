@@ -66,15 +66,19 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
     }
     return ret
 
-def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show=True):
+def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show=True, align_first_point_phase=False,
+                    plot_magnitude=False, plot_positive_only=False, plot_real_only=False):
     '''
     Generate plot of QSP response function polynomial, i.e. Re( <0| U |0> )
     For values of model, see ComputeQSPResponse.
 
     pcoefs - coefficients for expected polynomial response; will be plotted, if provided
     target - reference function, if provided
+    align_first_point_phase - if True, change the complex phase of phase such that the first point has phase angle zero
+    plot_magnitude - if True, show magnitude instead of real and imaginary parts
+    plot_positive_only - if True, then only show positive ordinate values
     '''
-    qspr = ComputeQSPResponse(phiset, model, npts, align_first_point_phase=False)
+    qspr = ComputeQSPResponse(phiset, model, npts, align_first_point_phase=align_first_point_phase, positive_only=plot_positive_only)
     adat = qspr['adat']
     pdat = qspr['pdat']
 
@@ -90,8 +94,12 @@ def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show
         xref = np.linspace(-L, L, 101)
         plt.plot(xref, target(xref), 'k', label="target function")
         
+    if plot_magnitude:
+        plt.plot(adat, abs(pdat), 'k', label="abs(P)")
+
     plt.plot(adat, np.real(pdat), 'r', label="Re(P)")
-    plt.plot(adat, np.imag(pdat), 'g', label="Im(P)")
+    if not plot_real_only:
+        plt.plot(adat, np.imag(pdat), 'g', label="Im(P)")
     #plt.plot(adat, abs(pdat), 'k')
 
     # format plot
