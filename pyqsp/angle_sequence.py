@@ -16,6 +16,7 @@ def angle_sequence(p, eps=1e-4, suc=1-1e-4):
     The QSP phases returned are for the Wz QSP convention (signal unitaries are Z-rotations and QSP phases are X-rotations).
     """
     p = LPoly.LPoly(p, -len(p) + 1)
+
     # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
     p_new = suc * (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
 
@@ -29,7 +30,7 @@ def angle_sequence(p, eps=1e-4, suc=1-1e-4):
     seq = decomposition.angseq(g)
     t_dec = time.time()
     print("Decomposition part finished within time ", t_dec - t_comp)
-    print(seq)
+    #print(seq)
 
     # Make sure that the reconstructed element lies in the desired error tolerance regime
     g_recon = LPoly.LAlg.unitary_from_angles(seq)
@@ -122,50 +123,25 @@ def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, eps=1e-4, su
     # convert polynomial coefficients to laurent
     if laurent_poly is None:
         cheb_coefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
-        pcoefs = cheb_coefs
 
         # determine parity of polynomial
-        is_even = np.max(np.abs(pcoefs[0::2])) > 1e-8
-        is_odd = np.max(np.abs(pcoefs[1::2])) > 1e-8
+        is_even = np.max(np.abs(cheb_coefs[0::2])) > 1e-8
+        is_odd = np.max(np.abs(cheb_coefs[1::2])) > 1e-8
         
         if is_even and is_odd:
             raise Exception(f"[QuantumSignalProcessingWxPhases] Polynomial must have definite parity: {str(pcoefs)}")
         
         if is_odd:
-            p = pcoefs[1::2]
-            p = np.r_[np.zeros(p.size), p]
+            p = cheb_coefs[1::2] / 2
+            p = np.r_[p[::-1], p]
         else:
-            p = pcoefs[0::2]
-            p = np.r_[np.zeros(p.size-1), p]
+            p = cheb_coefs[0::2] / 2
+            p = np.r_[p[-1:0:-1], 2 * p[0], p[1:]]
     else:
         p = laurent_poly
         
-    # find angle sequence
-    p = LPoly.LPoly(p, -len(p) + 1)
-    # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
-    p_new = suc * (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
+    return angle_sequence(p, eps=eps, suc=suc)
 
-    # Completion phase
-    t = time.time()
-    g = completion.completion_from_root_finding(p_new)
-    t_comp = time.time()
-    print("Completion part finished within time ", t_comp - t)
-
-    # Decomposition phase
-    seq = decomposition.angseq(g)
-    t_dec = time.time()
-    print("Decomposition part finished within time ", t_dec - t_comp)
-    print(seq)
-    seq = np.array(seq)
-
-    # Make sure that the reconstructed element lies in the desired error tolerance regime
-    g_recon = LPoly.LAlg.unitary_from_angles(seq)
-    final_error = (1/suc * g_recon.IPoly - p).inf_norm
-    print(f"Final error = {final_error}")
-    if  final_error < eps:
-        return seq
-    else:
-        raise ValueError("The angle finding program failed on given instance, with an error of {}. Please relax the error budget and/ or the success probability.".format(final_error))
 
 def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretries=1, tolerance=0.1, verbose=True):
     '''
