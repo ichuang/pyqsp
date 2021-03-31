@@ -36,8 +36,8 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
     else:
         raise Exception(f"[PlotQSPRsponse] model={model} unknown - must be Wx (signal is x-rot) or Wz (signal is z-rot)")
     i = (0+1j)
-    pmats = [ scipy.linalg.expm(i * phiset[0] * s_phase) ]
-    for phi in phiset[1:]:
+    pmats = [ ]
+    for phi in phiset:
         pmats.append( scipy.linalg.expm(i * phi * s_phase) )
     # print(f"pm[-1] = {pmats[-1]}")
     for a in adat:
@@ -96,11 +96,11 @@ def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show
         plt.plot(xref, target(xref), 'k', label="target function")
         
     if plot_magnitude:
-        plt.plot(adat, abs(pdat), 'k', label="abs(P)")
-
-    plt.plot(adat, np.real(pdat), 'r', label="Re(P)")
-    if not plot_real_only:
-        plt.plot(adat, np.imag(pdat), 'g', label="Im(P)")
+        plt.plot(adat, abs(pdat), 'b', label="abs(P)")
+    else:
+        plt.plot(adat, np.real(pdat), 'r', label="Re(P)")
+        if not plot_real_only:
+            plt.plot(adat, np.imag(pdat), 'g', label="Im(P)")
     #plt.plot(adat, abs(pdat), 'k')
 
     # format plot
