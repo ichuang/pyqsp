@@ -29,14 +29,16 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
     H = (sx + sz)/np.sqrt(2)
     if model in ["Wx", "WxH"]:
         s_phase = sz
+        p_state = np.matrix([[1],[1]])/np.sqrt(2)
     elif model=="Wz":
         s_phase = sx
+        p_state = np.matrix([[1],[0]])
     else:
         raise Exception(f"[PlotQSPRsponse] model={model} unknown - must be Wx (signal is x-rot) or Wz (signal is z-rot)")
     i = (0+1j)
-    pmats = [np.exp(i * phiset[0]) * np.eye(2)]
+    pmats = [ scipy.linalg.expm(i * phiset[0] * s_phase) ]
     for phi in phiset[1:]:
-        pmats.append( scipy.linalg.expm(i * phi * s_phase))
+        pmats.append( scipy.linalg.expm(i * phi * s_phase) )
     # print(f"pm[-1] = {pmats[-1]}")
     for a in adat:
         ao = i * np.sqrt(1-a**2)
@@ -51,9 +53,9 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
             U = U @ W @ pm
         if model=="WxH":
             U = H @ U @ H
-        pdat.append( U[0,0] )
+        pdat.append((p_state.T @ U @ p_state)[0,0])
 
-    pdat = np.array(pdat)
+    pdat = np.array(pdat, dtype=np.complex128)
     if align_first_point_phase:
         pdat = pdat * np.exp(i * np.arctan2(np.imag(pdat[0]), np.real(pdat[0])))
 
@@ -64,43 +66,61 @@ def ComputeQSPResponse(phiset, model="Wx", npts=100, align_first_point_phase=Tru
     }
     return ret
 
-def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, show=True, align_first_point_phase=True,
-                    plot_magnitude=False, plot_positive_only=False, plot_real_only=False):
+def PlotQSPResponse(phiset, model="Wx", npts=100, pcoefs=None, target=None, show=True):
     '''
     Generate plot of QSP response function polynomial, i.e. Re( <0| U |0> )
     For values of model, see ComputeQSPResponse.
 
     pcoefs - coefficients for expected polynomial response; will be plotted, if provided
-    align_first_point_phase - if True, change the complex phase of phase such that the first point has phase angle zero
-    plot_magnitude - if True, show magnitude instead of real and imaginary parts
-    plot_positive_only - if True, then only show positive ordinate values
+    target - reference function, if provided
     '''
-    qspr = ComputeQSPResponse(phiset, model, npts, align_first_point_phase=align_first_point_phase, positive_only=plot_positive_only)
+    qspr = ComputeQSPResponse(phiset, model, npts, align_first_point_phase=False)
     adat = qspr['adat']
     pdat = qspr['pdat']
 
-    if plot_magnitude:
-        plt.plot(adat, abs(pdat), 'k')
-        ytext = "magnitude (black)"
-    elif plot_real_only:
-        plt.plot(adat, np.real(pdat), 'r')
-        ytext = "real (red)"
-    else:
-        plt.plot(adat, np.real(pdat), 'r')
-        plt.plot(adat, np.imag(pdat), 'g')
-        ytext = "real (red), imag (green)"
-
-    # plt.plot(adat, abs(pdat), 'k')
+    plt.figure(figsize=[8, 5])
 
     if pcoefs is not None:
         poly = np.polynomial.Polynomial(pcoefs)
         expected = poly(adat)
-        plt.plot(adat, expected, 'b')
-        ytext += ', blue=goal'
+        plt.plot(adat, expected, 'b', label="target polynomial")
 
-    plt.ylabel(ytext)
+    if target is not None:
+        L = np.max(np.abs(adat))
+        xref = np.linspace(-L, L, 101)
+        plt.plot(xref, target(xref), 'k', label="target function")
+        
+    plt.plot(adat, np.real(pdat), 'r', label="Re(P)")
+    plt.plot(adat, np.imag(pdat), 'g', label="Im(P)")
+    #plt.plot(adat, abs(pdat), 'k')
+
+    # format plot
+    plt.ylabel("response")
     plt.xlabel("a")
     plt.legend(loc="upper right")
 
+    ymax = np.max(np.abs(np.real(pdat)))
+    plt.xlim([np.min(adat), np.max(adat)])
+    plt.ylim([-1.5*ymax, 1.5*ymax])
+    
     if show:
-        plt.show()    
+        plt.show()
+
+
+def PlotQSPPhases(phiset, show=True):
+    '''
+    Generate plot of QSP response function polynomial, i.e. Re( <0| U |0> )
+    For values of model, see ComputeQSPResponse.
+
+    pcoefs - coefficients for expected polynomial response; will be plotted, if provided
+    target - reference function, if provided
+    '''
+    plt.figure(figsize=[8, 5])
+
+    plt.stem(phiset, markerfmt='bo', basefmt='k-')
+    plt.xlabel("k")
+    plt.ylabel("phi_k")
+    plt.ylim([-np.pi, np.pi])
+
+    if show:
+        plt.show()
