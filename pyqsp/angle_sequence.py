@@ -6,7 +6,8 @@ from pyqsp import completion
 from pyqsp import decomposition
 from pyqsp import response
 
-def angle_sequence(p, eps=1e-4, suc=1-1e-4):
+
+def angle_sequence(p, eps=1e-4, suc=1 - 1e-4):
     """
     Solve for the angle sequence corresponding to the array p, with eps error budget and suc success probability.
     The bigger the error budget and the smaller the success probability, the better the numerical stability of the process.
@@ -17,8 +18,10 @@ def angle_sequence(p, eps=1e-4, suc=1-1e-4):
     """
     p = LPoly.LPoly(p, -len(p) + 1)
 
-    # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
-    p_new = suc * (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
+    # Capitalization: eps/2 amount of error budget is put to the highest power
+    # for sake of numerical stability.
+    p_new = suc * \
+        (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
 
     # Completion phase
     t = time.time()
@@ -30,18 +33,26 @@ def angle_sequence(p, eps=1e-4, suc=1-1e-4):
     seq = decomposition.angseq(g)
     t_dec = time.time()
     print("Decomposition part finished within time ", t_dec - t_comp)
-    #print(seq)
+    # print(seq)
 
-    # Make sure that the reconstructed element lies in the desired error tolerance regime
+    # Make sure that the reconstructed element lies in the desired error
+    # tolerance regime
     g_recon = LPoly.LAlg.unitary_from_angles(seq)
-    final_error = (1/suc * g_recon.IPoly - p).inf_norm
+    final_error = (1 / suc * g_recon.IPoly - p).inf_norm
     print(f"Final error = {final_error}")
-    if  final_error < eps:
+    if final_error < eps:
         return seq
     else:
-        raise ValueError("The angle finding program failed on given instance, with an error of {}. Please relax the error budget and/ or the success probability.".format(final_error))
+        raise ValueError(
+            "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and/ or the success probability.".format(final_error))
 
-def QuantumSignalProcessingPhases(pcoefs=None, max_nretries=1, tolerance=0.1, verbose=True, model="Wx"):
+
+def QuantumSignalProcessingPhases(
+        pcoefs=None,
+        max_nretries=1,
+        tolerance=0.1,
+        verbose=True,
+        model="Wx"):
     '''
     Compute QSP phase angles for the specified polynomial, in the specified model.
 
@@ -52,45 +63,66 @@ def QuantumSignalProcessingPhases(pcoefs=None, max_nretries=1, tolerance=0.1, ve
     return a list of floats, giving the QSP phases
     '''
     if max_nretries > 1 and (pcoefs is not None):
-        return QuantumSignalProcessingPhasesOptimizer(pcoefs,
-                                                      max_nretries=max_nretries,
-                                                      tolerance=tolerance,
-                                                      verbose=verbose,
-                                                      model=model)
-    
-    if model=="Wx":
-        return QuantumSignalProcessingWxPhases(pcoefs, verbose=verbose)        
-    elif model=="Wz":
+        return QuantumSignalProcessingPhasesOptimizer(
+            pcoefs,
+            max_nretries=max_nretries,
+            tolerance=tolerance,
+            verbose=verbose,
+            model=model)
+
+    if model == "Wx":
+        return QuantumSignalProcessingWxPhases(pcoefs, verbose=verbose)
+    elif model == "Wz":
         return QuantumSignalProcessingWzPhases(pcoefs, verbose=verbose)
     else:
-        raise Exception(f"[QuantumSignalProcessingPhases] Unknown model {model}: must be Wx or Wz")
+        raise Exception(
+            f"[QuantumSignalProcessingPhases] Unknown model {model}: must be Wx or Wz")
 
-def QuantumSignalProcessingPhasesOptimizer(pcoefs=None, max_nretries=1, tolerance=0.1, verbose=True, model="Wx"):
+
+def QuantumSignalProcessingPhasesOptimizer(
+        pcoefs=None,
+        max_nretries=1,
+        tolerance=0.1,
+        verbose=True,
+        model="Wx"):
     '''
     Run QuantumSignalProcessingPhases until error tolerance reached or max number of retries exceeded
     '''
     best_phiset = None
     best_error = None
     for k in range(max_nretries):
-        phiset = QuantumSignalProcessingPhases(pcoefs=pcoefs, max_nretries=0, verbose=False, model=model)
-        qspr = response.ComputeQSPResponse(phiset, model=model, npts=100, align_first_point_phase=False)
+        phiset = QuantumSignalProcessingPhases(
+            pcoefs=pcoefs, max_nretries=0, verbose=False, model=model)
+        qspr = response.ComputeQSPResponse(
+            phiset, model=model, npts=100, align_first_point_phase=False)
         adat = qspr['adat']
         pdat = qspr['pdat']
         poly = np.polynomial.Polynomial(pcoefs)
         expected = poly(adat)
         if 0:
             def error_func(b):
-                return abs(expected - np.real(pdat * np.exp((0+1j)*b))).mean()
-            res = scipy.optimize.minimize(error_func, (0,), bounds=[(-np.pi, np.pi)])
+                return abs(
+                    expected -
+                    np.real(
+                        pdat *
+                        np.exp(
+                            (0 +
+                             1j) *
+                            b))).mean()
+            res = scipy.optimize.minimize(
+                error_func, (0,), bounds=[
+                    (-np.pi, np.pi)])
             bmin = res.x
             print(f"bin={bmin}, error at bmin={error_func(bmin)}")
             phiset[-1] = phiset[-1] + bmin
-            qspr = response.ComputeQSPResponse(phiset, model=model, npts=100, align_first_point_phase=False)
+            qspr = response.ComputeQSPResponse(
+                phiset, model=model, npts=100, align_first_point_phase=False)
             pdat = qspr['pdat']
             avg_error = abs(expected - np.real(pdat)).mean()
         else:
             avg_error = abs(expected - np.real(pdat)).mean()
-        print(f"[QuantumSignalProcessingPhases]                    avg_error={avg_error}")
+        print(
+            f"[QuantumSignalProcessingPhases]                    avg_error={avg_error}")
         if avg_error < tolerance:
             print(f"[QuantumSignalProcessingPhases]     QSP angles = {phiset}")
             return phiset
@@ -99,21 +131,32 @@ def QuantumSignalProcessingPhasesOptimizer(pcoefs=None, max_nretries=1, toleranc
             best_error = avg_error
             best_phiset = phiset
     phiset = best_phiset
-    print(f"[QuantumSignalProcessingPhases] failed to obtain phases with avg_error less than tolerance {tolerance}, aborting with best set, err={best_error}")
+    print(
+        f"[QuantumSignalProcessingPhases] failed to obtain phases with avg_error less than tolerance {tolerance}, aborting with best set, err={best_error}")
     print(f"[QuantumSignalProcessingPhases]    QSP angles = {phiset}")
     return phiset
-    
 
-def QuantumSignalProcessingWzPhases(pcoefs=None, max_nretries=1, tolerance=0.1, verbose=True):
+
+def QuantumSignalProcessingWzPhases(
+        pcoefs=None,
+        max_nretries=1,
+        tolerance=0.1,
+        verbose=True):
     '''
     Generate QSP phase angles for the Laurent polynomial specified by pcoefs.
     '''
     return angle_sequence(pcoefs)
 
-def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, eps=1e-4, suc=1-1e-4, verbose=True):
+
+def QuantumSignalProcessingWxPhases(
+        pcoefs=None,
+        laurent_poly=None,
+        eps=1e-4,
+        suc=1 - 1e-4,
+        verbose=True):
     '''
-    Take a polynomial P(a) as specified by pcoefs, convert to Laurent Poly, 
-    complete to find Q Laurent Poly, perform Hadamard transform to get P' = P + Q.  
+    Take a polynomial P(a) as specified by pcoefs, convert to Laurent Poly,
+    complete to find Q Laurent Poly, perform Hadamard transform to get P' = P + Q.
     Generate QSP phases for P'
     These phases should be the QSP phases for the W(x) = Rx convention of QSP.
 
@@ -127,10 +170,11 @@ def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, eps=1e-4, su
         # determine parity of polynomial
         is_even = np.max(np.abs(cheb_coefs[0::2])) > 1e-8
         is_odd = np.max(np.abs(cheb_coefs[1::2])) > 1e-8
-        
+
         if is_even and is_odd:
-            raise Exception(f"[QuantumSignalProcessingWxPhases] Polynomial must have definite parity: {str(pcoefs)}")
-        
+            raise Exception(
+                f"[QuantumSignalProcessingWxPhases] Polynomial must have definite parity: {str(pcoefs)}")
+
         if is_odd:
             p = cheb_coefs[1::2] / 2
             p = np.r_[p[::-1], p]
@@ -139,14 +183,19 @@ def QuantumSignalProcessingWxPhases(pcoefs=None, laurent_poly=None, eps=1e-4, su
             p = np.r_[p[-1:0:-1], 2 * p[0], p[1:]]
     else:
         p = laurent_poly
-        
+
     return angle_sequence(p, eps=eps, suc=suc)
 
 
-def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretries=1, tolerance=0.1, verbose=True):
+def QuantumSignalProcessingWxPhasesOld(
+        pcoefs=None,
+        laurent_poly=None,
+        max_nretries=1,
+        tolerance=0.1,
+        verbose=True):
     '''
-    Take a polynomial P(a) as specified by pcoefs, convert to Laurent Poly, 
-    complete to find Q Laurent Poly, perform Hadamard transform to get P' = P + Q.  
+    Take a polynomial P(a) as specified by pcoefs, convert to Laurent Poly,
+    complete to find Q Laurent Poly, perform Hadamard transform to get P' = P + Q.
     Generate QSP phases for P'
     These phases should be the QSP phases for the W(x) = Rx convention of QSP.
 
@@ -156,11 +205,12 @@ def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretr
     The QSP phases returned are for the Wx QSP convention (signal unitaries are X-rotations and QSP phases are Z-rotations)
     '''
     if max_nretries > 1 and (pcoefs is not None):
-        return QuantumSignalProcessingPhasesOptimizer(pcoefs,
-                                                      max_nretries=max_nretries,
-                                                      tolerance=tolerance,
-                                                      verbose=verbose,
-                                                      model=model)
+        return QuantumSignalProcessingPhasesOptimizer(
+            pcoefs,
+            max_nretries=max_nretries,
+            tolerance=tolerance,
+            verbose=verbose,
+            model=model)
 
     if laurent_poly is not None:
         Plp = laurent_poly
@@ -173,8 +223,10 @@ def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretr
     suc = 1 - 1.0e-4
     p = Plp
 
-    # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
-    p_new = suc * (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
+    # Capitalization: eps/2 amount of error budget is put to the highest power
+    # for sake of numerical stability.
+    p_new = suc * \
+        (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
 
     if verbose:
         print(f"Laurent P poly {Plp}")
@@ -182,7 +234,7 @@ def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretr
     Qlp = Qalg.XPoly
     if verbose:
         print(f"Laurent Q poly {Qlp}")
-    
+
     if 1:
         Pprime_lp = Plp + Qlp
         Qprime_lp = Plp - Qlp
@@ -191,11 +243,11 @@ def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretr
         Pi = 0.5 * (Plp - ~Plp)
         Qr = 0.5 * (Qlp + ~Qlp)
         Qi = 0.5 * (Qlp - ~Qlp)
-        Pprime_lp = Pr + Qr.pos_half() - Qr.neg_half() 
+        Pprime_lp = Pr + Qr.pos_half() - Qr.neg_half()
         Qprime_lp = Pi + Qi.pos_half() - Qi.neg_half()
     else:
-        Pprime_lp =  0.5 * (Plp + (~Plp) - (Qlp + (~Qlp)))
-        Qprime_lp = -0.5 * (Plp - (~Plp) +  Qlp - (~Qlp) )
+        Pprime_lp = 0.5 * (Plp + (~Plp) - (Qlp + (~Qlp)))
+        Qprime_lp = -0.5 * (Plp - (~Plp) + Qlp - (~Qlp))
     if verbose:
         print(f"Laurent Pprime poly {Pprime_lp}")
 
@@ -204,8 +256,9 @@ def QuantumSignalProcessingWxPhasesOld(pcoefs=None, laurent_poly=None, max_nretr
     seq = decomposition.angseq(g)
 
     g_recon = LPoly.LAlg.unitary_from_angles(seq)
-    final_error = (1/suc * g_recon.IPoly - Pprime_lp).inf_norm
-    print(f"[QuantumSignalProcessingWxPhases] Reconstruction from QSP angles error = {final_error}")
+    final_error = (1 / suc * g_recon.IPoly - Pprime_lp).inf_norm
+    print(
+        f"[QuantumSignalProcessingWxPhases] Reconstruction from QSP angles error = {final_error}")
     if verbose:
         print(f"QSP angles = {seq}")
     seq = np.array(seq)

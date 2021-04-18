@@ -1,6 +1,7 @@
 import numpy
 PRES = 5000
 
+
 class LPoly():
     '''
     Laurent polynomials with parity constraint.
@@ -57,7 +58,17 @@ class LPoly():
 
     @property
     def curve(self):
-        values = numpy.exp(numpy.outer(numpy.linspace(-self.parity * 1j * numpy.pi, 1j*numpy.pi, PRES), range(self.dmin, self.dmax+1, 2))).dot(self.coefs)
+        values = numpy.exp(
+            numpy.outer(
+                numpy.linspace(
+                    -self.parity * 1j * numpy.pi,
+                    1j * numpy.pi,
+                    PRES),
+                range(
+                    self.dmin,
+                    self.dmax + 1,
+                    2))).dot(
+            self.coefs)
         return numpy.real(values), numpy.imag(values)
 
     def __getitem__(self, key):
@@ -117,16 +128,18 @@ class LPoly():
     def __str__(self):
         return " + ".join(["{} * w ^ ({})".format(self.coefs[i],
                                                   self.dmin + 2 * i)
-                          for i in range(len(self.coefs))])
+                           for i in range(len(self.coefs))])
 
     def aligned(self, dmin, dmax):
         if(self.iszero):
-            return numpy.zeros((dmax-dmin)//2 + 1)
+            return numpy.zeros((dmax - dmin) // 2 + 1)
         else:
-            assert (dmin <= self.dmin) and (dmax >= self.dmax), "interval not valid"
-            return numpy.hstack((numpy.zeros((self.dmin - dmin)//2),
+            assert (
+                dmin <= self.dmin) and (
+                dmax >= self.dmax), "interval not valid"
+            return numpy.hstack((numpy.zeros((self.dmin - dmin) // 2),
                                  numpy.array(self.coefs),
-                                 numpy.zeros((dmax - self.dmax)//2)))
+                                 numpy.zeros((dmax - self.dmax) // 2)))
 
     def eval(self, angles):
         '''
@@ -134,14 +147,24 @@ class LPoly():
         '''
         if self.iszero:
             return 1
-        res = self.coefs.dot(numpy.exp(1j*numpy.outer(numpy.arange(self.dmin, self.dmax + 1, 2), angles)))
+        res = self.coefs.dot(
+            numpy.exp(
+                1j *
+                numpy.outer(
+                    numpy.arange(
+                        self.dmin,
+                        self.dmax +
+                        1,
+                        2),
+                    angles)))
         return res
 
     @classmethod
     def truncate(cls, p, dmin, dmax):
         lb = min(dmin, p.dmin)
         ub = max(dmax, p.dmax)
-        return LPoly(p.aligned(lb, ub+2)[(dmin-lb) // 2:(dmax-ub)//2-1], dmin)
+        return LPoly(p.aligned(lb, ub + 2)
+                     [(dmin - lb) // 2:(dmax - ub) // 2 - 1], dmin)
 
     @classmethod
     def isconsistent(cls, a, b):
@@ -154,7 +177,7 @@ class LPoly():
     def __eq__(self, other):
         '''
         Equality test between two LPoly instances.
-        Note that this doesn't check for when two LPoly's are equal but have different dmin 
+        Note that this doesn't check for when two LPoly's are equal but have different dmin
         and different coefficients, e.g. because of zeros in the coefficients
         '''
         iseq = abs(self.coefs - other.coefs).sum() < 0.001
@@ -173,7 +196,7 @@ class LPoly():
         The negative (and zero) exponent coefficients are set to zero.
         '''
         new_coefs = numpy.copy(self.coefs)
-        nhalf = int(numpy.ceil(len(new_coefs)/2))
+        nhalf = int(numpy.ceil(len(new_coefs) / 2))
         new_coefs[:nhalf] = 0
         return LPoly(new_coefs, self.dmin)
 
@@ -183,7 +206,7 @@ class LPoly():
         The positive exponent coefficients are set to zero.
         '''
         new_coefs = numpy.copy(self.coefs)
-        nhalf = int(numpy.ceil(len(new_coefs)/2))
+        nhalf = int(numpy.ceil(len(new_coefs) / 2))
         new_coefs[nhalf:] = 0
         return LPoly(new_coefs, self.dmin)
 
@@ -265,7 +288,7 @@ class LAlg():
         For degree 0 element M, the corresponding angle is defined such that M \propto exp(angle * iX).
         '''
         assert (self.degree == 0), "deg = {}".format(self.degree)
-        return numpy.angle(self.IPoly[0]+self.XPoly[0]*1j)
+        return numpy.angle(self.IPoly[0] + self.XPoly[0] * 1j)
 
     @property
     def left_and_right_angles(self):
@@ -274,8 +297,12 @@ class LAlg():
         Note that g(Id) = exp((a + b) * iX) and g(iZ) = exp((a-b) * iX) * iZ.
         '''
         assert self.degree == 1
-        summation = numpy.angle(self.IPoly.eval(0)[0] + 1j * self.XPoly.eval(0)[0])
-        difference = numpy.angle(self.IPoly.eval(numpy.pi / 2)[0] - 1j * self.XPoly.eval(numpy.pi / 2)[0]) - numpy.pi / 2
+        summation = numpy.angle(
+            self.IPoly.eval(0)[0] +
+            1j *
+            self.XPoly.eval(0)[0])
+        difference = numpy.angle(self.IPoly.eval(
+            numpy.pi / 2)[0] - 1j * self.XPoly.eval(numpy.pi / 2)[0]) - numpy.pi / 2
         res = [(summation + difference) / 2, (summation - difference) / 2]
         return res
 
@@ -324,7 +351,8 @@ class LAlg():
             res = res * w * cls.rotation(i)
         return res
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 def PolynomialToLaurentForm(coefs):
     '''
@@ -335,22 +363,23 @@ def PolynomialToLaurentForm(coefs):
     '''
     lp = LPoly([])
     for k, c in enumerate(coefs):
-        if c==0:
+        if c == 0:
             continue
-        if k==0:
+        if k == 0:
             lpcoefs = [1]
             dmin = 0
         else:
-            lpcoefs = [1/2, 1/2]
+            lpcoefs = [1 / 2, 1 / 2]
             dmin = -1
         nlp = LPoly(lpcoefs, dmin)
-        for j in range(k-1):
+        for j in range(k - 1):
             nlp = nlp * LPoly(lpcoefs, dmin)
         lp = lp + c * nlp
     return lp
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Definition of elements
+
 
 Id = LPoly([1])
 w = LPoly([1], 1)

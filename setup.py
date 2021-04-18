@@ -1,11 +1,13 @@
 import glob
 from setuptools import setup
 
+
 def findfiles(pat):
     return [x for x in glob.glob('share/' + pat)]
 
+
 data_files = [
-    ]
+]
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -28,8 +30,8 @@ setup(
     entry_points={
         'console_scripts': [
             'pyqsp = pyqsp.main:CommandLine',
-            ],
-        },
+        ],
+    },
     install_requires=['numpy',
                       'scipy',
                       ],

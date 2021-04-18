@@ -2,10 +2,11 @@ import os
 import numpy as np
 from pyqsp import main
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # unit tests
 
 import unittest
+
 
 class Test_main(unittest.TestCase):
 

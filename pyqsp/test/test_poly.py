@@ -6,10 +6,11 @@ from pyqsp import LPoly
 from pyqsp import response
 from pyqsp import angle_sequence
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # unit tests
 
 import unittest
+
 
 class Test_poly(unittest.TestCase):
 
@@ -19,8 +20,8 @@ class Test_poly(unittest.TestCase):
         # print(f"gp={gp}")
         print(f"gp(0.5) = {gp(0.5)}")
         assert abs(gp(0.5) - 2) < 0.01
-        assert abs(gp(0.3) - 1/(0.3)) < 0.01
-    
+        assert abs(gp(0.3) - 1 / (0.3)) < 0.01
+
     def test_oneoverx1(self):
         '''
         unit test to ensure that the polynomial approximation to 1/x really is close to 1/x
@@ -28,10 +29,14 @@ class Test_poly(unittest.TestCase):
         kappa = 3
         epsilon = 0.01
         pg = pyqsp.poly.PolyOneOverX()
-        gpoly = pg.generate(kappa, epsilon, return_coef=False, ensure_bounded=False)
-        xpos = np.linspace(1/kappa, 1)
+        gpoly = pg.generate(
+            kappa,
+            epsilon,
+            return_coef=False,
+            ensure_bounded=False)
+        xpos = np.linspace(1 / kappa, 1)
         xval = np.concatenate([-xpos, xpos])
-        expected = 1/xval
+        expected = 1 / xval
         polyval = gpoly(xval)
         diff = abs(polyval - expected).mean()
         print(f"diff={diff}")
@@ -62,7 +67,7 @@ class Test_poly(unittest.TestCase):
         assert (poly(-0.9) < 0.1)
         assert (poly(0) > 0.3)
         assert (poly(0.9) < 0.1)
-        
+
     def test_poly_gibbs1(self):
         pg = pyqsp.poly.PolyGibbs()
         pcoefs = pg.generate(30, 4.5)
@@ -71,7 +76,7 @@ class Test_poly(unittest.TestCase):
         print(f"gibbs poly at 0 = {poly(0)}")
         assert (poly(0.9) < 0.3)
         assert (poly(0) > 0.9)
-        
+
     def test_poly_efilter1(self):
         pg = pyqsp.poly.PolyEigenstateFiltering()
         pcoefs = pg.generate(20, 0.2, 0.9)
@@ -80,7 +85,3 @@ class Test_poly(unittest.TestCase):
         print(f"ef poly at 0 = {poly(0)}")
         assert (poly(0.9) < 0.1)
         assert (poly(0) > 0.7)
-        
-        
-        
-        
