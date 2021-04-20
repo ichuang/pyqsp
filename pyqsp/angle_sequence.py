@@ -1,10 +1,9 @@
 import time
+
 import numpy as np
 import scipy.optimize
-from pyqsp import LPoly
-from pyqsp import completion
-from pyqsp import decomposition
-from pyqsp import response
+
+from pyqsp import LPoly, completion, decomposition, response
 
 
 def angle_sequence(p, eps=1e-4, suc=1 - 1e-4):
@@ -21,7 +20,8 @@ def angle_sequence(p, eps=1e-4, suc=1 - 1e-4):
     # Capitalization: eps/2 amount of error budget is put to the highest power
     # for sake of numerical stability.
     p_new = suc * \
-        (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
+        (p + LPoly.LPoly([eps / 4], p.degree) +
+         LPoly.LPoly([eps / 4], -p.degree))
 
     # Completion phase
     t = time.time()
@@ -185,82 +185,3 @@ def QuantumSignalProcessingWxPhases(
         p = laurent_poly
 
     return angle_sequence(p, eps=eps, suc=suc)
-
-
-def QuantumSignalProcessingWxPhasesOld(
-        pcoefs=None,
-        laurent_poly=None,
-        max_nretries=1,
-        tolerance=0.1,
-        verbose=True):
-    '''
-    Take a polynomial P(a) as specified by pcoefs, convert to Laurent Poly,
-    complete to find Q Laurent Poly, perform Hadamard transform to get P' = P + Q.
-    Generate QSP phases for P'
-    These phases should be the QSP phases for the W(x) = Rx convention of QSP.
-
-    pcoefs       - a list, with coefficients for [constant, a, a^2, a^3, ...]
-    laurent_poly - if provided, use this instead of pcoefs
-
-    The QSP phases returned are for the Wx QSP convention (signal unitaries are X-rotations and QSP phases are Z-rotations)
-    '''
-    if max_nretries > 1 and (pcoefs is not None):
-        return QuantumSignalProcessingPhasesOptimizer(
-            pcoefs,
-            max_nretries=max_nretries,
-            tolerance=tolerance,
-            verbose=verbose,
-            model=model)
-
-    if laurent_poly is not None:
-        Plp = laurent_poly
-    else:
-        if pcoefs is None:
-            pcoefs = [0, -3, 0, 4]		# default, as an example
-        Plp = LPoly.PolynomialToLaurentForm(pcoefs)
-
-    eps = 1.0e-4
-    suc = 1 - 1.0e-4
-    p = Plp
-
-    # Capitalization: eps/2 amount of error budget is put to the highest power
-    # for sake of numerical stability.
-    p_new = suc * \
-        (p + LPoly.LPoly([eps / 4], p.degree) + LPoly.LPoly([eps / 4], -p.degree))
-
-    if verbose:
-        print(f"Laurent P poly {Plp}")
-    Qalg = completion.completion_from_root_finding(p_new.coefs)
-    Qlp = Qalg.XPoly
-    if verbose:
-        print(f"Laurent Q poly {Qlp}")
-
-    if 1:
-        Pprime_lp = Plp + Qlp
-        Qprime_lp = Plp - Qlp
-    elif 0:
-        Pr = 0.5 * (Plp + ~Plp)
-        Pi = 0.5 * (Plp - ~Plp)
-        Qr = 0.5 * (Qlp + ~Qlp)
-        Qi = 0.5 * (Qlp - ~Qlp)
-        Pprime_lp = Pr + Qr.pos_half() - Qr.neg_half()
-        Qprime_lp = Pi + Qi.pos_half() - Qi.neg_half()
-    else:
-        Pprime_lp = 0.5 * (Plp + (~Plp) - (Qlp + (~Qlp)))
-        Qprime_lp = -0.5 * (Plp - (~Plp) + Qlp - (~Qlp))
-    if verbose:
-        print(f"Laurent Pprime poly {Pprime_lp}")
-
-    g = LPoly.LAlg(Pprime_lp, Qprime_lp)
-    # g = completion.completion_from_root_finding(Pprime_lp)
-    seq = decomposition.angseq(g)
-
-    g_recon = LPoly.LAlg.unitary_from_angles(seq)
-    final_error = (1 / suc * g_recon.IPoly - Pprime_lp).inf_norm
-    print(
-        f"[QuantumSignalProcessingWxPhases] Reconstruction from QSP angles error = {final_error}")
-    if verbose:
-        print(f"QSP angles = {seq}")
-    seq = np.array(seq)
-    # seq[0] = seq[0] - 0.25
-    return(seq)

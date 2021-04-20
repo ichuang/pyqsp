@@ -2,7 +2,7 @@ import numpy as np
 from numpy.polynomial.polynomial import Polynomial, polyfromroots
 from scipy.special import chebyt, chebyu
 
-from pyqsp.LPoly import Id, LAlg, LPoly, PolynomialToLaurentForm
+from pyqsp.LPoly import Id, LAlg, LPoly
 
 
 class CompletionError(Exception):
@@ -59,7 +59,6 @@ def _pq_completion(P):
         Polynomial object Q giving described unitary matrix.
     """
     pcoefs = P.coef
-    deg = pcoefs.size - 1
 
     P = Polynomial(pcoefs)
     Pc = Polynomial(pcoefs.conj())
@@ -107,7 +106,8 @@ def _pq_completion(P):
 
 def _fg_completion(F, seed):
     """
-    Find polynomial G given Laurent polynomial F such that the following matrix is unitary.
+    Find polynomial G given Laurent polynomial F such that the following matrix
+    is unitary.
     [[F(w), i G(w)],
       i G(1/w), F(1/w)]]
 
@@ -135,8 +135,10 @@ def _fg_completion(F, seed):
                 imag_roots.append(i)
     norm = poly[-1]
 
-    # Randomly choose whether to pick the real root (the pair of complex roots) inside or outside the unit circle.
-    # This is to reduce the range of the coefficients appearing in the final product.
+    # Randomly choose whether to pick the real root (the pair of complex roots)
+    #   inside or outside the unit circle.
+    # This is to reduce the range of the coefficients appearing in the final
+    #   product.
     degree = len(real_roots) + 2 * len(imag_roots)
     lst = []
     if seed is None:
@@ -166,7 +168,8 @@ def _fg_completion(F, seed):
 
 def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
     """
-    Find a Low Algebra element g such that the identity components are given by the input p.
+    Find a Low Algebra element g such that the identity components are given by
+    the input p.
 
     Args:
         coefs: Array corresponding to the (Laurent) polynomial coefficients.
@@ -231,6 +234,7 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
 
     if not success:
         raise CompletionError(
-            "Completion Failed. Input {} = {} could not be completed".format(coef_type, coefs))
+            "Completion Failed. Input {} = {} could not be completed".format(
+                coef_type, coefs))
 
     return LAlg(ipoly, xpoly)

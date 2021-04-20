@@ -1,10 +1,10 @@
-import os
 import unittest
 
 import numpy as np
 
-from pyqsp import LPoly
-from pyqsp.completion import *
+from pyqsp.completion import (CompletionError, cheb2poly,
+                              completion_from_root_finding, poly2cheb)
+from pyqsp.LPoly import LPoly, PolynomialToLaurentForm
 
 # -----------------------------------------------------------------------------
 # unit tests
@@ -13,7 +13,8 @@ from pyqsp.completion import *
 class Test_completion(unittest.TestCase):
     def test_completion_f_1(self):
         """
-        See if completion_from_root_finding can get the G polynomial, given the F polynomial in Laurent form
+        See if completion_from_root_finding can get the G polynomial,
+            given the F polynomial in Laurent form
         Test case: F = w should produce G = 0
         """
         lpcoefs = [0, 0, 1]
@@ -41,8 +42,10 @@ class Test_completion(unittest.TestCase):
 
     def test_completion_f_2(self):
         """
-        See if completion_from_root_finding can get the G polynomial, given the F polynomial in Laurent form
-        Test case: F = -1 + 2 a^2 should produce G = i * 2 a sqrt(1-a^2), which has Laurent poly (w^2 - w^(-2))/2
+        See if completion_from_root_finding can get the G polynomial,
+            given the F polynomial in Laurent form
+        Test case: F = -1 + 2 a^2 should produce G = i * 2 a sqrt(1-a^2),
+            which has Laurent poly (w^2 - w^(-2))/2
         """
         pcoefs = [-1, 0, 2]
         Plp = PolynomialToLaurentForm(pcoefs)
