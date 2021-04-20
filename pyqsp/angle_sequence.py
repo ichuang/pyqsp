@@ -25,7 +25,7 @@ def angle_sequence(p, eps=1e-4, suc=1 - 1e-4):
 
     # Completion phase
     t = time.time()
-    g = completion.completion_from_root_finding(p_new)
+    g = completion.completion_from_root_finding(p_new.coefs)
     t_comp = time.time()
     print("Completion part finished within time ", t_comp - t)
 
@@ -230,7 +230,7 @@ def QuantumSignalProcessingWxPhasesOld(
 
     if verbose:
         print(f"Laurent P poly {Plp}")
-    Qalg = completion.completion_from_root_finding(p_new)
+    Qalg = completion.completion_from_root_finding(p_new.coefs)
     Qlp = Qalg.XPoly
     if verbose:
         print(f"Laurent Q poly {Qlp}")
