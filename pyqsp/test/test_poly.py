@@ -1,15 +1,14 @@
 import os
+import unittest
+
 import numpy as np
+
 import pyqsp
-from pyqsp import poly
-from pyqsp import LPoly
-from pyqsp import response
-from pyqsp import angle_sequence
+from pyqsp import LPoly, angle_sequence, poly, response
 
 # -----------------------------------------------------------------------------
 # unit tests
 
-import unittest
 
 
 class Test_poly(unittest.TestCase):
@@ -45,9 +44,11 @@ class Test_poly(unittest.TestCase):
     def test_poly_one_over_x_response1(self):
         pg = pyqsp.poly.PolyOneOverX()
         pcoefs = pg.generate(3, 0.3, return_coef=True, ensure_bounded=True)
-        phiset = angle_sequence.QuantumSignalProcessingWxPhases(pcoefs)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, signal_operator="Wx")
         print(f"QSP angles = {phiset}")
-        response.PlotQSPResponse(phiset, model="Wx", pcoefs=pcoefs, show=False)
+        response.PlotQSPResponse(
+            phiset, signal_operator="Wx", pcoefs=pcoefs, show=False)
         assert True
 
     def test_poly_sign1(self):

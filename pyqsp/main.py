@@ -1,11 +1,10 @@
+import argparse
+import json
 import os
 import sys
-import json
+
 import pyqsp
-import argparse
-from pyqsp import ham_sim
-from pyqsp import response
-from pyqsp import angle_sequence
+from pyqsp import angle_sequence, ham_sim, response
 from pyqsp.phases import phase_generators
 from pyqsp.poly import polynomial_generators
 
@@ -42,8 +41,8 @@ Commands:
 Examples:
 
     pyqsp --poly=-1,0,2 poly2angles
-    pyqsp --poly=-1,0,2 --plot --align-first-point-phase poly2angles
-    pyqsp --model=Wz --poly=0,0,0,1 --plot  poly2angles
+    pyqsp --poly=-1,0,2 --plot poly2angles
+    pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot  poly2angles
     pyqsp --plot --tau 10 hamsim
     pyqsp --plot --tolerance=0.01 invert
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
@@ -73,8 +72,8 @@ Examples:
         dest='verbose')
     parser.add_argument("-o", "--output", help="output filename", default="")
     parser.add_argument(
-        "--model",
-        help="QSP sequence model, either Wx (signal is X rotations) or Wz (signal is Z rotations)",
+        "--signal_operator",
+        help="QSP sequence signal_operator, either Wx (signal is X rotations) or Wz (signal is Z rotations)",
         type=str,
         default="Wx")
     parser.add_argument(
@@ -135,10 +134,6 @@ Examples:
         action="store",
         type=float_list)
     parser.add_argument(
-        "--align-first-point-phase",
-        help="when plotting change overall complex phase such that the first point has zero phase",
-        action="store_true")
-    parser.add_argument(
         "--plot-magnitude",
         help="when plotting only show magnitude, instead of separate imaginary and real components",
         action="store_true")
@@ -164,11 +159,6 @@ Examples:
         type=int,
         default=100)
     parser.add_argument(
-        "--niter",
-        help="number of iterations to use in trying to compute phase angles",
-        type=int,
-        default=2)
-    parser.add_argument(
         "--tolerance",
         help="error tolerance for phase angle optimizer",
         type=float,
@@ -178,8 +168,7 @@ Examples:
         args = parser.parse_args(arglist)
 
     phiset = None
-    plot_args = dict(align_first_point_phase=args.align_first_point_phase,
-                     plot_magnitude=args.plot_magnitude,
+    plot_args = dict(plot_magnitude=args.plot_magnitude,
                      plot_positive_only=args.plot_positive_only,
                      plot_real_only=args.plot_real_only,
                      plot_tight_y=args.plot_tight_y,
@@ -197,15 +186,15 @@ Examples:
             coefs = list(map(float, coefs.split(",")))
         print(f"[pyqsp] polynomial coefficients={coefs}")
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            coefs, model=args.model)
+            coefs, signal_operator=args.signal_operator)
         if args.plot:
             response.PlotQSPResponse(
-                phiset, pcoefs=coefs, model=args.model, **plot_args)
+                phiset, pcoefs=coefs, signal_operator=args.signal_operator, **plot_args)
 
     elif args.cmd == "hamsim":
         phiset, telapsed = ham_sim.ham_sim(args.tau, 1.0e-4, 1 - 1.0e-4)
         if args.plot:
-            response.PlotQSPResponse(phiset, model="Wz", **plot_args)
+            response.PlotQSPResponse(phiset, signal_operator="Wz", **plot_args)
 
     elif args.cmd == "invert":
         pg = pyqsp.poly.PolyOneOverX()
@@ -215,11 +204,14 @@ Examples:
             return_coef=True,
             ensure_bounded=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, max_nretries=args.niter, tolerance=args.tolerance)
+            pcoefs, tolerance=args.tolerance)
         if args.plot:
             response.PlotQSPResponse(
-                phiset, pcoefs=pcoefs, model="Wx", **plot_args)
-
+                phiset,
+                pcoefs=pcoefs,
+                signal_operator="Wx",
+                title="Inversion",
+                **plot_args)
     elif args.cmd == "poly":
         if not args.polyname or args.polyname not in polynomial_generators:
             print(
@@ -232,10 +224,10 @@ Examples:
         pcoefs = pg.generate(*args.polyargs)
         print(f"[pyqsp] polynomial coefs = {pcoefs}")
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, max_nretries=args.niter, tolerance=args.tolerance)
+            pcoefs, tolerance=args.tolerance)
         if args.plot:
             response.PlotQSPResponse(
-                phiset, pcoefs=pcoefs, model="Wx", **plot_args)
+                phiset, pcoefs=pcoefs, signal_operator="Wx", **plot_args)
 
     elif args.cmd == "angles":
         if not args.seqname or args.seqname not in phase_generators:
@@ -249,7 +241,7 @@ Examples:
         phiset = pg.generate(*args.seqargs)
         print(f"[pysqp] phiset={phiset}")
         if args.plot:
-            response.PlotQSPResponse(phiset, model="Wx", **plot_args)
+            response.PlotQSPResponse(phiset, signal_operator="Wx", **plot_args)
 
     else:
         print(f"[pyqsp.main] Unknown command {args.cmd}")
@@ -259,6 +251,7 @@ Examples:
         if args.return_angles:
             return phiset
         if args.output_json:
-            print(f"QSP Phase angles (for model={args.model}) in JSON format:")
+            print(
+                f"QSP Phase angles (for signal_operator={args.signal_operator}) in JSON format:")
             phiset = phiset.tolist()
             print(json.dumps(phiset, indent=4))

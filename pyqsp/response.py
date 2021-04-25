@@ -3,69 +3,82 @@ import numpy as np
 import scipy.linalg
 
 
+class ResponseError(Exception):
+    pass
+
+
 def ComputeQSPResponse(
+        adat,
         phiset,
-        model="Wx",
-        npts=100,
-        align_first_point_phase=True,
-        positive_only=False):
-    '''
+        signal_operator="Wx",
+        measurement=None):
+    """
     Compute QSP response.
 
-    Model can be:
-        Wx - phases do z-rotations and signal does x-rotations
-        Wz - phases do x-rotations and signal does z-rotations
-        WxH - phases do z-rotations and signal does x-rotations, but conjugate by Hadamard at the end
+    Args:
+        adat: array of inputs to the polynomial
+        phiset: array of QSP phases
+        signal_operator: QSP signal-dependent operation ['Wx', 'Wz']
+        measurement: measurement basis (defaults to signal operator basis)
 
-    Return dict with
-    { adat: 1-d array of a-values,
-      pdat: array of complex-valued U[0,0] values
-      model: model
-    }
-
-    positive_only: if True, then only use positive a (polynomial argument) values
-    '''
-    if positive_only:
-        adat = np.linspace(0, 1, npts)
-    else:
-        adat = np.linspace(-1, 1, npts)
+    Returns:
+        Response object.
+    """
     pdat = []
-    sz = np.matrix([[1, 0], [0, -1]])
-    sx = np.matrix([[0, 1], [1, 0]])
-    H = (sx + sz) / np.sqrt(2)
-    if model in ["Wx", "WxH"]:
-        s_phase = sz
-        p_state = np.matrix([[1], [1]]) / np.sqrt(2)
-    elif model == "Wz":
-        s_phase = sx
-        p_state = np.matrix([[1], [0]])
+
+    if measurement is None:
+        if signal_operator == "Wx":
+            measurement = "x"
+        elif signal_operator == "Wz":
+            measurement = "z"
+
+    # define model parameters
+    model = (signal_operator, measurement)
+    if signal_operator == "Wx":
+        def sig_op(a): return np.array(
+            [[a, 1j * np.sqrt(1 - a**2)],
+             [1j * np.sqrt(1 - a**2), a]])
+
+        def qsp_op(phi): return np.array(
+            [[np.exp(1j*phi), 0.],
+             [0., np.exp(-1j*phi)]])
+    elif signal_operator == "Wz":
+        H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+
+        def sig_op(a): return H @ np.array(
+            [[a, 1j * np.sqrt(1 - a**2)],
+             [1j * np.sqrt(1 - a**2), a]]) @ H
+
+        def qsp_op(phi): return H @ np.array(
+            [[np.exp(1j*phi), 0.],
+             [0., np.exp(-1j*phi)]]) @ H
     else:
-        raise Exception(
-            f"[PlotQSPRsponse] model={model} unknown - must be Wx (signal is x-rot) or Wz (signal is z-rot)")
-    i = (0 + 1j)
+        raise ResponseError(
+            "Invalid signal_operator: {}".format(signal_operator)
+        )
+
+    if measurement == "x":
+        p_state = np.array([[1.], [1.]]) / np.sqrt(2)
+    elif measurement == "z":
+        p_state = np.array([[1.], [0.]])
+    else:
+        raise ResponseError(
+            "Invalid measurement: {}".format(measurement)
+        )
+
+    # Compute response
     pmats = []
     for phi in phiset:
-        pmats.append(scipy.linalg.expm(i * phi * s_phase))
-    # print(f"pm[-1] = {pmats[-1]}")
+        pmats.append(qsp_op(phi))
+
     for a in adat:
-        ao = i * np.sqrt(1 - a**2)
-        if model in ["Wx", "WxH"]:
-            W = np.matrix([[a, ao], [ao, a]])
-        elif model == "Wz":
-            W = np.matrix([[a, ao], [ao, a]])
-            W = H @ W @ H
-            # W = np.matrix([[a, 0], [0, -i * ao]])
+        W = sig_op(a)
         U = pmats[0]
         for pm in pmats[1:]:
             U = U @ W @ pm
-        if model == "WxH":
-            U = H @ U @ H
         pdat.append((p_state.T @ U @ p_state)[0, 0])
 
     pdat = np.array(pdat, dtype=np.complex128)
-    if align_first_point_phase:
-        pdat = pdat * \
-            np.exp(i * np.arctan2(np.imag(pdat[0]), np.real(pdat[0])))
 
     ret = {'adat': adat,
            'pdat': pdat,
@@ -77,34 +90,49 @@ def ComputeQSPResponse(
 
 def PlotQSPResponse(
         phiset,
-        model="Wx",
+        signal_operator="Wx",
+        measurement=None,
         npts=100,
         pcoefs=None,
         target=None,
         show=True,
-        align_first_point_phase=False,
+        title=None,
         plot_magnitude=False,
         plot_positive_only=False,
         plot_real_only=False,
         plot_tight_y=False):
-    '''
-    Generate plot of QSP response function polynomial, i.e. Re( <0| U |0> )
-    For values of model, see ComputeQSPResponse.
+    """
+    Plot QSP response.
 
-    pcoefs - coefficients for expected polynomial response; will be plotted, if provided
-    target - reference function, if provided
-    align_first_point_phase - if True, change the complex phase of phase such that the first point has phase angle zero
-    plot_magnitude - if True, show magnitude instead of real and imaginary parts
-    plot_positive_only - if True, then only show positive ordinate values
-    plot_tight_y - if True, set y-axis scale to be from min to max of real part; else go from +1.5 max to -1.5 max
-    '''
-    qspr = ComputeQSPResponse(
-        phiset,
-        model,
-        npts,
-        align_first_point_phase=align_first_point_phase,
-        positive_only=plot_positive_only)
-    adat = qspr['adat']
+    Args:
+        phiset: array of QSP phases
+        signal_operator: QSP signal-dependent operation ['Wx', 'Wz']
+        measurement: measurement basis (defaults to signal operator basis)
+        npts: number of points to plot
+        pcoefs: coefficients for expected polynomial response; will be plotted,
+        if provided
+        target: reference function, if provided
+        show: call show function
+        title: plot title, if provided
+        plot_magnitude: if True, show magnitude instead of real and imaginary
+            parts
+        plot_positive_only: if True, then only show positive ordinate values
+        plot_real_only: if Truw, show only real part
+        plot_tight_y: if True, set y-axis scale to be from min to max of real
+            part; else go from +1.5 max to -1.5 max
+
+    Returns:
+        Response object.
+    """
+    if plot_positive_only:
+        adat = np.linspace(0., 1., npts)
+    else:
+        adat = np.linspace(-1., 1., npts)
+
+    qspr = ComputeQSPResponse(adat,
+                              phiset,
+                              signal_operator=signal_operator,
+                              measurement=measurement)
     pdat = qspr['pdat']
 
     plt.figure(figsize=[8, 5])
@@ -112,25 +140,30 @@ def PlotQSPResponse(
     if pcoefs is not None:
         poly = np.polynomial.Polynomial(pcoefs)
         expected = poly(adat)
-        plt.plot(adat, expected, 'b', label="target polynomial")
+        plt.plot(adat, expected, 'k-', label="target polynomial",
+                 linewidth=3, alpha=0.5)
 
     if target is not None:
         L = np.max(np.abs(adat))
         xref = np.linspace(-L, L, 101)
-        plt.plot(xref, target(xref), 'k', label="target function")
+        plt.plot(xref, target(xref), 'k--', label="target function",
+                 linewidth=3, alpha=0.5)
 
     if plot_magnitude:
-        plt.plot(adat, abs(pdat), 'b', label="abs(P)")
+        plt.plot(adat, abs(pdat), 'r', label="abs[F(a)]")
     else:
-        plt.plot(adat, np.real(pdat), 'r', label="Re(P)")
+        plt.plot(adat, np.real(pdat), 'k', label="Re[F(a)]")
         if not plot_real_only:
-            plt.plot(adat, np.imag(pdat), 'g', label="Im(P)")
-    #plt.plot(adat, abs(pdat), 'k')
+            plt.plot(adat, np.imag(pdat), 'b', label="Im[F(a)]")
+    # plt.plot(adat, abs(pdat), 'k')
 
     # format plot
     plt.ylabel("response")
     plt.xlabel("a")
     plt.legend(loc="upper right")
+
+    if title is not None:
+        plt.title(title)
 
     ymax = np.max(np.abs(np.real(pdat)))
     ymin = np.min(np.abs(np.real(pdat)))
@@ -145,13 +178,14 @@ def PlotQSPResponse(
 
 
 def PlotQSPPhases(phiset, show=True):
-    '''
+    """
     Generate plot of QSP response function polynomial, i.e. Re( <0| U |0> )
     For values of model, see ComputeQSPResponse.
 
-    pcoefs - coefficients for expected polynomial response; will be plotted, if provided
+    pcoefs - coefficients for expected polynomial response; will be plotted,
+        if provided
     target - reference function, if provided
-    '''
+    """
     plt.figure(figsize=[8, 5])
 
     plt.stem(phiset, markerfmt='bo', basefmt='k-')

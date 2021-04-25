@@ -1,11 +1,12 @@
 import os
+import unittest
+
 import numpy as np
+
 from pyqsp import main
 
 # -----------------------------------------------------------------------------
 # unit tests
-
-import unittest
 
 
 class Test_main(unittest.TestCase):
@@ -16,12 +17,12 @@ class Test_main(unittest.TestCase):
         assert len(phiset)
 
     def test_main2(self):
-        cmdline = "--return-angles --poly=-1,0,2 --plot --hide-plot --align-first-point-phase poly2angles"
+        cmdline = "--return-angles --poly=-1,0,2 --plot --hide-plot poly2angles"
         phiset = main.CommandLine(arglist=cmdline.split(" "))
         assert len(phiset)
 
     def test_main3(self):
-        cmdline = "--return-angles --hide-plot --model=Wz --poly=0,0,0,1 --plot poly2angles"
+        cmdline = "--return-angles --hide-plot --signal_operator=Wz --poly=0,0,0,1 --plot poly2angles"
         phiset = main.CommandLine(arglist=cmdline.split(" "))
         assert len(phiset)
 

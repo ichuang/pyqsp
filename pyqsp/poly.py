@@ -1,6 +1,6 @@
 import numpy as np
-import scipy.special
 import scipy.optimize
+import scipy.special
 from scipy.interpolate import approximate_taylor_polynomial
 
 
@@ -92,7 +92,7 @@ class PolyOneOverX(PolyGenerator):
 
 class PolyTaylorSeries(PolyGenerator):
     '''
-    Base clas for PolySign and PolyThreshold
+    Base class for PolySign and PolyThreshold
     '''
 
     def taylor_series(
@@ -103,8 +103,10 @@ class PolyTaylorSeries(PolyGenerator):
             npts=100,
             max_scale=0.5):
         '''
-        Return numpy Polynomial approximation for func, constructed using taylor series, of specified degree.
-        Evaluate approximation using mean absolut difference on npts points in the domain from -1 to 1.
+        Return numpy Polynomial approximation for func, constructed using
+        taylor series, of specified degree.
+        Evaluate approximation using mean absolut difference on npts points in
+        the domain from -1 to 1.
         '''
         the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
         the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
@@ -131,25 +133,25 @@ class PolyTaylorSeries(PolyGenerator):
 class PolySign(PolyTaylorSeries):
 
     def help(self):
-        return "approximation to the sign function using erf(kappa*a) ; give degree and kappa"
+        return "approximation to the sign function using erf(delta*a) ; given epsilon and delta"
 
-    def generate(self, degree=7, kappa=2, ensure_bounded=True):
+    def generate(self, degree=7, delta=2, ensure_bounded=True):
         '''
         Approximation to sign function, using erf(kappa * x)
         '''
         degree = int(degree)
-        print(f"[pyqsp.poly.PolySign] degree={degree}, kappa={kappa}")
+        print(f"[pyqsp.poly.PolySign] degree={degree}, kappa={delta}")
         if not (degree % 2):
             raise Exception("[PolyErf] degree must be odd")
 
-        def erf_kappa(x):
-            return scipy.special.erf(x * kappa)
+        def erf_delta(x):
+            return scipy.special.erf(x * delta)
         the_poly = self.taylor_series(
-            erf_kappa,
+            erf_delta,
             degree,
             ensure_bounded=ensure_bounded,
             max_scale=0.5)
-        if kappa > 4:
+        if delta > 4:
             the_poly = 0.7 * the_poly  # smaller, to handle imperfect approximation
         pcoefs = the_poly.coef
         # force even coefficients to be zero, since the polynomial must be odd

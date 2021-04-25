@@ -1,7 +1,8 @@
 import time
+
 import numpy
 from scipy.special import jn
-from pyqsp.LPoly import LPoly
+
 from pyqsp.angle_sequence import angle_sequence
 
 
@@ -13,6 +14,7 @@ def hamiltonian_coefficients(tau, eps):
 def ham_sim(tau, eps, suc):
     t = time.time()
     a = hamiltonian_coefficients(tau, eps / 10)
+
     return angle_sequence(a, .9 * eps, suc), time.time() - t
 
 
