@@ -38,7 +38,8 @@ class PolyOneOverX(PolyGenerator):
             kappa=3,
             epsilon=0.1,
             return_coef=True,
-            ensure_bounded=True):
+            ensure_bounded=True,
+            return_scale=False):
         '''
         Approximation to 1/x polynomial, using sums of Chebyshev polynomials,
         from Quantum algorithm for systems of linear equations with exponentially
@@ -74,7 +75,7 @@ class PolyOneOverX(PolyGenerator):
                 scale = scale * 0.9
             else:
                 scale = scale * 0.5
-                print(f"[PolyOneOverX] bounding to 0.5")
+                print("[PolyOneOverX] bounding to 0.5")
             g = scale * g
 
         if return_coef:
@@ -83,9 +84,49 @@ class PolyOneOverX(PolyGenerator):
             else:
                 pcoefs = g.coef
             print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
-            return pcoefs
+            if ensure_bounded and return_scale:
+                return pcoefs, scale
+            else:
+                return pcoefs
 
         return g
+
+
+class PolyOneOverXRect(PolyGenerator):
+
+    def help(self):
+        return "Region of validity is from 1/kappa to 1, and from -1/kappa to -1.  Error is epsilon"
+
+    def generate(
+            self,
+            degree=6,
+            delta=2,
+            kappa=3,
+            epsilon=0.1,
+            ensure_bounded=True,
+            return_scale=False):
+
+        coefs_invert, scale1 = PolyOneOverX().generate(2*kappa,
+                                                       epsilon,
+                                                       ensure_bounded,
+                                                       return_scale=True)
+
+        coefs_rect, scale2 = PolyRect().generate(degree,
+                                                 delta,
+                                                 kappa,
+                                                 ensure_bounded,
+                                                 return_scale=True)
+
+        poly_invert = np.polynomial.Polynomial(coefs_invert)
+        poly_rect = np.polynomial.Polynomial(coefs_rect)
+
+        pcoefs = (poly_invert * poly_rect).coef
+
+        if return_scale:
+            return pcoefs, scale1 * scale2
+        else:
+            return pcoefs
+
 
 # -----------------------------------------------------------------------------
 
@@ -100,6 +141,7 @@ class PolyTaylorSeries(PolyGenerator):
             func,
             degree,
             ensure_bounded=True,
+            return_scale=False,
             npts=100,
             max_scale=0.5):
         '''
@@ -125,7 +167,10 @@ class PolyTaylorSeries(PolyGenerator):
         avg_err = abs(edat - pdat).mean()
         print(
             f"[PolyTaylorSeries] average error = {avg_err} in the domain [-1, 1] using degree {degree}")
-        return the_poly
+        if ensure_bounded and return_scale:
+            return the_poly, scale
+        else:
+            return the_poly
 
 # -----------------------------------------------------------------------------
 
@@ -133,62 +178,140 @@ class PolyTaylorSeries(PolyGenerator):
 class PolySign(PolyTaylorSeries):
 
     def help(self):
-        return "approximation to the sign function using erf(delta*a) ; given epsilon and delta"
+        return "approximation to the sign function using erf(delta*a) ; given delta"
 
-    def generate(self, degree=7, delta=2, ensure_bounded=True):
+    def generate(self, degree=7, delta=2, ensure_bounded=True, return_scale=False):
         '''
-        Approximation to sign function, using erf(kappa * x)
+        Approximation to sign function, using erf(delta * x)
         '''
         degree = int(degree)
-        print(f"[pyqsp.poly.PolySign] degree={degree}, kappa={delta}")
+        print(f"[pyqsp.poly.PolySign] degree={degree}, delta={delta}")
         if not (degree % 2):
             raise Exception("[PolyErf] degree must be odd")
 
         def erf_delta(x):
             return scipy.special.erf(x * delta)
-        the_poly = self.taylor_series(
-            erf_delta,
-            degree,
-            ensure_bounded=ensure_bounded,
-            max_scale=0.5)
-        if delta > 4:
-            the_poly = 0.7 * the_poly  # smaller, to handle imperfect approximation
+
+        if ensure_bounded and return_scale:
+            the_poly, scale = self.taylor_series(
+                erf_delta,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+        else:
+            the_poly = self.taylor_series(
+                erf_delta,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+
         pcoefs = the_poly.coef
         # force even coefficients to be zero, since the polynomial must be odd
         pcoefs[0::2] = 0
-        return pcoefs
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
 
 
 class PolyThreshold(PolyTaylorSeries):
 
     def help(self):
-        return "approximation to a thresholding function at threshold 1/2, using linear combination of erf(kappa * a); give degree and kappa"
+        return "approximation to a thresholding function at threshold 1/2, using linear combination of erf(delta * a); give degree and delta"
 
-    def generate(self, degree=6, kappa=2, ensure_bounded=True):
+    def generate(self,
+                 degree=6,
+                 delta=2,
+                 ensure_bounded=True,
+                 return_scale=False):
         '''
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
         degree = int(degree)
-        print(f"[pyqsp.poly.PolyThreshold] degree={degree}, kappa={kappa}")
+        print(f"[pyqsp.poly.PolyThreshold] degree={degree}, delta={delta}")
         if (degree % 2):
             raise Exception("[PolyThreshold] degree must be even")
 
-        def erf_kappa(x):
-            return scipy.special.erf(x * kappa)
+        def erf_delta(x):
+            return scipy.special.erf(x * delta)
 
         def threshold(x):
-            return (erf_kappa(x + 0.5) - erf_kappa(x - 0.5)) / 2
-        the_poly = self.taylor_series(
-            threshold,
-            degree,
-            ensure_bounded=ensure_bounded,
-            max_scale=0.5)
-        if kappa > 4:
-            the_poly = 0.7 * the_poly  # smaller, to handle imperfect approximation
+            return (erf_delta(x + 0.5) - erf_delta(x - 0.5)) / 2
+
+        if ensure_bounded and return_scale:
+            the_poly, scale = self.taylor_series(
+                threshold,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+        else:
+            the_poly = self.taylor_series(
+                threshold,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
-        return pcoefs
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
+
+
+class PolyRect(PolyTaylorSeries):
+
+    def help(self):
+        return "approximation to a thresholding function at threshold 1/2, using linear combination of erf(delta * a); give degree and delta"
+
+    def generate(self,
+                 degree=6,
+                 delta=2,
+                 kappa=3,
+                 ensure_bounded=True,
+                 return_scale=False):
+        '''
+        Approximation to threshold function at a=1/2; use a bandpass built from two erf's
+        '''
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolyThreshold] degree={degree}, delta={delta}")
+        if (degree % 2):
+            raise Exception("[PolyThreshold] degree must be even")
+
+        def erf_delta(x):
+            return scipy.special.erf(x * delta)
+
+        def rect(x):
+            return 1 - (erf_delta(x + 1 / kappa) - erf_delta(x - 1 / kappa)) / 2
+
+        if ensure_bounded and return_scale:
+            the_poly, scale = self.taylor_series(
+                rect,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+        else:
+            the_poly = self.taylor_series(
+                rect,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+
+        pcoefs = the_poly.coef
+        # force odd coefficients to be zero, since the polynomial must be even
+        pcoefs[1::2] = 0
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
+
 
 # -----------------------------------------------------------------------------
 

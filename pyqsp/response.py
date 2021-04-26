@@ -145,7 +145,7 @@ def PlotQSPResponse(
 
     if target is not None:
         L = np.max(np.abs(adat))
-        xref = np.linspace(-L, L, 101)
+        xref = np.linspace(-L, L, 401)
         plt.plot(xref, target(xref), 'k--', label="target function",
                  linewidth=3, alpha=0.5)
 

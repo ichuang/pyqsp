@@ -3,6 +3,8 @@ import json
 import os
 import sys
 
+import numpy as np
+
 import pyqsp
 from pyqsp import angle_sequence, ham_sim, response
 from pyqsp.phases import phase_generators
@@ -34,7 +36,7 @@ Commands:
 
     poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
     hamsim      - compute QSP phase angles for Hamiltonian simulation using the Jacobi-Anger expansion of exp(-i tau sin(2 theta))
-    invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given kappa and epsilon parameter values
+    invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
 
@@ -99,13 +101,18 @@ Examples:
         type=float,
         default=100)
     parser.add_argument(
+        "--delta",
+        help="parameter for polynomial approximation to the theshold function using erf(delta * x)",
+        type=float,
+        default=3)
+    parser.add_argument(
         "--kappa",
         help="parameter for polynomial approximation to 1/a, valid in the regions 1/kappa < a < 1 and -1 < a < -1/kappa",
         type=float,
         default=3)
     parser.add_argument(
         "--degree",
-        help="parameter for polynomial approximation to erf(kappa*x)",
+        help="parameter for polynomial approximation to erf(delta*x)",
         type=int,
         default=3)
     parser.add_argument(
@@ -198,20 +205,96 @@ Examples:
 
     elif args.cmd == "invert":
         pg = pyqsp.poly.PolyOneOverX()
-        pcoefs = pg.generate(
+        pcoefs, scale = pg.generate(
             args.kappa,
             args.epsilon,
             return_coef=True,
-            ensure_bounded=True)
+            ensure_bounded=True,
+            return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, tolerance=args.tolerance)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
-                pcoefs=pcoefs,
+                target=lambda x: scale * 1/x,
                 signal_operator="Wx",
                 title="Inversion",
                 **plot_args)
+
+    elif args.cmd == "poly_sign":
+        pg = pyqsp.poly.PolySign()
+        pcoefs, scale = pg.generate(
+            args.degree,
+            args.delta,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale * np.sign(x),
+                signal_operator="Wx",
+                title="Sign Function",
+                **plot_args)
+
+    elif args.cmd == "poly_thresh":
+        pg = pyqsp.poly.PolyThreshold()
+        pcoefs, scale = pg.generate(
+            args.degree,
+            args.delta,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale *
+                (np.sign(x + 0.5) - np.sign(x - 0.5)) / 2,
+                signal_operator="Wx",
+                title="Threshold Function",
+                **plot_args)
+
+    elif args.cmd == "poly_rect":
+        pg = pyqsp.poly.PolyRect()
+        pcoefs, scale = pg.generate(
+            args.degree,
+            args.delta,
+            args.kappa,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale *
+                1 - (np.sign(x + 1/args.kappa) -
+                     np.sign(x - 1/args.kappa)) / 2,
+                signal_operator="Wx",
+                title="Rect Function",
+                **plot_args)
+
+    elif args.cmd == "invert_rect":
+        pg = pyqsp.poly.PolyOneOverXRect()
+        pcoefs, scale = pg.generate(
+            args.degree,
+            args.delta,
+            args.kappa,
+            args.epsilon,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale * 1/x,
+                signal_operator="Wx",
+                title="Poly Rect * 1/x",
+                **plot_args)
+
     elif args.cmd == "poly":
         if not args.polyname or args.polyname not in polynomial_generators:
             print(
