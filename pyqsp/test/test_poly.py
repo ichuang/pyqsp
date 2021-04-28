@@ -10,7 +10,6 @@ from pyqsp import LPoly, angle_sequence, poly, response
 # unit tests
 
 
-
 class Test_poly(unittest.TestCase):
 
     def test_oneoverx0(self):
@@ -78,11 +77,34 @@ class Test_poly(unittest.TestCase):
         assert (poly(0.9) < 0.3)
         assert (poly(0) > 0.9)
 
-    def test_poly_efilter1(self):
-        pg = pyqsp.poly.PolyEigenstateFiltering()
-        pcoefs = pg.generate(20, 0.2, 0.9)
+    def test_poly_cosine(self):
+        tau = 10
+        epsilon = 0.1
+        pg = pyqsp.poly.PolyCosineTX()
+        pcoefs, scale = pg.generate(
+            tau,
+            epsilon,
+            return_coef=True,
+            ensure_bounded=True,
+            return_scale=True)
         poly = np.polynomial.Polynomial(pcoefs)
-        print(f"ef poly at 0.9 = {poly(0.9)}")
-        print(f"ef poly at 0 = {poly(0)}")
-        assert (poly(0.9) < 0.1)
-        assert (poly(0) > 0.7)
+
+        x = np.linspace(-1, 1)
+        self.assertTrue(
+            np.max(np.abs(poly(x) - scale * np.cos(tau * x))) < epsilon)
+
+    def test_poly_sine(self):
+        tau = 10
+        epsilon = 0.1
+        pg = pyqsp.poly.PolySineTX()
+        pcoefs, scale = pg.generate(
+            tau,
+            epsilon,
+            return_coef=True,
+            ensure_bounded=True,
+            return_scale=True)
+        poly = np.polynomial.Polynomial(pcoefs)
+
+        x = np.linspace(-1, 1)
+        self.assertTrue(
+            np.max(np.abs(poly(x) - scale * np.sin(tau * x))) < epsilon)

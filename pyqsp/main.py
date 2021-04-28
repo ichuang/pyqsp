@@ -1,12 +1,11 @@
 import argparse
 import json
-import os
 import sys
 
 import numpy as np
 
 import pyqsp
-from pyqsp import angle_sequence, ham_sim, response
+from pyqsp import angle_sequence, response
 from pyqsp.phases import phase_generators
 from pyqsp.poly import polynomial_generators
 
@@ -101,21 +100,6 @@ Examples:
         type=float,
         default=100)
     parser.add_argument(
-        "--delta",
-        help="parameter for polynomial approximation to the theshold function using erf(delta * x)",
-        type=float,
-        default=3)
-    parser.add_argument(
-        "--kappa",
-        help="parameter for polynomial approximation to 1/a, valid in the regions 1/kappa < a < 1 and -1 < a < -1/kappa",
-        type=float,
-        default=3)
-    parser.add_argument(
-        "--degree",
-        help="parameter for polynomial approximation to erf(delta*x)",
-        type=int,
-        default=3)
-    parser.add_argument(
         "--epsilon",
         help="parameter for polynomial approximation to 1/a, giving bound on error",
         type=float,
@@ -199,15 +183,53 @@ Examples:
                 phiset, pcoefs=coefs, signal_operator=args.signal_operator, **plot_args)
 
     elif args.cmd == "hamsim":
-        phiset, telapsed = ham_sim.ham_sim(args.tau, 1.0e-4, 1 - 1.0e-4)
+        pg = pyqsp.poly.PolyCosineTX()
+        pcoefs, scale = pg.generate(
+            *args.seqargs,
+            return_coef=True,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
         if args.plot:
-            response.PlotQSPResponse(phiset, signal_operator="Wz", **plot_args)
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale * np.cos(args.seqargs[0] * x),
+                signal_operator="Wx",
+                title="Hamiltonian Simultation (Cosine)",
+                **plot_args)
+
+        pg = pyqsp.poly.PolySineTX()
+        pcoefs, scale = pg.generate(
+            *args.seqargs,
+            return_coef=True,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale * np.sin(args.seqargs[0] * x),
+                signal_operator="Wx",
+                title="Hamiltonian Simultation (Sine)",
+                **plot_args)
+
+    elif args.cmd == "fpsearch":
+        pg = pyqsp.phases.FPSearch()
+        phiset = pg.generate(*args.seqargs)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                signal_operator="Wx",
+                measurement="z",
+                title="Oblivious amplification",
+                **plot_args)
 
     elif args.cmd == "invert":
         pg = pyqsp.poly.PolyOneOverX()
         pcoefs, scale = pg.generate(
-            args.kappa,
-            args.epsilon,
+            *args.seqargs,
             return_coef=True,
             ensure_bounded=True,
             return_scale=True)
@@ -221,11 +243,60 @@ Examples:
                 title="Inversion",
                 **plot_args)
 
+    elif args.cmd == "gibbs":
+        pg = pyqsp.poly.PolyGibbs()
+        pcoefs, scale = pg.generate(
+            *args.seqargs,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale * np.exp(-args.seqargs[1]*x),
+                signal_operator="Wx",
+                title="Gibbs distribution",
+                **plot_args)
+
+    elif args.cmd == "efilter":
+        pg = pyqsp.poly.PolyEigenstateFiltering()
+        pcoefs, scale = pg.generate(
+            *args.seqargs,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            delta = args.seqargs[1] / 2.
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale *
+                (np.sign(x + delta) - np.sign(x - delta)) / 2,
+                signal_operator="Wx",
+                title="Eigenstate filtering",
+                **plot_args)
+
+    elif args.cmd == "relu":
+        pg = pyqsp.poly.PolySoftPlus()
+        pcoefs, scale = pg.generate(
+            *args.seqargs,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, tolerance=args.tolerance)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale * np.maximum(x - args.seqargs[1], 0.),
+                signal_operator="Wx",
+                title="ReLU Function",
+                **plot_args)
+
     elif args.cmd == "poly_sign":
         pg = pyqsp.poly.PolySign()
         pcoefs, scale = pg.generate(
-            args.degree,
-            args.delta,
+            *args.seqargs,
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
@@ -241,8 +312,7 @@ Examples:
     elif args.cmd == "poly_thresh":
         pg = pyqsp.poly.PolyThreshold()
         pcoefs, scale = pg.generate(
-            args.degree,
-            args.delta,
+            *args.seqargs,
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
@@ -259,9 +329,7 @@ Examples:
     elif args.cmd == "poly_rect":
         pg = pyqsp.poly.PolyRect()
         pcoefs, scale = pg.generate(
-            args.degree,
-            args.delta,
-            args.kappa,
+            *args.seqargs,
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
@@ -279,10 +347,7 @@ Examples:
     elif args.cmd == "invert_rect":
         pg = pyqsp.poly.PolyOneOverXRect()
         pcoefs, scale = pg.generate(
-            args.degree,
-            args.delta,
-            args.kappa,
-            args.epsilon,
+            *args.seqargs,
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(

@@ -29,7 +29,7 @@ class PhaseGenerator:
         return [0, 0]
 
 
-class fixed_point_search(PhaseGenerator):
+class FPSearch(PhaseGenerator):
     '''
     Return phases for fixed point quantum search, following https://arxiv.org/abs/1409.3305
 
@@ -73,6 +73,7 @@ class fixed_point_search(PhaseGenerator):
             # reverse order & scale to match QSVT convention
             phivec[2 * k] = -avec[d - k - 1] / 2
             phivec[2 * k + 1] = bvec[d - k - 1] / 2
+
         return phivec
 
 
@@ -103,6 +104,6 @@ class erf_step(PhaseGenerator):
 # -----------------------------------------------------------------------------
 
 
-phase_generators = {'fpsearch': fixed_point_search,
+phase_generators = {'fpsearch': FPSearch,
                     'erf_step': erf_step,
                     }

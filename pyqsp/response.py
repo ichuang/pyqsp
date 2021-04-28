@@ -92,7 +92,7 @@ def PlotQSPResponse(
         phiset,
         signal_operator="Wx",
         measurement=None,
-        npts=100,
+        npts=400,
         pcoefs=None,
         target=None,
         show=True,
@@ -117,13 +117,14 @@ def PlotQSPResponse(
         plot_magnitude: if True, show magnitude instead of real and imaginary
             parts
         plot_positive_only: if True, then only show positive ordinate values
-        plot_real_only: if Truw, show only real part
+        plot_real_only: if True, show only real part
         plot_tight_y: if True, set y-axis scale to be from min to max of real
             part; else go from +1.5 max to -1.5 max
 
     Returns:
         Response object.
     """
+
     if plot_positive_only:
         adat = np.linspace(0., 1., npts)
     else:
@@ -150,12 +151,15 @@ def PlotQSPResponse(
                  linewidth=3, alpha=0.5)
 
     if plot_magnitude:
-        plt.plot(adat, abs(pdat), 'r', label="abs[F(a)]")
+        plt.plot(adat, abs(pdat), 'k', label="abs[F(a)]")
+        ymax = np.max(np.abs(pdat))
+        ymin = np.min(np.abs(pdat))
     else:
         plt.plot(adat, np.real(pdat), 'k', label="Re[F(a)]")
         if not plot_real_only:
             plt.plot(adat, np.imag(pdat), 'b', label="Im[F(a)]")
-    # plt.plot(adat, abs(pdat), 'k')
+        ymax = np.max(np.real(pdat))
+        ymin = np.min(np.real(pdat))
 
     # format plot
     plt.ylabel("response")
@@ -165,11 +169,9 @@ def PlotQSPResponse(
     if title is not None:
         plt.title(title)
 
-    ymax = np.max(np.abs(np.real(pdat)))
-    ymin = np.min(np.abs(np.real(pdat)))
     plt.xlim([np.min(adat), np.max(adat)])
     if plot_tight_y:
-        plt.ylim([1.05 * ymin, 1.05 * ymax])
+        plt.ylim([1.1 * ymin, 1.1 * ymax])
     else:
         plt.ylim([-1.5 * ymax, 1.5 * ymax])
 

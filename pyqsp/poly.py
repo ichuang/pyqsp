@@ -25,8 +25,108 @@ class PolyGenerator:
         '''
         return [0, 0]
 
+# -----------------------------------------------------------------------------
+
+
+class PolyCosineTX(PolyGenerator):
+
+    def help(self):
+        return "Used for Hamiltonian simultion for time tau. Error is epsilon"
+
+    def generate(
+            self,
+            tau=10.,
+            epsilon=0.1,
+            return_coef=True,
+            ensure_bounded=True,
+            return_scale=False):
+        '''
+        Approximation to cos(tx) polynomial, using sums of Chebyshev
+        polynomials, from Optimal Hamiltonian Simulation by Quantum Signal
+        Processing by Low and Chuang,
+        https://arxiv.org/abs/1606.02685
+        ensure_bounded: True if polynomial should be normalized to be between
+        +/- 1
+        '''
+        r = scipy.optimize.fsolve(lambda r: (
+            np.e * np.abs(tau) / (2 * r))**r - (5/4) * epsilon, tau)[0]
+        print(r)
+        R = np.floor(r / 2).astype(int)
+        R = max(R, 1)
+
+        print(f"R={R}")
+
+        g = scipy.special.jv(0, tau) * np.polynomial.chebyshev.Chebyshev([1])
+        for k in range(1, R+1):
+            gcoef = 2 * scipy.special.jv(2*k, tau)
+            deg = 2*k
+            g += (-1)**k * gcoef * \
+                np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
+
+        if ensure_bounded:
+            scale = 0.5
+            g = scale * g
+            print(f"[PolyCosineTX] rescaling by {scale}.")
+
+        if return_coef:
+            pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            if ensure_bounded and return_scale:
+                return pcoefs, scale
+            else:
+                return pcoefs
+        return g
+
+
+class PolySineTX(PolyGenerator):
+
+    def help(self):
+        return "Used for Hamiltonian simultion for time tau. Error is epsilon"
+
+    def generate(
+            self,
+            tau=10.,
+            epsilon=0.1,
+            return_coef=True,
+            ensure_bounded=True,
+            return_scale=False):
+        '''
+        Approximation to cos(tx) polynomial, using sums of Chebyshev
+        polynomials, from Optimal Hamiltonian Simulation by Quantum Signal
+        Processing by Low and Chuang,
+        https://arxiv.org/abs/1606.02685
+        ensure_bounded: True if polynomial should be normalized to be between
+        +/- 1
+        '''
+        r = scipy.optimize.fsolve(lambda r: (
+            np.e * np.abs(tau) / (2 * r))**r - (5/4) * epsilon, tau)[0]
+        print(r)
+        R = np.floor(r / 2).astype(int)
+        R = max(R, 1)
+
+        print(f"R={R}")
+
+        g = np.polynomial.chebyshev.Chebyshev([0])
+        for k in range(0, R+1):
+            gcoef = 2 * scipy.special.jv(2*k+1, tau)
+            deg = 2*k+1
+            g += (-1)**k * gcoef * \
+                np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
+
+        if ensure_bounded:
+            scale = 0.5
+            g = scale * g
+            print(f"[PolySineTX] rescaling by {scale}.")
+
+        if return_coef:
+            pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            if ensure_bounded and return_scale:
+                return pcoefs, scale
+            else:
+                return pcoefs
+        return g
 
 # -----------------------------------------------------------------------------
+
 
 class PolyOneOverX(PolyGenerator):
 
@@ -324,7 +424,11 @@ class PolyGibbs(PolyTaylorSeries):
     def help(self):
         return "approximation to exp(-beta*a) ; specify degree and beta"
 
-    def generate(self, degree=6, beta=2, ensure_bounded=True):
+    def generate(self,
+                 degree=6,
+                 beta=2,
+                 ensure_bounded=True,
+                 return_scale=False):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyGibbs] degree={degree}, beta={beta}")
         if (degree % 2):
@@ -332,14 +436,29 @@ class PolyGibbs(PolyTaylorSeries):
 
         def gibbs(x):
             return np.exp(-beta * abs(x))
-        the_poly = self.taylor_series(
-            gibbs, degree, ensure_bounded=ensure_bounded, max_scale=1)
-        if 0:
-            the_poly = 0.8 * the_poly  # smaller, to handle imperfect approximation
+
+        if ensure_bounded and return_scale:
+            the_poly, scale = self.taylor_series(
+                gibbs,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=1)
+        else:
+            the_poly = self.taylor_series(
+                gibbs,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=1)
+
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
-        return pcoefs
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
 
 # -----------------------------------------------------------------------------
 
@@ -356,8 +475,9 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
             self,
             degree=6,
             delta=0.2,
-            max_scale=0.99,
-            ensure_bounded=True):
+            max_scale=0.9,
+            ensure_bounded=True,
+            return_scale=False):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyEfilter] degree={degree}, delta={delta}")
         if (degree % 2):
@@ -369,18 +489,30 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
         scale = 1 / cheb(0)
 
         def efpoly(x):
-            return scale * cheb(x**2)
-        the_poly = self.taylor_series(
-            efpoly,
-            degree,
-            ensure_bounded=ensure_bounded,
-            max_scale=max_scale)
-        if 0:
-            the_poly = 0.8 * the_poly  # smaller, to handle imperfect approximation
+            return scale * cheb(x)
+
+        if ensure_bounded and return_scale:
+            the_poly, scale = self.taylor_series(
+                efpoly,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=max_scale)
+        else:
+            the_poly, scale = self.taylor_series(
+                efpoly,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=max_scale)
+
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
-        return pcoefs
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
 
 # -----------------------------------------------------------------------------
 
@@ -433,8 +565,9 @@ class PolySoftPlus(PolyTaylorSeries):
             degree=6,
             delta=0.2,
             kappa=1,
-            max_scale=0.99,
-            ensure_bounded=True):
+            max_scale=0.90,
+            ensure_bounded=True,
+            return_scale=False):
         degree = int(degree)
         print(
             f"[pyqsp.poly.PolySoftPlus] degree={degree}, delta={delta}, kappa={kappa}")
@@ -443,15 +576,28 @@ class PolySoftPlus(PolyTaylorSeries):
 
         def func(x):
             return np.log(1 + np.exp(kappa * (abs(x) - delta))) / kappa
-        the_poly = self.taylor_series(
-            func,
-            degree,
-            ensure_bounded=ensure_bounded,
-            max_scale=max_scale)
+        if ensure_bounded and return_scale:
+            the_poly, scale = self.taylor_series(
+                func,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=max_scale)
+        else:
+            the_poly = self.taylor_series(
+                func,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=max_scale)
+
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
-        return pcoefs
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
 
 # -----------------------------------------------------------------------------
 
