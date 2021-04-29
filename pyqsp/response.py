@@ -151,13 +151,13 @@ def PlotQSPResponse(
                  linewidth=3, alpha=0.5)
 
     if plot_magnitude:
-        plt.plot(adat, abs(pdat), 'k', label="abs[F(a)]")
+        plt.plot(adat, abs(pdat), 'k', label="abs[Poly(a)]")
         ymax = np.max(np.abs(pdat))
         ymin = np.min(np.abs(pdat))
     else:
-        plt.plot(adat, np.real(pdat), 'k', label="Re[F(a)]")
+        plt.plot(adat, np.real(pdat), 'k', label="Re[Poly(a)]")
         if not plot_real_only:
-            plt.plot(adat, np.imag(pdat), 'b', label="Im[F(a)]")
+            plt.plot(adat, np.imag(pdat), 'b', label="Im[Poly(a)]")
         ymax = np.max(np.real(pdat))
         ymin = np.min(np.real(pdat))
 
@@ -171,7 +171,7 @@ def PlotQSPResponse(
 
     plt.xlim([np.min(adat), np.max(adat)])
     if plot_tight_y:
-        plt.ylim([1.1 * ymin, 1.1 * ymax])
+        plt.ylim([-0.1, 1.1 * ymax])
     else:
         plt.ylim([-1.5 * ymax, 1.5 * ymax])
 
