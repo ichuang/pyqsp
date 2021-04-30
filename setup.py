@@ -20,7 +20,7 @@ setup(
     version='0.1.1',
     author='I. Chuang, J. Docter, Z. Rossi, A. Tan',
     author_email='ichuang@mit.edu',
-    packages=['pyqsp', 'pyqsp.test', 'pyqsp.qsp_model'],
+    packages=['pyqsp', 'pyqsp.test', 'pyqsp.qsp_models'],
     scripts=[],
     url='https://github.com/ichuang/pyqsp',
     license='LICENSE.txt',
