@@ -133,6 +133,8 @@ def QuantumSignalProcessingPhases(
             measurement = "z"
 
     if method == "tf":
+        if not signal_operator=="Wx":
+            raise ValueError(f"Must use Wx signal operator model with tf method")
         return QuantumSignalProcessingPhasesWithTensorflow(poly, **kwargs)
     elif not method == "laurent":
         raise ValueError(f"Invalid method {method}")
