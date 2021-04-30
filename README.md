@@ -6,7 +6,9 @@
 
 Quantum signal processing performs spectral transformation of any unitary $U$, given access to an ancilla qubit, a controlled version of $U$ and single-qubit rotations on the ancilla qubit. It first truncates an arbitrary spectral transformation function into a Laurent polynomial, then finds a way to decompose the Laurent polynomial into a sequence of products of controlled-$U$ and single qubit rotations (by certain "QSP phase angles") on the ancilla. Such routines achieve optimal gate complexity for many of the quantum algorithmic tasks mentioned above.  The task achieved is essentially entirely defined by the QSP phase angles employed in the QSP operation sequence, and as such a central part is finding these QSP phase angles, given the desired Laurent polynomial.
 
-This python package generates QSP phase angles using the code based on [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extending the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  Two QSP model conventions are used in the literature: Wx, where the signal W(a) is an X-rotation and QSP phase shifts are Z-rotations, and Wz, where the signal W(a) is a Z-rotation and QSP phase shifts are X-rotations.
+This python package generates QSP phase angles using the code based on two different methods.  The "laurent" method employs [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extends the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  The "tf" method employs tensorflow + keras, and finds the QSP angles using optimization.
+
+Two QSP model conventions are used in the literature: Wx, where the signal W(a) is an X-rotation and QSP phase shifts are Z-rotations, and Wz, where the signal W(a) is a Z-rotation and QSP phase shifts are X-rotations.
 
 Specifically, in the Wx convention, the QSP operation sequence is:
 
@@ -81,6 +83,9 @@ produces the QSP phase angles for a degree 20 polynomial approximation, using tw
 * `response.py` computes QSP response functions and generates plots
 * `poly.py` provides some utility polynomials, namely the approximation of 1/a using a linear combination of Chebyshev polynomials
 * `main.py` is the main entry point for command line usage
+* `qsp_model` is the submodule providing generation of QSP phase angles using tensorflow + keras
+
+The code is structured such that tensorflow is not imported by default, so that the package can be run without tensorflow being installed.  If `qsp_model` is used, then tensorflow is required.
 
 ### Unit tests
 
