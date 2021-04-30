@@ -112,34 +112,41 @@ To find the QSP angle sequence corresponding to a real (non-Laurent) polynomial 
 ## Command line usage
 
 ```
-usage: pyqsp [-h] [-v] [-o OUTPUT] [--model MODEL] [--plot] [--hide-plot] [--return-angles] [--poly POLY] [--tau TAU] [--kappa KAPPA] [--degree DEGREE]
-             [--epsilon EPSILON] [--seqname SEQNAME] [--seqargs SEQARGS] [--polyname POLYNAME] [--polyargs POLYARGS] [--align-first-point-phase]
-             [--plot-magnitude] [--plot-real-only] [--plot-positive-only] [--plot-npts PLOT_NPTS] [--niter NITER] [--tolerance TOLERANCE]
+usage: pyqsp [-h] [-v] [-o OUTPUT] [--signal_operator SIGNAL_OPERATOR] [--plot] [--hide-plot] [--return-angles] [--poly POLY] [--func FUNC]
+             [--polydeg POLYDEG] [--tau TAU] [--epsilon EPSILON] [--seqname SEQNAME] [--seqargs SEQARGS] [--polyname POLYNAME] [--polyargs POLYARGS]
+             [--plot-magnitude] [--plot-real-only] [--output-json] [--plot-positive-only] [--plot-tight-y] [--plot-npts PLOT_NPTS]
+             [--tolerance TOLERANCE] [--method METHOD] [--plot-qsp-model]
              cmd
 
 usage: pyqsp [options] cmd
 
-Version: 0.0.3
+Version: 0.1.0
 Commands:
 
     poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
     hamsim      - compute QSP phase angles for Hamiltonian simulation using the Jacobi-Anger expansion of exp(-i tau sin(2 theta))
-    invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given kappa and epsilon parameter values
+    invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
+    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf)
 
 Examples:
 
     pyqsp --poly=-1,0,2 poly2angles
-    pyqsp --poly=-1,0,2 --plot --align-first-point-phase poly2angles
-    pyqsp --model=Wz --poly=0,0,0,1 --plot  poly2angles
+    pyqsp --poly=-1,0,2 --plot poly2angles
+    pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot  poly2angles
     pyqsp --plot --tau 10 hamsim
-    pyqsp --plot --tolerance=0.01 invert
+    pyqsp --plot --tolerance=0.01 --seqargs 3 invert
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-real-only --plot --polyargs=20,20 --polyname poly_thresh poly
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
+    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
+    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
+    pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly
+    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
+    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
 
 positional arguments:
   cmd                   command
@@ -149,29 +156,32 @@ optional arguments:
   -v, --verbose         increase output verbosity (add more -v to increase versbosity)
   -o OUTPUT, --output OUTPUT
                         output filename
-  --model MODEL         QSP sequence model, either Wx (signal is X rotations) or Wz (signal is Z rotations)
+  --signal_operator SIGNAL_OPERATOR
+                        QSP sequence signal_operator, either Wx (signal is X rotations) or Wz (signal is Z rotations)
   --plot                generate QSP response plot
   --hide-plot           do not show plot (but it may be saved to a file if --output is specified)
   --return-angles       return QSP phase angles to caller
   --poly POLY           comma delimited list of floating-point coeficients for polynomial, as const, a, a^2, ...
+  --func FUNC           for tf method, numpy expression specifying ideal function (of x) to be approximated by a polynomial, e.g. 'np.cos(3 * x)'
+  --polydeg POLYDEG     for tf method, degree of polynomial to use in generating approximation of specified function (see --func)
   --tau TAU             time value for Hamiltonian simulation (hamsim command)
-  --kappa KAPPA         parameter for polynomial approximation to 1/a, valid in the regions 1/kappa < a < 1 and -1 < a < -1/kappa
-  --degree DEGREE       parameter for polynomial approximation to erf(kappa*x)
   --epsilon EPSILON     parameter for polynomial approximation to 1/a, giving bound on error
   --seqname SEQNAME     name of QSP phase angle sequence to generate using the 'angles' command, e.g. fpsearch
   --seqargs SEQARGS     arguments to the phase angles generated by seqname (e.g. length,delta,gamma for fpsearch)
   --polyname POLYNAME   name of polynomial generate using the 'poly' command, e.g. 'sign'
   --polyargs POLYARGS   arguments to the polynomial generated by poly (e.g. degree,kappa for 'sign')
-  --align-first-point-phase
-                        when plotting change overall complex phase such that the first point has zero phase
   --plot-magnitude      when plotting only show magnitude, instead of separate imaginary and real components
   --plot-real-only      when plotting only real component, and not imaginary
+  --output-json         output QSP phase angles in JSON format
   --plot-positive-only  when plotting only a-values (x-axis) from 0 to +1, instead of from -1 to +1 
+  --plot-tight-y        when plotting scale y-axis tightly to real part of data
   --plot-npts PLOT_NPTS
                         number of points to use in plotting
-  --niter NITER         number of iterations to use in trying to compute phase angles
   --tolerance TOLERANCE
-                        error tolerance for phase angle optimizer```
+                        error tolerance for phase angle optimizer
+  --method METHOD       method to use for qsp phase angle generation, either 'laurent' (default) or 'tf' (for tensorflow + keras)
+  --plot-qsp-model      show qsp_model version of response plot instead of the default plot
+```
 
 ## History
 
