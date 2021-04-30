@@ -2,6 +2,7 @@ import os
 import unittest
 
 import numpy as np
+import tensorflow as tf
 
 from pyqsp import qsp_models
 
@@ -27,11 +28,8 @@ class Test_qsp_models(unittest.TestCase):
         Do imports here, so that this module can be entirely optional
         '''
         if self.is_enabled():
-            import tensorflow as tf
-            import pyqsp.qsp_models as qsp_models
+            pass
             # from cirq.contrib.svg import SVGCircuit
-            globals()['tf'] = tf
-            globals()['qsp_models'] = qsp_models
         else:
             print(
                 "[pyqsp.test] Skipping qsp_model tests: export PYQSP_TEST_QSP_MODELS=1 to enable these tests")
