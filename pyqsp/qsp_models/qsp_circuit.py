@@ -1,7 +1,7 @@
-from cirq.contrib.svg import SVGCircuit
 import cirq
-import sympy
 import numpy as np
+import sympy
+from cirq.contrib.svg import SVGCircuit
 
 
 class QSPCircuit(cirq.Circuit):
@@ -44,9 +44,10 @@ class QSPCircuit(cirq.Circuit):
         returns
         -------
         numpy array with shape (len(params),)
-            evaluates the qsp response Re[P(x) + Q(x)] from post selecting on |+> for each theta in thetas
+            evaluates the qsp response Re[P(x)] + i * Re[Q(x)] * sqrt(1-x^2) from post selecting on |+> for each theta in thetas
         """
-        return np.real(self.eval_px(thetas) + self.eval_qx(thetas))
+        return np.real(self.eval_px(thetas)) + \
+            1j * np.real(self.eval_qx(thetas)) * np.sin(thetas)
 
     def eval_px(self, thetas):
         """Evaluate P(x) for a list of thetas
@@ -93,5 +94,5 @@ class QSPCircuit(cirq.Circuit):
         for theta in np.array(thetas).flatten():
             resolver = cirq.ParamResolver({"theta": theta * (-2)})
             u = cirq.resolve_parameters(self, resolver).unitary()
-            qxs.append(u[0, 1])
+            qxs.append(u[0, 1] / (1j * np.sqrt(np.sin(theta))))
         return np.array(qxs)
