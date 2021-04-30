@@ -100,7 +100,8 @@ def PlotQSPResponse(
         plot_magnitude=False,
         plot_positive_only=False,
         plot_real_only=False,
-        plot_tight_y=False):
+        plot_tight_y=False,
+        show_qsp_model_plot=False):
     """
     Plot QSP response.
 
@@ -120,10 +121,15 @@ def PlotQSPResponse(
         plot_real_only: if True, show only real part
         plot_tight_y: if True, set y-axis scale to be from min to max of real
             part; else go from +1.5 max to -1.5 max
+        show_qsp_model_plot: if True, use qsp_model.plot_qsp_response 
 
     Returns:
         Response object.
     """
+
+    if show_qsp_model_plot:
+        import pyqsp.qsp_models as qsp_models
+        return qsp_models.plot_qsp_response(target, model=None, phis=phiset, title=title)
 
     if plot_positive_only:
         adat = np.linspace(0., 1., npts)
@@ -139,7 +145,9 @@ def PlotQSPResponse(
     plt.figure(figsize=[8, 5])
 
     if pcoefs is not None:
-        poly = np.polynomial.Polynomial(pcoefs)
+        poly = pcoefs
+        if not isinstance(poly, np.polynomial.Polynomial):
+            poly = np.polynomial.Polynomial(pcoefs)
         expected = poly(adat)
         plt.plot(adat, expected, 'k-', label="target polynomial",
                  linewidth=3, alpha=0.5)

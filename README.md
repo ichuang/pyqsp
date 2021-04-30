@@ -82,7 +82,15 @@ produces the QSP phase angles for a degree 20 polynomial approximation, using tw
 * `poly.py` provides some utility polynomials, namely the approximation of 1/a using a linear combination of Chebyshev polynomials
 * `main.py` is the main entry point for command line usage
 
-A set of unit tests is also provided.
+### Unit tests
+
+A set of unit tests is also provided.  Run them using `python setup.py test`
+
+The `qsp_model` code depends on having tensorflow installed, and the unit tests for this code take awhile to run, so they are not run by default.  To enable unit tests for this code, first do `export PYQSP_TEST_QSP_MODELS=1`
+
+The `qsp_model` code unit tests can be run by themselves using `python setup.py test -s pyqsp.test.test_qsp_models`
+
+### Programmatic usage
 
 To find the QSP angle sequence corresponding to a real Laurent polynomial $A(\tilde{w}) = \sum_{i=-n}\^n a_i\tilde{w}^i$, simply run:
 
@@ -159,3 +167,8 @@ optional arguments:
   --niter NITER         number of iterations to use in trying to compute phase angles
   --tolerance TOLERANCE
                         error tolerance for phase angle optimizer```
+
+## History
+
+- v0.0.3: initial version, with phase angle generation entirely done using https://arxiv.org/abs/2003.02831
+- v0.1.0: added generation of phase angles using optimization via tensorflow (qsp_model code by Jordan Docter and Zane Rossi)

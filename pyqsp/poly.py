@@ -3,6 +3,52 @@ import scipy.optimize
 import scipy.special
 from scipy.interpolate import approximate_taylor_polynomial
 
+#-----------------------------------------------------------------------------
+
+class StringPolynomial:
+    '''
+    Representation of a polynomial using a python string which specifies a numpy function, 
+    and an integer giving the desired polynomial's degree.
+    '''
+    def __init__(self, funcstr, poly_deg):
+        '''
+        funcstr: (str) specification of function using "x" as the argument, e.g. "np.where(x<0, -1 ,np.where(x>0,1,0))"
+                 The function should accept a numpy array as "x"
+        poly_deg: (int) degree of the polynoimal to be used to approximate the specified function
+        '''
+        self.funcstr = funcstr
+        self.poly_deg = int(poly_deg)
+        try:
+            self.__call__(0.5)
+        except Exception as err:
+            raise ValueError(f"Invalid function specifciation, failed to evaluate at x=0.5, err={err}")
+
+    def degree(self):
+        return self.poly_deg
+
+    def __call__(self, arg):
+        ret = eval(self.funcstr, globals(), {'x': arg})
+        return ret
+
+    def target(self, arg):
+        return self.__call__(arg)
+
+#-----------------------------------------------------------------------------
+
+class TargetPolynomial(np.polynomial.Polynomial):
+    '''
+    Polynomial with ideal target
+    '''
+    def __init__(self, *args, target=None, scale=None, **kwargs):
+        '''
+        target = function which accepts argument and gives ideal response, e.g. lambda x: x**2
+        scale = metadata about scale of polynomial
+        '''
+        self.target = target
+        self.scale = scale
+        super().__init__(*args, **kwargs)
+
+#-----------------------------------------------------------------------------
 
 class PolyGenerator:
     '''
@@ -313,7 +359,7 @@ class PolySign(PolyTaylorSeries):
         if ensure_bounded and return_scale:
             return pcoefs, scale
         else:
-            return pcoefs
+            return TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
 
 
 class PolyThreshold(PolyTaylorSeries):
@@ -458,7 +504,7 @@ class PolyGibbs(PolyTaylorSeries):
         if ensure_bounded and return_scale:
             return pcoefs, scale
         else:
-            return pcoefs
+            return TargetPolynomial(pcoefs, target=lambda x: gibbs(x))
 
 # -----------------------------------------------------------------------------
 

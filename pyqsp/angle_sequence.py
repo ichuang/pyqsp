@@ -7,7 +7,7 @@ from pyqsp.completion import completion_from_root_finding
 from pyqsp.decomposition import angseq
 from pyqsp.LPoly import LAlg, LPoly
 from pyqsp.response import ComputeQSPResponse
-
+from pyqsp.poly import StringPolynomial, TargetPolynomial
 
 class AngleFindingError(Exception):
     """Raised when angle finding step failes."""
@@ -95,7 +95,9 @@ def QuantumSignalProcessingPhases(
         suc=1 - 1e-4,
         signal_operator="Wx",
         measurement=None,
-        tolerance=1e-6):
+        tolerance=1e-6,
+        method="laurent",
+        **kwargs):
     """
     Generate QSP phase angles for a given polynomial.
 
@@ -106,6 +108,7 @@ def QuantumSignalProcessingPhases(
         signal_operator: QSP signal-dependent operation ['Wx', 'Wz']
         measurement: measurement basis (defaults to signal operator basis)
         tolerance: error tolerance in final reconstruction
+        method: method to use for computing phase angles ['laurent', 'tf']
 
     Returns:
         Array of QSP angles.
@@ -115,16 +118,23 @@ def QuantumSignalProcessingPhases(
             model.
         AngleFindingError: Raised if angle finding algorithm cannot find
         sequence to specified tolerance.
-        ValueError: Raised if invalid model is specified.
+        ValueError: Raised if invalid model (or method) is specified.
     """
     if type(poly) is np.ndarray or type(poly) is list:
         poly = Polynomial(poly)
+    elif isinstance(poly, TargetPolynomial):
+        poly = Polynomial(poly.coef)
 
     if measurement is None:
         if signal_operator == "Wx":
             measurement = "x"
         elif signal_operator == "Wz":
             measurement = "z"
+
+    if method=="tf":
+        return QuantumSignalProcessingPhasesWithTensorflow(poly, **kwargs)
+    elif not method=="laurent":
+        raise ValueError(f"Invalid method {method}")
 
     model = (signal_operator, measurement)
 
@@ -162,3 +172,52 @@ def QuantumSignalProcessingPhases(
             "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
 
     return phiset
+
+def QuantumSignalProcessingPhasesWithTensorflow(poly, npts_theta=30, nepochs=5000, verbose=0, return_all=False):
+    '''
+    Compute QSP phase angles using optimization, with tensorflow, via the qsp_model submodule
+    Running this imports pyqsp.qsp_models
+    This import is done in the procedure because qsp_models requires tensorflow, and is heavyweight.
+    We want to avoid requiring tensorflow to run pyqsp, if this is not needed.
+
+    Args:
+        poly: polynomial object, or StringPolynomial instance
+        npts_theta: number of points to discretize theta axis into
+        nepochs: number of epochs of training to do
+        verbose: flag to give verbose debugging output during training
+        return_all: if True, return dict with model, training history, and more
+
+    Returns:
+        Array of QSP angles (or if return_all: dict with model, training history, ...)
+    '''
+    import pyqsp.qsp_models as qsp_models
+    import tensorflow as tf
+
+    if not (isinstance(poly, Polynomial) or isinstance(poly, StringPolynomial)):
+        raise ValueError(f"poly={poly} should be a Polynomial or StringPolynomial")
+    
+    poly_deg = poly.degree()
+
+    # The intput theta training values 
+    th_in = np.arange(0, np.pi, np.pi / npts_theta)
+    th_in = tf.reshape(th_in, (th_in.shape[0], 1))
+
+    # The desired real part of p(x) which is the upper left value in the unitary of the qsp sequence
+    # and the desired real part of q(x) = 0
+    expected_outputs = [poly(np.cos(th_in)), np.zeros(th_in.shape[0])]
+    
+    # the tensorflow keras model
+    model = qsp_models.construct_qsp_model(poly_deg)
+    history = model.fit(x=th_in, y=expected_outputs, epochs=nepochs, verbose=verbose)
+    phis = model.trainable_weights[0].numpy()
+    if return_all:
+        data = {'model': model,
+                'history': history,
+                'phis': phis,
+                'th_in': th_in,
+                'expected_outputs': expected_outputs,
+                'poly': poly,
+        }
+        return data
+
+    return phis
