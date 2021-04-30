@@ -9,7 +9,7 @@ from pyqsp import main
 test_cmds = [
     "--return-angles --poly=-1,0,2 poly2angles",
     "--return-angles --poly=-1,0,2 --plot --hide-plot poly2angles",
-    "--plot-positive-only --plot-magnitude --plot-npts=400 --seqargs=10,0.5 fpsearch",
+    "--plot-positive-only --plot-probability --plot-tight-y --plot-npts=400 --seqargs=10,0.5 fpsearch",
     "--plot-real-only --plot-npts=400 --seqargs=19,10 poly_sign",
     "--plot-real-only --plot-npts=400 --seqargs=3,0.3 invert",
     "--plot-real-only --plot-npts=400 --seqargs=10,0.1 hamsim",
@@ -41,7 +41,7 @@ class Test_main(unittest.TestCase):
             print(
                 "[pyqsp.test] Skipping qsp_model tests: export PYQSP_TEST_QSP_MODELS=1 to enable these tests")
             return
-        
+
         for i, cmd in enumerate(test_cmds_tf):
             with self.subTest(i=i):
                 print(f"[pyqsp.test_main testing '{cmd}'")

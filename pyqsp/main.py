@@ -154,6 +154,10 @@ Examples:
         help="when plotting only show magnitude, instead of separate imaginary and real components",
         action="store_true")
     parser.add_argument(
+        "--plot-probability",
+        help="when plotting only show squared magnitude, instead of separate imaginary and real components",
+        action="store_true")
+    parser.add_argument(
         "--plot-real-only",
         help="when plotting only real component, and not imaginary",
         action="store_true")
@@ -199,6 +203,7 @@ Examples:
 
     phiset = None
     plot_args = dict(plot_magnitude=args.plot_magnitude,
+                     plot_probability=args.plot_probability,
                      plot_positive_only=args.plot_positive_only,
                      plot_real_only=args.plot_real_only,
                      plot_tight_y=args.plot_tight_y,

@@ -98,6 +98,7 @@ def PlotQSPResponse(
         show=True,
         title=None,
         plot_magnitude=False,
+        plot_probability=False,
         plot_positive_only=False,
         plot_real_only=False,
         plot_tight_y=False,
@@ -117,6 +118,8 @@ def PlotQSPResponse(
         title: plot title, if provided
         plot_magnitude: if True, show magnitude instead of real and imaginary
             parts
+        plot_probability: if True, show squared magnitude instead of real and
+            imaginary parts
         plot_positive_only: if True, then only show positive ordinate values
         plot_real_only: if True, show only real part
         plot_tight_y: if True, set y-axis scale to be from min to max of real
@@ -163,6 +166,10 @@ def PlotQSPResponse(
         plt.plot(adat, abs(pdat), 'k', label="abs[Poly(a)]")
         ymax = np.max(np.abs(pdat))
         ymin = np.min(np.abs(pdat))
+    elif plot_probability:
+        plt.plot(adat, abs(pdat)**2, 'k', label="abs[Poly(a)]^2")
+        ymax = np.max(np.abs(pdat))**2
+        ymin = np.min(np.abs(pdat))**2
     else:
         plt.plot(adat, np.real(pdat), 'k', label="Re[Poly(a)]")
         if not plot_real_only:
