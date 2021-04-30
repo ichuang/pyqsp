@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import numpy as np
@@ -37,7 +36,7 @@ class Test_poly(unittest.TestCase):
         expected = 1 / xval
         polyval = gpoly(xval)
         diff = abs(polyval - expected).mean()
-        print(f"diff={diff}")
+        # print(f"diff={diff}")
         assert diff < 0.1
 
     def test_poly_one_over_x_response1(self):
@@ -45,37 +44,34 @@ class Test_poly(unittest.TestCase):
         pcoefs = pg.generate(3, 0.3, return_coef=True, ensure_bounded=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, signal_operator="Wx")
-        print(f"QSP angles = {phiset}")
+        # print(f"QSP angles = {phiset}")
         response.PlotQSPResponse(
             phiset, signal_operator="Wx", pcoefs=pcoefs, show=False)
         assert True
 
     def test_poly_sign1(self):
         pg = pyqsp.poly.PolySign()
-        pcoefs = pg.generate(17, 10)
-        poly = np.polynomial.Polynomial(pcoefs)
-        print(f"sign poly at -0.9 = {poly(-0.9)}")
-        assert (poly(-0.9) < -0.2)
-        assert (poly(0.9) > -0.2)
+        pfunc = pg.generate(17, 10)
+        assert (pfunc(-0.9) < -0.2)
+        assert (pfunc(0.9) > -0.2)
 
     def test_poly_thresh1(self):
         pg = pyqsp.poly.PolyThreshold()
         pcoefs = pg.generate(18, 10)
-        poly = np.polynomial.Polynomial(pcoefs)
-        print(f"sign poly at -0.9 = {poly(-0.9)}")
-        print(f"sign poly at 0 = {poly(0)}")
-        assert (poly(-0.9) < 0.1)
-        assert (poly(0) > 0.3)
-        assert (poly(0.9) < 0.1)
+        pfunc = np.polynomial.Polynomial(pcoefs)
+        # print(f"sign poly at -0.9 = {pfunc(-0.9)}")
+        # print(f"sign poly at 0 = {pfunc(0)}")
+        assert (pfunc(-0.9) < 0.1)
+        assert (pfunc(0) > 0.3)
+        assert (pfunc(0.9) < 0.1)
 
     def test_poly_gibbs1(self):
         pg = pyqsp.poly.PolyGibbs()
-        pcoefs = pg.generate(30, 4.5)
-        poly = np.polynomial.Polynomial(pcoefs)
-        print(f"gibbs poly at 0.9 = {poly(0.9)}")
-        print(f"gibbs poly at 0 = {poly(0)}")
-        assert (poly(0.9) < 0.3)
-        assert (poly(0) > 0.9)
+        pfunc = pg.generate(30, 4.5)
+        # print(f"gibbs poly at 0.9 = {pfunc(0.9)}")
+        # print(f"gibbs poly at 0 = {pfunc(0)}")
+        assert (pfunc(0.9) < 0.3)
+        assert (pfunc(0) > 0.9)
 
     def test_poly_cosine(self):
         tau = 10
@@ -87,11 +83,11 @@ class Test_poly(unittest.TestCase):
             return_coef=True,
             ensure_bounded=True,
             return_scale=True)
-        poly = np.polynomial.Polynomial(pcoefs)
+        pfunc = np.polynomial.Polynomial(pcoefs)
 
         x = np.linspace(-1, 1)
         self.assertTrue(
-            np.max(np.abs(poly(x) - scale * np.cos(tau * x))) < epsilon)
+            np.max(np.abs(pfunc(x) - scale * np.cos(tau * x))) < epsilon)
 
     def test_poly_sine(self):
         tau = 10
@@ -103,8 +99,8 @@ class Test_poly(unittest.TestCase):
             return_coef=True,
             ensure_bounded=True,
             return_scale=True)
-        poly = np.polynomial.Polynomial(pcoefs)
+        pfunc = np.polynomial.Polynomial(pcoefs)
 
         x = np.linspace(-1, 1)
         self.assertTrue(
-            np.max(np.abs(poly(x) - scale * np.sin(tau * x))) < epsilon)
+            np.max(np.abs(pfunc(x) - scale * np.sin(tau * x))) < epsilon)

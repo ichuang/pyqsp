@@ -1,4 +1,5 @@
 import glob
+
 from setuptools import setup
 
 
@@ -32,9 +33,12 @@ setup(
             'pyqsp = pyqsp.main:CommandLine',
         ],
     },
-    install_requires=['matplotlib',
-                      'numpy',
+    install_requires=['cirq',
+                      'matplotlib',
+                      'numpy==1.19.2',
+                      'protobuf==3.13.0',
                       'scipy',
+                      'tensorflow',
                       ],
     package_dir={'pyqsp': 'pyqsp'},
     test_suite="pyqsp.test",
