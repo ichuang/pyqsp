@@ -6,7 +6,7 @@
 
 [Quantum signal processing](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.118.010501) is a framework for quantum algorithms including Hamiltonian simulation, quantum linear system solving, amplitude amplification, etc. 
 
-Quantum signal processing performs spectral transformation of any unitary $U$, given access to an ancilla qubit, a controlled version of $U$ and single-qubit rotations on the ancilla qubit. It first truncates an arbitrary spectral transformation function into a Laurent polynomial, then finds a way to decompose the Laurent polynomial into a sequence of products of controlled-$U$ and single qubit rotations (by certain "QSP phase angles") on the ancilla. Such routines achieve optimal gate complexity for many of the quantum algorithmic tasks mentioned above.  The task achieved is essentially entirely defined by the QSP phase angles employed in the QSP operation sequence, and as such a central part is finding these QSP phase angles, given the desired Laurent polynomial.
+Quantum signal processing performs spectral transformation of any unitary U, given access to an ancilla qubit, a controlled version of U and single-qubit rotations on the ancilla qubit. It first truncates an arbitrary spectral transformation function into a Laurent polynomial, then finds a way to decompose the Laurent polynomial into a sequence of products of controlled-U and single qubit rotations (by certain "QSP phase angles") on the ancilla. Such routines achieve optimal gate complexity for many of the quantum algorithmic tasks mentioned above.  The task achieved is essentially entirely defined by the QSP phase angles employed in the QSP operation sequence, and as such a central part is finding these QSP phase angles, given the desired Laurent polynomial.
 
 This python package generates QSP phase angles using the code based on two different methods.  The "laurent" method employs [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extends the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  The "tf" method employs tensorflow + keras, and finds the QSP angles using optimization.
 
@@ -82,7 +82,7 @@ produces the QSP phase angles for a degree 6 polynomial approximation of cos(3*x
 
 ![Example QSP response function approximating a cosine function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-cos-using-tf-order-6.png?raw=true)
 
-This example also shows how an arbitrary function can be specified (using a numpy expression) as a string, and fit using an arbitrary (may need to be even or odd, to match the function) order polynomial, using optimization via tensorflow, and a keras model.  The example also shows an alternative style of plot, produced using the `--plot-qsp-model` flag.
+This example also shows how an arbitrary function can be specified (using a numpy expression) as a string, and fit using an arbitrary order polynomial (may need to be even or odd, to match the function), using optimization via tensorflow, and a keras model.  The example also shows an alternative style of plot, produced using the `--plot-qsp-model` flag.
 
 ## Code design
 
@@ -111,14 +111,29 @@ The `qsp_model` code unit tests can be run by themselves using `python setup.py 
 To find the QSP angle sequence corresponding to a real Laurent polynomial $A(\tilde{w}) = \sum_{i=-n}\^n a_i\tilde{w}^i$, simply run:
 
     from pyqsp.angle_sequence import QuantumSignalProcessingPhases
-    ang_seq = QuantumSignalProcessingPhases([a_{-n}, a_{-n+2}, ..., a_n], model="Wz")
+    ang_seq = QuantumSignalProcessingPhases([a_{-n}, a_{-n+2}, ..., a_n], signal_operator="Wz")
     print(ang_seq)
 
 To find the QSP angle sequence corresponding to a real (non-Laurent) polynomial $A(x) = \sum_{i=0}\^n a_i x^i$, simply run:
 
     from pyqsp.angle_sequence import QuantumSignalProcessingPhases
-    ang_seq = QuantumSignalProcessingPhases([a_{0}, a_{1}, ..., a_n], model="Wx")
+    ang_seq = QuantumSignalProcessingPhases([a_{0}, a_{1}, ..., a_n], signal_operator="Wx")
     print(ang_seq)
+
+By default, `QuantumSignalProcessingPhases` uses the "laurent" method, which is typically quite fast, but can become unstable at very high orders of polynomials, due to numerical roundoff errors, and the need for some randomization in completing the polynomials.
+
+`QuantumSignalProcessingPhases` can also be instructed to use the "tf" method, which employs tensorflow with a keras model, to find QSP phase angles using optimization.  This stably finds very high-quality solutions, but can be quite slow, particularly compared with the "laurent" method.  Do this, for example, using:
+
+    ang_seq = QuantumSignalProcessingPhases(poly, signal_operator="Wx", method="tf")
+
+Note that with the "tf" method, only the "Wx" signal_operator model is supported.  With this method, the polynomial can be a numpy Polynomial instance, or an instance of `pyqsp.poly.StringPolynomial`, e.g.
+
+    poly = StringPolynomial("np.cos(3*x)", 6)
+    ang_seq = QuantumSignalProcessingPhases(poly, method="tf")
+
+You can also plot the response given by a given QSP angle sequence, e.g. using:
+
+    pyqsp.response.PlotQSPResponse(ang_seq, target=poly, signal_operator="Wx")
 
 ## Command line usage
 
