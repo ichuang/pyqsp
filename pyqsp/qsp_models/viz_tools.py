@@ -58,7 +58,7 @@ def plot_qsp_response(f, model=None, phis=None, title="QSP Response"):
         "Imag[p(x)]": np.imag(circuit_px),
         "Real[p(x)]": np.real(circuit_px),
         "Real[q(x)]": np.real(circuit_qx),
-        "QSP Response": qsp_response}
+        "QSP Response": np.real(qsp_response)}
     if f is not None:
         pdata["desired f"] = f(np.cos(all_th))
     df = pd.DataFrame(pdata)
