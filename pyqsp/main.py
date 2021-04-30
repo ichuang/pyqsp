@@ -68,7 +68,16 @@ Examples:
         formatter_class=argparse.RawTextHelpFormatter)
 
     def float_list(value):
-        return list(map(float, value.split(",")))
+        try:
+            if not ',' in value and value.startswith("[") and value.endswith("]"):
+                fstrset = value[1:-1].split(" ")
+                fstrset = [x for x in fstrset if x]
+                flist = list(map(float, fstrset))
+                return flist
+            return list(map(float, value.split(",")))
+        except Exception as err:
+            print(f"[pyqsp.float_list] failed to parse float list, err={err} from {value}")
+            raise
 
     parser.add_argument("cmd", help="command")
     parser.add_argument(
