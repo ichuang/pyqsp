@@ -75,8 +75,7 @@ class QSP(keras.layers.Layer):
 
         # assume we are interested in the real part of p(x) and the real part of q(x) in 
         # the resulting qsp unitary
-        ### FIXME ###
-        return tf.math.real(u[:, 0, 0]), tf.math.real(u[:, 0, 1])
+        return tf.math.real(u[:, 0, 0]), tf.math.imag(u[:, 0, 1])
 
 
 def construct_qsp_model(poly_deg):
