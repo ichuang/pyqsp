@@ -430,6 +430,7 @@ class PolyRect(PolyTaylorSeries):
                  degree=6,
                  delta=2,
                  kappa=3,
+                 epsilon=0.1,
                  ensure_bounded=True,
                  return_scale=False):
         '''
@@ -440,12 +441,14 @@ class PolyRect(PolyTaylorSeries):
         if (degree % 2):
             raise Exception("[PolyThreshold] degree must be even")
 
+        k = np.sqrt(2) / delta * np.sqrt(np.log(2 / (np.pi * epsilon**2)))
+
         def erf_delta(x):
-            return scipy.special.erf(x * delta)
+            return scipy.special.erf(x * k)
 
         def rect(x):
-            return 1 - (erf_delta(x + 1 / kappa) -
-                        erf_delta(x - 1 / kappa)) / 2
+            return 1 + (erf_delta(x - 3 / (4 * kappa)) +
+                        erf_delta(-x - 3 / (4 * kappa))) / 2
 
         if ensure_bounded and return_scale:
             the_poly, scale = self.taylor_series(

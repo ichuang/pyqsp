@@ -7,8 +7,8 @@ import numpy as np
 import pyqsp
 from pyqsp import angle_sequence, response
 from pyqsp.phases import phase_generators
-from pyqsp.poly import polynomial_generators
-from pyqsp.poly import StringPolynomial, TargetPolynomial
+from pyqsp.poly import (StringPolynomial, TargetPolynomial,
+                        polynomial_generators)
 
 # -----------------------------------------------------------------------------
 
@@ -76,7 +76,8 @@ Examples:
                 return flist
             return list(map(float, value.split(",")))
         except Exception as err:
-            print(f"[pyqsp.float_list] failed to parse float list, err={err} from {value}")
+            print(
+                f"[pyqsp.float_list] failed to parse float list, err={err} from {value}")
             raise
 
     parser.add_argument("cmd", help="command")
@@ -282,6 +283,7 @@ Examples:
                 phiset,
                 target=lambda x: scale * 1 / x,
                 signal_operator="Wx",
+                measurement="z",
                 title="Inversion",
                 **plot_args)
 
