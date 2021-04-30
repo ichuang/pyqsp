@@ -40,6 +40,7 @@ Commands:
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
     polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf)
+    response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
 
 Examples:
 
@@ -177,6 +178,11 @@ Examples:
         "--plot-qsp-model",
         help="show qsp_model version of response plot instead of the default plot",
         action="store_true")
+    parser.add_argument(
+        "--phiset",
+        help="comma delimited list of QSP phase angles, to be used in the 'response' command",
+        action="store",
+        type=float_list)
 
     if not args:
         args = parser.parse_args(arglist)
@@ -436,6 +442,13 @@ Examples:
             response.PlotQSPResponse(
                 phiset, target=poly, signal_operator="Wx", **plot_args)
 
+    elif args.cmd == "response":
+        if not args.phiset:
+            print("Must specify --phiset")
+        phiset = args.phiset
+        response.PlotQSPResponse(
+            phiset, signal_operator=args.signal_operator, **plot_args)
+
     else:
         print(f"[pyqsp.main] Unknown command {args.cmd}")
         print(help_text)
@@ -446,5 +459,6 @@ Examples:
         if args.output_json:
             print(
                 f"QSP Phase angles (for signal_operator={args.signal_operator}) in JSON format:")
-            phiset = phiset.tolist()
-            print(json.dumps(phiset, indent=4))
+            if not isinstance(phiset, list):
+                phiset = phiset.tolist()
+            print(json.dumps(phiset))
