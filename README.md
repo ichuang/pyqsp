@@ -210,6 +210,11 @@ optional arguments:
   --plot-qsp-model      show qsp_model version of response plot instead of the default plot
 ```
 
+### Example: plot response polynomial functions for sin(a) approximation
+
+    pyqsp --plot-qsp-model --phiset="[-1.63276817 0.20550406 -0.84198335  0.39732059 -0.26820613 2.41324245  0.04662674 -2.02847501 1.11311765  0.04662674 -0.72835021 -0.26820613 0.39732059 -0.84198335  0.20550406 -0.06197184]" response
+
+
 ## History
 
 - v0.0.3: initial version, with phase angle generation entirely done using https://arxiv.org/abs/2003.02831
