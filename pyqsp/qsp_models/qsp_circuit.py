@@ -3,18 +3,21 @@ import cirq
 import sympy
 import numpy as np
 
+
 class QSPCircuit(cirq.Circuit):
     """QSP circuit
 
-    A `cirq.Circuit` that implements the QSP sequence given by `phis`  
-    
+    A `cirq.Circuit` that implements the QSP sequence given by `phis`
+
     A tool to evaluate and visualize the response of a given QSP sequence.
 
     Allows substitution of arbitrary theta into the sequence
     """
+
     def __init__(self, phis):
         super(QSPCircuit, self).__init__()
-        # recall that in the QSP sequence we rotate as exp(i * phi * Z), but rz(theta) := exp(i * theta/2 * Z)
+        # recall that in the QSP sequence we rotate as exp(i * phi * Z), but
+        # rz(theta) := exp(i * theta/2 * Z)
         self.phis = np.array(phis).flatten() * (-2)
         self.theta = sympy.Symbol("theta")
         self.q = cirq.GridQubit(0, 0)
@@ -60,9 +63,9 @@ class QSPCircuit(cirq.Circuit):
         """
         pxs = []
         for theta in np.array(thetas).flatten():
-            resolver = cirq.ParamResolver({"theta" : theta * (-2)})
+            resolver = cirq.ParamResolver({"theta": theta * (-2)})
             u = cirq.resolve_parameters(self, resolver).unitary()
-            pxs.append(u[0,0])
+            pxs.append(u[0, 0])
         return np.array(pxs)
 
     def eval_real_px(self, thetas):
@@ -88,7 +91,7 @@ class QSPCircuit(cirq.Circuit):
         """
         qxs = []
         for theta in np.array(thetas).flatten():
-            resolver = cirq.ParamResolver({"theta" : theta * (-2)})
+            resolver = cirq.ParamResolver({"theta": theta * (-2)})
             u = cirq.resolve_parameters(self, resolver).unitary()
-            qxs.append(u[0,1])
+            qxs.append(u[0, 1])
         return np.array(qxs)

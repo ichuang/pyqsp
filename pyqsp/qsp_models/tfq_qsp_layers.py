@@ -99,7 +99,8 @@ class HybridControlledPQC(tf.keras.layers.Layer):
         if repetitions is None:
             self._analytic = True
 
-        if not self._analytic and not isinstance(repetitions, numbers.Integral):
+        if not self._analytic and not isinstance(
+                repetitions, numbers.Integral):
             raise TypeError("repetitions must be a positive integer value."
                             " Given: ".format(repetitions))
 
@@ -111,8 +112,9 @@ class HybridControlledPQC(tf.keras.layers.Layer):
                 [[repetitions for _ in range(len(operators))]],
                 dtype=tf.dtypes.int32)
 
-        if not isinstance(backend, cirq.Sampler
-                          ) and repetitions is not None and backend is not None:
+        if not isinstance(
+                backend,
+                cirq.Sampler) and repetitions is not None and backend is not None:
             raise TypeError("provided backend does not inherit cirq.Sampler "
                             "and repetitions!=None. Please provide a backend "
                             "that inherits cirq.Sampler or set "
@@ -127,8 +129,8 @@ class HybridControlledPQC(tf.keras.layers.Layer):
 
         # Ingest backend and differentiator.
         if self._analytic:
-            self._layer = expectation.Expectation(backend=backend,
-                                                  differentiator=differentiator)
+            self._layer = expectation.Expectation(
+                backend=backend, differentiator=differentiator)
         else:
             self._layer = sampled_expectation.SampledExpectation(
                 backend=backend, differentiator=differentiator)
@@ -137,7 +139,8 @@ class HybridControlledPQC(tf.keras.layers.Layer):
 
         # create weights for only native symbols
 
-        if not all(name in self._symbols_list for name in controlled_symbol_names):
+        if not all(
+                name in self._symbols_list for name in controlled_symbol_names):
             raise ValueError(
                 "model_circuit does not contain all controlled symbol names ")
 
@@ -148,14 +151,16 @@ class HybridControlledPQC(tf.keras.layers.Layer):
 
         # Weight creation is not placed in a Build function because the number
         # of weights is independent of the input shape.
-        self._native_symbol_values = self.add_weight('parameters',
-                                                     shape=(
-                                                         len(native_symbol_names),),
-                                                     initializer=self.initializer,
-                                                     regularizer=self.regularizer,
-                                                     constraint=self.constraint,
-                                                     dtype=tf.float32,
-                                                     trainable=True)
+        self._native_symbol_values = self.add_weight(
+            'parameters',
+            shape=(
+                len(native_symbol_names),
+            ),
+            initializer=self.initializer,
+            regularizer=self.regularizer,
+            constraint=self.constraint,
+            dtype=tf.float32,
+            trainable=True)
 
     @property
     def symbols(self):
@@ -267,7 +272,7 @@ class QSP(tf.keras.layers.Layer):
         self.q = cirq.GridQubit(0, 0)
         self.poly_deg = poly_deg
         self.symbol_names = [sympy.Symbol(f'phi{k}') for k in range(
-            poly_deg+1)] + [sympy.Symbol(f'th')]
+            poly_deg + 1)] + [sympy.Symbol(f'th')]
 
         initializer = tf.keras.initializers.RandomUniform(0, 2 * np.pi)
 
@@ -288,15 +293,15 @@ class QSP(tf.keras.layers.Layer):
                 [number of circuits, <size of state>, <size of state>]
         """
 
-        wx = cirq.Circuit(cirq.rx(2*theta_inp))
-        self.rot_zs = [cirq.Circuit(cirq.rz(2*self.phi[k])(self.q))
+        wx = cirq.Circuit(cirq.rx(2 * theta_inp))
+        self.rot_zs = [cirq.Circuit(cirq.rz(2 * self.phi[k])(self.q))
                        for k in range(self.poly_deg)]
 
         full_circuit = self.rot_zs[0]
         full_circuit_test = cirq.Circuit(
-            cirq.rz(2*self.symbol_names[0])(self.q),
-            cirq.rx(2*self.symbol_names[-1])(self.q),
-            cirq.rz(2*self.symbol_names[0])(self.q)
+            cirq.rz(2 * self.symbol_names[0])(self.q),
+            cirq.rx(2 * self.symbol_names[-1])(self.q),
+            cirq.rz(2 * self.symbol_names[0])(self.q)
         )
 
         phi_values = tf.expand_dims(self.phi, axis=0)

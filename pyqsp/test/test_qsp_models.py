@@ -62,17 +62,17 @@ class Test_qsp_models(unittest.TestCase):
         response, all_th, circuit_px, circuit_qx = qsp_models.compute_qsp_response(
             model, return_all=True)
         desired = f(np.cos(all_th))
-        assert abs(response-desired).mean() < 0.1
+        assert abs(response - desired).mean() < 0.1
 
     def xtest_mpinverse(self):
         if not self.is_enabled():
             return
 
-        d = 1/16
-        e = 1/16
-        k = 2/d
-        poly_deg = int((np.log(1/e) / d))
-        b = np.ceil(k * k * np.log(k/e))
+        d = 1 / 16
+        e = 1 / 16
+        k = 2 / d
+        poly_deg = int((np.log(1 / e) / d))
+        b = np.ceil(k * k * np.log(k / e))
         # odd polynomials for now
         poly_deg = poly_deg if (np.mod(poly_deg, 2) == 1) else (poly_deg + 1)
 
@@ -84,7 +84,8 @@ class Test_qsp_models(unittest.TestCase):
         th_in = np.arange(0, np.pi, np.pi / 30)
         th_in = tf.reshape(th_in, (th_in.shape[0], 1))
 
-        # The desired real part of p(x) which is the upper left value in the unitary of the qsp sequence
+        # The desired real part of p(x) which is the upper left value in the
+        # unitary of the qsp sequence
         expected_outputs = [f(np.cos(th_in)), np.zeros(th_in.shape[0])]
         model = qsp_models.construct_qsp_model(poly_deg)
         history = model.fit(x=th_in, y=expected_outputs,
@@ -94,7 +95,7 @@ class Test_qsp_models(unittest.TestCase):
         response, all_th, circuit_px, circuit_qx = qsp_models.compute_qsp_response(
             model, return_all=True)
         desired = f(np.cos(all_th))
-        assert abs(response-desired).mean() < 0.1
+        assert abs(response - desired).mean() < 0.1
 
     def test_ampamp1(self):
         if not self.is_enabled():
@@ -108,7 +109,8 @@ class Test_qsp_models(unittest.TestCase):
         th_in = np.arange(0, np.pi, np.pi / 30)
         th_in = tf.reshape(th_in, (th_in.shape[0], 1))
 
-        # The desired real part of p(x) which is the upper left value in the unitary of the qsp sequence
+        # The desired real part of p(x) which is the upper left value in the
+        # unitary of the qsp sequence
         expected_outputs = [f(np.cos(th_in)), np.zeros(th_in.shape[0])]
 
         model = qsp_models.construct_qsp_model(poly_deg)
@@ -117,4 +119,4 @@ class Test_qsp_models(unittest.TestCase):
         response, all_th, circuit_px, circuit_qx = qsp_models.compute_qsp_response(
             model, return_all=True)
         desired = f(np.cos(all_th))
-        assert abs(response-desired).mean() < 0.1
+        assert abs(response - desired).mean() < 0.1

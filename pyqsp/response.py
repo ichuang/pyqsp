@@ -40,8 +40,8 @@ def ComputeQSPResponse(
              [1j * np.sqrt(1 - a**2), a]])
 
         def qsp_op(phi): return np.array(
-            [[np.exp(1j*phi), 0.],
-             [0., np.exp(-1j*phi)]])
+            [[np.exp(1j * phi), 0.],
+             [0., np.exp(-1j * phi)]])
     elif signal_operator == "Wz":
         H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
 
@@ -50,8 +50,8 @@ def ComputeQSPResponse(
              [1j * np.sqrt(1 - a**2), a]]) @ H
 
         def qsp_op(phi): return H @ np.array(
-            [[np.exp(1j*phi), 0.],
-             [0., np.exp(-1j*phi)]]) @ H
+            [[np.exp(1j * phi), 0.],
+             [0., np.exp(-1j * phi)]]) @ H
     else:
         raise ResponseError(
             "Invalid signal_operator: {}".format(signal_operator)
@@ -121,7 +121,7 @@ def PlotQSPResponse(
         plot_real_only: if True, show only real part
         plot_tight_y: if True, set y-axis scale to be from min to max of real
             part; else go from +1.5 max to -1.5 max
-        show_qsp_model_plot: if True, use qsp_model.plot_qsp_response 
+        show_qsp_model_plot: if True, use qsp_model.plot_qsp_response
 
     Returns:
         Response object.
@@ -129,7 +129,8 @@ def PlotQSPResponse(
 
     if show_qsp_model_plot:
         import pyqsp.qsp_models as qsp_models
-        return qsp_models.plot_qsp_response(target, model=None, phis=phiset, title=title)
+        return qsp_models.plot_qsp_response(
+            target, model=None, phis=phiset, title=title)
 
     if plot_positive_only:
         adat = np.linspace(0., 1., npts)

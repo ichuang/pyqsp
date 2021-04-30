@@ -3,13 +3,15 @@ import scipy.optimize
 import scipy.special
 from scipy.interpolate import approximate_taylor_polynomial
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class StringPolynomial:
     '''
-    Representation of a polynomial using a python string which specifies a numpy function, 
+    Representation of a polynomial using a python string which specifies a numpy function,
     and an integer giving the desired polynomial's degree.
     '''
+
     def __init__(self, funcstr, poly_deg):
         '''
         funcstr: (str) specification of function using "x" as the argument, e.g. "np.where(x<0, -1 ,np.where(x>0,1,0))"
@@ -21,7 +23,8 @@ class StringPolynomial:
         try:
             self.__call__(0.5)
         except Exception as err:
-            raise ValueError(f"Invalid function specifciation, failed to evaluate at x=0.5, err={err}")
+            raise ValueError(
+                f"Invalid function specifciation, failed to evaluate at x=0.5, err={err}")
 
     def degree(self):
         return self.poly_deg
@@ -33,12 +36,14 @@ class StringPolynomial:
     def target(self, arg):
         return self.__call__(arg)
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class TargetPolynomial(np.polynomial.Polynomial):
     '''
     Polynomial with ideal target
     '''
+
     def __init__(self, *args, target=None, scale=None, **kwargs):
         '''
         target = function which accepts argument and gives ideal response, e.g. lambda x: x**2
@@ -48,7 +53,8 @@ class TargetPolynomial(np.polynomial.Polynomial):
         self.scale = scale
         super().__init__(*args, **kwargs)
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class PolyGenerator:
     '''
@@ -95,7 +101,7 @@ class PolyCosineTX(PolyGenerator):
         +/- 1
         '''
         r = scipy.optimize.fsolve(lambda r: (
-            np.e * np.abs(tau) / (2 * r))**r - (5/4) * epsilon, tau)[0]
+            np.e * np.abs(tau) / (2 * r))**r - (5 / 4) * epsilon, tau)[0]
         print(r)
         R = np.floor(r / 2).astype(int)
         R = max(R, 1)
@@ -103,9 +109,9 @@ class PolyCosineTX(PolyGenerator):
         print(f"R={R}")
 
         g = scipy.special.jv(0, tau) * np.polynomial.chebyshev.Chebyshev([1])
-        for k in range(1, R+1):
-            gcoef = 2 * scipy.special.jv(2*k, tau)
-            deg = 2*k
+        for k in range(1, R + 1):
+            gcoef = 2 * scipy.special.jv(2 * k, tau)
+            deg = 2 * k
             g += (-1)**k * gcoef * \
                 np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
 
@@ -144,7 +150,7 @@ class PolySineTX(PolyGenerator):
         +/- 1
         '''
         r = scipy.optimize.fsolve(lambda r: (
-            np.e * np.abs(tau) / (2 * r))**r - (5/4) * epsilon, tau)[0]
+            np.e * np.abs(tau) / (2 * r))**r - (5 / 4) * epsilon, tau)[0]
         print(r)
         R = np.floor(r / 2).astype(int)
         R = max(R, 1)
@@ -152,9 +158,9 @@ class PolySineTX(PolyGenerator):
         print(f"R={R}")
 
         g = np.polynomial.chebyshev.Chebyshev([0])
-        for k in range(0, R+1):
-            gcoef = 2 * scipy.special.jv(2*k+1, tau)
-            deg = 2*k+1
+        for k in range(0, R + 1):
+            gcoef = 2 * scipy.special.jv(2 * k + 1, tau)
+            deg = 2 * k + 1
             g += (-1)**k * gcoef * \
                 np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
 
@@ -252,7 +258,7 @@ class PolyOneOverXRect(PolyGenerator):
             ensure_bounded=True,
             return_scale=False):
 
-        coefs_invert, scale1 = PolyOneOverX().generate(2*kappa,
+        coefs_invert, scale1 = PolyOneOverX().generate(2 * kappa,
                                                        epsilon,
                                                        ensure_bounded,
                                                        return_scale=True)
@@ -326,7 +332,12 @@ class PolySign(PolyTaylorSeries):
     def help(self):
         return "approximation to the sign function using erf(delta*a) ; given delta"
 
-    def generate(self, degree=7, delta=2, ensure_bounded=True, return_scale=False):
+    def generate(
+            self,
+            degree=7,
+            delta=2,
+            ensure_bounded=True,
+            return_scale=False):
         '''
         Approximation to sign function, using erf(delta * x)
         '''
@@ -433,7 +444,8 @@ class PolyRect(PolyTaylorSeries):
             return scipy.special.erf(x * delta)
 
         def rect(x):
-            return 1 - (erf_delta(x + 1 / kappa) - erf_delta(x - 1 / kappa)) / 2
+            return 1 - (erf_delta(x + 1 / kappa) -
+                        erf_delta(x - 1 / kappa)) / 2
 
         if ensure_bounded and return_scale:
             the_poly, scale = self.taylor_series(

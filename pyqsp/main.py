@@ -204,7 +204,10 @@ Examples:
             coefs, signal_operator=args.signal_operator, method=args.method)
         if args.plot:
             response.PlotQSPResponse(
-                phiset, pcoefs=coefs, signal_operator=args.signal_operator, **plot_args)
+                phiset,
+                pcoefs=coefs,
+                signal_operator=args.signal_operator,
+                **plot_args)
 
     elif args.cmd == "hamsim":
         pg = pyqsp.poly.PolyCosineTX()
@@ -262,7 +265,7 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
-                target=lambda x: scale * 1/x,
+                target=lambda x: scale * 1 / x,
                 signal_operator="Wx",
                 title="Inversion",
                 **plot_args)
@@ -278,7 +281,7 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
-                target=lambda x: scale * np.exp(-args.seqargs[1]*x),
+                target=lambda x: scale * np.exp(-args.seqargs[1] * x),
                 signal_operator="Wx",
                 title="Gibbs distribution",
                 **plot_args)
@@ -362,8 +365,8 @@ Examples:
             response.PlotQSPResponse(
                 phiset,
                 target=lambda x: scale *
-                1 - (np.sign(x + 1/args.kappa) -
-                     np.sign(x - 1/args.kappa)) / 2,
+                1 - (np.sign(x + 1 / args.kappa) -
+                     np.sign(x - 1 / args.kappa)) / 2,
                 signal_operator="Wx",
                 title="Rect Function",
                 **plot_args)
@@ -379,7 +382,7 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
-                target=lambda x: scale * 1/x,
+                target=lambda x: scale * 1 / x,
                 signal_operator="Wx",
                 title="Poly Rect * 1/x",
                 **plot_args)
@@ -402,7 +405,11 @@ Examples:
             if isinstance(pcoefs, TargetPolynomial):
                 target = pcoefs.target
             response.PlotQSPResponse(
-                phiset, pcoefs=pcoefs, target=target, signal_operator="Wx", **plot_args)
+                phiset,
+                pcoefs=pcoefs,
+                target=target,
+                signal_operator="Wx",
+                **plot_args)
 
     elif args.cmd == "angles":
         if not args.seqname or args.seqname not in phase_generators:
@@ -423,7 +430,8 @@ Examples:
             print(f"Must specify --func and --polydeg")
             return
         poly = StringPolynomial(args.func, args.polydeg)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(poly, method="tf")
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            poly, method="tf")
         if args.plot:
             response.PlotQSPResponse(
                 phiset, target=poly, signal_operator="Wx", **plot_args)

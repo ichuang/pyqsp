@@ -9,6 +9,7 @@ from pyqsp.LPoly import LAlg, LPoly
 from pyqsp.response import ComputeQSPResponse
 from pyqsp.poly import StringPolynomial, TargetPolynomial
 
+
 class AngleFindingError(Exception):
     """Raised when angle finding step failes."""
     pass
@@ -120,7 +121,7 @@ def QuantumSignalProcessingPhases(
         sequence to specified tolerance.
         ValueError: Raised if invalid model (or method) is specified.
     """
-    if type(poly) is np.ndarray or type(poly) is list:
+    if isinstance(poly, np.ndarray) or isinstance(poly, list):
         poly = Polynomial(poly)
     elif isinstance(poly, TargetPolynomial):
         poly = Polynomial(poly.coef)
@@ -131,9 +132,9 @@ def QuantumSignalProcessingPhases(
         elif signal_operator == "Wz":
             measurement = "z"
 
-    if method=="tf":
+    if method == "tf":
         return QuantumSignalProcessingPhasesWithTensorflow(poly, **kwargs)
-    elif not method=="laurent":
+    elif not method == "laurent":
         raise ValueError(f"Invalid method {method}")
 
     model = (signal_operator, measurement)
@@ -143,7 +144,7 @@ def QuantumSignalProcessingPhases(
         # Capitalization: eps/2 amount of error budget is put to the highest
         # power for sake of numerical stability.
         poly = suc * \
-            (poly + Polynomial([0, ] * poly.degree() + [eps/2, ]))
+            (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
 
         lcoefs = poly2laurent(poly.coef)
         lalg = completion_from_root_finding(lcoefs, coef_type="F")
@@ -173,7 +174,13 @@ def QuantumSignalProcessingPhases(
 
     return phiset
 
-def QuantumSignalProcessingPhasesWithTensorflow(poly, npts_theta=30, nepochs=5000, verbose=0, return_all=False):
+
+def QuantumSignalProcessingPhasesWithTensorflow(
+        poly,
+        npts_theta=30,
+        nepochs=5000,
+        verbose=0,
+        return_all=False):
     '''
     Compute QSP phase angles using optimization, with tensorflow, via the qsp_model submodule
     Running this imports pyqsp.qsp_models
@@ -193,22 +200,32 @@ def QuantumSignalProcessingPhasesWithTensorflow(poly, npts_theta=30, nepochs=500
     import pyqsp.qsp_models as qsp_models
     import tensorflow as tf
 
-    if not (isinstance(poly, Polynomial) or isinstance(poly, StringPolynomial)):
-        raise ValueError(f"poly={poly} should be a Polynomial or StringPolynomial")
-    
+    if not (
+        isinstance(
+            poly,
+            Polynomial) or isinstance(
+            poly,
+            StringPolynomial)):
+        raise ValueError(
+            f"poly={poly} should be a Polynomial or StringPolynomial")
+
     poly_deg = poly.degree()
 
-    # The intput theta training values 
+    # The intput theta training values
     th_in = np.arange(0, np.pi, np.pi / npts_theta)
     th_in = tf.reshape(th_in, (th_in.shape[0], 1))
 
     # The desired real part of p(x) which is the upper left value in the unitary of the qsp sequence
     # and the desired real part of q(x) = 0
     expected_outputs = [poly(np.cos(th_in)), np.zeros(th_in.shape[0])]
-    
+
     # the tensorflow keras model
     model = qsp_models.construct_qsp_model(poly_deg)
-    history = model.fit(x=th_in, y=expected_outputs, epochs=nepochs, verbose=verbose)
+    history = model.fit(
+        x=th_in,
+        y=expected_outputs,
+        epochs=nepochs,
+        verbose=verbose)
     phis = model.trainable_weights[0].numpy()
     if return_all:
         data = {'model': model,
@@ -217,7 +234,7 @@ def QuantumSignalProcessingPhasesWithTensorflow(poly, npts_theta=30, nepochs=500
                 'th_in': th_in,
                 'expected_outputs': expected_outputs,
                 'poly': poly,
-        }
+                }
         return data
 
     return phis

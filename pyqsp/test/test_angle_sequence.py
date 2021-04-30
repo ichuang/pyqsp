@@ -13,19 +13,19 @@ from pyqsp.LPoly import LPoly, PolynomialToLaurentForm
 
 class Test_angle_sequence(unittest.TestCase):
     def test_poly2laurent_1(self):
-        pcoefs = np.array([-3-2j, 0., 26+10j, 0., -24-8j])
-        expected = np.array([-3-1j, 1+1j, 2., 1+1j, -3-1j]) / 2.
+        pcoefs = np.array([-3 - 2j, 0., 26 + 10j, 0., -24 - 8j])
+        expected = np.array([-3 - 1j, 1 + 1j, 2., 1 + 1j, -3 - 1j]) / 2.
         result = poly2laurent(pcoefs)
         self.assertAlmostEqual(np.max(np.abs(expected - result)), 0.)
 
     def test_poly2laurent_2(self):
-        pcoefs = np.array([0., -5+5j, 0., 8-4j])
-        expected = np.array([2-1j, 1+2j, 1+2j, 2-1j]) / 2.
+        pcoefs = np.array([0., -5 + 5j, 0., 8 - 4j])
+        expected = np.array([2 - 1j, 1 + 2j, 1 + 2j, 2 - 1j]) / 2.
         result = poly2laurent(pcoefs)
         self.assertAlmostEqual(np.max(np.abs(expected - result)), 0.)
 
     def test_poly2laurent_3(self):
-        pcoefs = np.array([1., -5+5j, 0., 8-4j])
+        pcoefs = np.array([1., -5 + 5j, 0., 8 - 4j])
         with self.assertRaises(AngleFindingError):
             poly2laurent(pcoefs)
 
@@ -52,7 +52,7 @@ class Test_angle_sequence(unittest.TestCase):
         QuantumSignalProcessingPhases(poly, signal_operator="Wz")
 
     def test_response_4(self):
-        pcoefs = [0., -2+1j, 0., 2.]
+        pcoefs = [0., -2 + 1j, 0., 2.]
         poly = Polynomial(pcoefs)
 
         QuantumSignalProcessingPhases(
@@ -68,8 +68,8 @@ class Test_angle_sequence(unittest.TestCase):
             poly, signal_operator="Wx", measurement="z")
 
     def test_response_6(self):
-        pcoefs = [-1., 0., (1/2)*(4 + 3j - (1 - 2j)*np.sqrt(3)),
-                  0., (1-1j)*(-1j+np.sqrt(3))]
+        pcoefs = [-1., 0., (1 / 2) * (4 + 3j - (1 - 2j) * np.sqrt(3)),
+                  0., (1 - 1j) * (-1j + np.sqrt(3))]
         poly = Polynomial(pcoefs)
 
         QuantumSignalProcessingPhases(

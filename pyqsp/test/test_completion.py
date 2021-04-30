@@ -34,9 +34,9 @@ class Test_completion(unittest.TestCase):
         Qlp = Qalg.XPoly
         # print(f"Laurent G poly {Qlp}")
 
-        ncoefs = (p_new*~p_new + Qlp*~Qlp).coefs
+        ncoefs = (p_new * ~p_new + Qlp * ~Qlp).coefs
         ncoefs_expected = np.zeros(ncoefs.size)
-        ncoefs_expected[ncoefs.size//2] = 1.
+        ncoefs_expected[ncoefs.size // 2] = 1.
 
         self.assertAlmostEqual(np.max(np.abs(ncoefs - ncoefs_expected)), 0.)
 
@@ -66,9 +66,9 @@ class Test_completion(unittest.TestCase):
 
         self.assertEqual(Qlp.dmin, -2)
 
-        ncoefs = (p_new*~p_new + Qlp*~Qlp).coefs
+        ncoefs = (p_new * ~p_new + Qlp * ~Qlp).coefs
         ncoefs_expected = np.zeros(ncoefs.size)
-        ncoefs_expected[ncoefs.size//2] = 1.
+        ncoefs_expected[ncoefs.size // 2] = 1.
 
         self.assertAlmostEqual(np.max(np.abs(ncoefs - ncoefs_expected)), 0.)
 
@@ -101,22 +101,22 @@ class Test_completion(unittest.TestCase):
 
         self.assertEqual(Qlp.dmin, -3)
 
-        ncoefs = (p_new*~p_new + Qlp*~Qlp).coefs
+        ncoefs = (p_new * ~p_new + Qlp * ~Qlp).coefs
         ncoefs_expected = np.zeros(ncoefs.size)
-        ncoefs_expected[ncoefs.size//2] = 1.
+        ncoefs_expected[ncoefs.size // 2] = 1.
 
         self.assertAlmostEqual(np.max(np.abs(ncoefs - ncoefs_expected)), 0.)
 
     def test_completion_p_1(self):
-        pcoefs = [0., -2+1j, 0., 2.]
+        pcoefs = [0., -2 + 1j, 0., 2.]
 
         alg = completion_from_root_finding(pcoefs, coef_type="P")
 
         F, G = alg.IPoly, alg.XPoly
 
-        ncoefs = (F*~F + G*~G).coefs
+        ncoefs = (F * ~F + G * ~G).coefs
         ncoefs_expected = np.zeros(ncoefs.size)
-        ncoefs_expected[ncoefs.size//2] = 1.
+        ncoefs_expected[ncoefs.size // 2] = 1.
 
         self.assertAlmostEqual(np.max(np.abs(ncoefs - ncoefs_expected)), 0.)
 
@@ -127,23 +127,23 @@ class Test_completion(unittest.TestCase):
 
         F, G = alg.IPoly, alg.XPoly
 
-        ncoefs = (F*~F + G*~G).coefs
+        ncoefs = (F * ~F + G * ~G).coefs
         ncoefs_expected = np.zeros(ncoefs.size)
-        ncoefs_expected[ncoefs.size//2] = 1.
+        ncoefs_expected[ncoefs.size // 2] = 1.
 
         self.assertAlmostEqual(np.max(np.abs(ncoefs - ncoefs_expected)), 0.)
 
     def test_completion_p_3(self):
-        pcoefs = [-1., 0., (1/2)*(4 + 3j - (1 - 2j)*np.sqrt(3)),
-                  0., (1-1j)*(-1j+np.sqrt(3))]
+        pcoefs = [-1., 0., (1 / 2) * (4 + 3j - (1 - 2j) * np.sqrt(3)),
+                  0., (1 - 1j) * (-1j + np.sqrt(3))]
 
         alg = completion_from_root_finding(pcoefs, coef_type="P")
 
         F, G = alg.IPoly, alg.XPoly
 
-        ncoefs = (F*~F + G*~G).coefs
+        ncoefs = (F * ~F + G * ~G).coefs
         ncoefs_expected = np.zeros(ncoefs.size)
-        ncoefs_expected[ncoefs.size//2] = 1.
+        ncoefs_expected[ncoefs.size // 2] = 1.
 
         self.assertAlmostEqual(np.max(np.abs(ncoefs - ncoefs_expected)), 0.)
 

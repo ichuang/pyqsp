@@ -22,7 +22,7 @@ def cheb2poly(ccoefs, kind="T"):
 
     for deg, ccoef in enumerate(ccoefs):
         basis = cfunc(deg).coef[::-1]
-        pcoefs[:deg+1] += ccoef * basis
+        pcoefs[:deg + 1] += ccoef * basis
 
     return pcoefs
 
@@ -41,7 +41,7 @@ def poly2cheb(pcoefs, kind="T"):
         deg = pcoefs.size - i - 1
         basis = cfunc(deg).coef[::-1]
         ccoefs[deg] = pcoef / basis[-1]
-        pcoefs[:deg+1] -= ccoefs[deg] * basis
+        pcoefs[:deg + 1] -= ccoefs[deg] * basis
 
     return ccoefs
 
@@ -94,7 +94,13 @@ def _pq_completion(P):
     cplx_roots = np.r_[cplx_roots, -cplx_roots]
 
     # construct Q
-    Q = Polynomial(polyfromroots(np.r_[real_roots, 1j*imag_roots, cplx_roots]))
+    Q = Polynomial(
+        polyfromroots(
+            np.r_[
+                real_roots,
+                1j *
+                imag_roots,
+                cplx_roots]))
     Qc = Polynomial(Q.coef.conj())
 
     # normalize
@@ -118,13 +124,15 @@ def _fg_completion(F, seed):
     Returns:
         Laurent polynomial object G corresponding to a unitary matrix.
     """
-    # Find all the roots of Id - (p * ~p) that lies within the upper unit circle.
+    # Find all the roots of Id - (p * ~p) that lies within the upper unit
+    # circle.
     poly = (Id - (F * ~F)).coefs
     roots = np.roots(poly)
     # poly is a real, self-inverse Laurent polynomial with no root on the unit circle. All real roots come in reciprocal pairs,
     # and all complex roots come in quadruples (r, r*, 1/r, 1/r*).
     # For each pair of real roots, select the one within the unit circle.
-    # For each quadruple of complex roots, select the pair within the unit circle.
+    # For each quadruple of complex roots, select the pair within the unit
+    # circle.
     imag_roots = []
     real_roots = []
     for i in roots:
@@ -153,12 +161,12 @@ def _fg_completion(F, seed):
         lst.append(LPoly([-root, 1]))
 
     # Multiply all the polynomial factors via fft for numerical stability.
-    pp = int(np.floor(np.log2(degree)))+1
-    lst_fft = np.pi * np.linspace(0, 1 - 1/2**pp, 2**pp)
+    pp = int(np.floor(np.log2(degree))) + 1
+    lst_fft = np.pi * np.linspace(0, 1 - 1 / 2**pp, 2**pp)
     coef_mat = np.log(np.array([i.eval(lst_fft) for i in lst]))
     coef_fft = np.exp(np.sum(coef_mat, axis=0))
     gcoefs = np.real(np.fft.fft(coef_fft, 1 << pp))[
-        :degree+1] / (1 << pp)
+        :degree + 1] / (1 << pp)
 
     # Normalization
     G = LPoly(gcoefs * np.sqrt(norm / gcoefs[0]), -len(gcoefs) + 1)
@@ -205,20 +213,20 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
         gcoefs = np.zeros(deg + 1)
 
         if deg % 2 == 0:
-            fcoefs[:(deg+1)//2] = np.real(pcheb[:0:-1] - qcheb[:0:-1]) / 2
-            fcoefs[(deg+1)//2+1:] = np.real(pcheb[1:] + qcheb[1:]) / 2
+            fcoefs[:(deg + 1) // 2] = np.real(pcheb[:0:-1] - qcheb[:0:-1]) / 2
+            fcoefs[(deg + 1) // 2 + 1:] = np.real(pcheb[1:] + qcheb[1:]) / 2
 
-            gcoefs[:(deg+1)//2] = np.imag(pcheb[:0:-1] + qcheb[:0:-1]) / 2
-            gcoefs[(deg+1)//2+1:] = np.imag(pcheb[1:] - qcheb[1:]) / 2
+            gcoefs[:(deg + 1) // 2] = np.imag(pcheb[:0:-1] + qcheb[:0:-1]) / 2
+            gcoefs[(deg + 1) // 2 + 1:] = np.imag(pcheb[1:] - qcheb[1:]) / 2
 
-            fcoefs[(deg+1)//2] = np.real(pcheb[0])
-            gcoefs[(deg+1)//2] = np.imag(pcheb[0])
+            fcoefs[(deg + 1) // 2] = np.real(pcheb[0])
+            gcoefs[(deg + 1) // 2] = np.imag(pcheb[0])
         else:
-            fcoefs[:(deg+1)//2] = np.real(pcheb[::-1] - qcheb[::-1]) / 2
-            fcoefs[(deg+1)//2:] = np.real(pcheb + qcheb) / 2
+            fcoefs[:(deg + 1) // 2] = np.real(pcheb[::-1] - qcheb[::-1]) / 2
+            fcoefs[(deg + 1) // 2:] = np.real(pcheb + qcheb) / 2
 
-            gcoefs[:(deg+1)//2] = np.imag(pcheb[::-1] + qcheb[::-1]) / 2
-            gcoefs[(deg+1)//2:] = np.imag(pcheb - qcheb) / 2
+            gcoefs[:(deg + 1) // 2] = np.imag(pcheb[::-1] + qcheb[::-1]) / 2
+            gcoefs[(deg + 1) // 2:] = np.imag(pcheb - qcheb) / 2
 
         ipoly = LPoly(fcoefs, -len(fcoefs) + 1)
         xpoly = LPoly(gcoefs, -len(gcoefs) + 1)
@@ -227,9 +235,9 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
             "Invalid QSP coef_type specifier: {}".format(coef_type))
 
     # check completion
-    ncoefs = (ipoly*~ipoly + xpoly*~xpoly).coefs
+    ncoefs = (ipoly * ~ipoly + xpoly * ~xpoly).coefs
     ncoefs_expected = np.zeros(ncoefs.size)
-    ncoefs_expected[ncoefs.size//2] = 1.
+    ncoefs_expected[ncoefs.size // 2] = 1.
     success = np.max(np.abs(ncoefs - ncoefs_expected)) < tol
 
     if not success:
