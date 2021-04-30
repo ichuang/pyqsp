@@ -36,7 +36,7 @@ setup(
     install_requires=['cirq',
                       'cython',
                       'matplotlib',
-                      'numpy,
+                      'numpy',
                       'protobuf',
                       'scipy',
                       'tensorflow',
