@@ -6,30 +6,16 @@ import tensorflow as tf
 
 from pyqsp import qsp_models
 
-# import IPython
-# visualization tools
-# %matplotlib inline
-
-# import pandas as pd
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-
-
-# sns.set()
-# plt.rcParams['figure.figsize'] = [15, 7]
-
 class Test_qsp_models(unittest.TestCase):
     '''
     Unit tests for qsp_models component of pyqsp
     '''
-
     def setUp(self):
         '''
         Do imports here, so that this module can be entirely optional
         '''
         if self.is_enabled():
             pass
-            # from cirq.contrib.svg import SVGCircuit
         else:
             print(
                 "[pyqsp.test] Skipping qsp_model tests: export PYQSP_TEST_QSP_MODELS=1 to enable these tests")
