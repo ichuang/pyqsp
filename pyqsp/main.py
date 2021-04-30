@@ -197,6 +197,16 @@ Examples:
         help="comma delimited list of QSP phase angles, to be used in the 'response' command",
         action="store",
         type=float_list)
+    parser.add_argument(
+        "--nepochs",
+        help="number of epochs to use in tensorflow optimization",
+        type=int,
+        default=5000)
+    parser.add_argument(
+        "--npts-theta",
+        help="number of discretized values of theta to use in tensorflow optimization",
+        type=int,
+        default=30)
 
     if not args:
         args = parser.parse_args(arglist)
@@ -212,6 +222,13 @@ Examples:
                      show_qsp_model_plot=args.plot_qsp_model,
                      )
 
+    qspp_args = dict(signal_operator=args.signal_operator,
+                     method=args.method,
+                     tolerance=args.tolerance,
+                     nepochs=args.nepochs,
+                     npts_theta=args.npts_theta,
+    )
+
     if args.cmd == "poly2angles":
         coefs = args.poly
         if not coefs:
@@ -222,7 +239,7 @@ Examples:
             coefs = list(map(float, coefs.split(",")))
         print(f"[pyqsp] polynomial coefficients={coefs}")
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            coefs, signal_operator=args.signal_operator, method=args.method)
+            coefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -238,7 +255,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -254,7 +271,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -282,7 +299,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -299,7 +316,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -315,7 +332,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             delta = args.seqargs[1] / 2.
             response.PlotQSPResponse(
@@ -333,7 +350,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -349,7 +366,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -365,7 +382,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -382,7 +399,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -400,7 +417,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
@@ -421,7 +438,7 @@ Examples:
         pcoefs = pg.generate(*args.polyargs)
         print(f"[pyqsp] polynomial coefs = {pcoefs}")
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            pcoefs, tolerance=args.tolerance, method=args.method)
+            pcoefs, **qspp_args)
         if args.plot:
             target = None
             if isinstance(pcoefs, TargetPolynomial):
@@ -451,9 +468,10 @@ Examples:
         if (not args.func) or (not args.polydeg):
             print(f"Must specify --func and --polydeg")
             return
+        qspp_args['method'] = 'tf'
         poly = StringPolynomial(args.func, args.polydeg)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            poly, method="tf")
+            poly, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset, target=poly, signal_operator="Wx", **plot_args)
