@@ -72,6 +72,15 @@ produces the QSP phase angles for a degree 20 polynomial approximation, using tw
 
 ![Example QSP response function approximating a threshold function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-threshold-polynomial-degree-20-kappa-20.png?raw=true)
 
+Sine and cosine functions are useful, for example, for Hamiltonian simulation.  Running:
+```
+pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
+```
+produces the QSP phase angles for a degree 6 polynomial approximation of cos(3*x), and produces this plot:
+
+![Example QSP response function approximating a cosine function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-cos-using-tf-order-6.png?raw=true)
+
+This example also shows how an arbitrary function can be specified (using a numpy expression) as a string, and fit using an arbitrary (may need to be even or odd, to match the function) order polynomial, using optimization via tensorflow, and a keras model.  The example also shows an alternative style of plot, produced using the `--plot-qsp-model` flag.
 
 ## Code design
 
@@ -146,6 +155,7 @@ Examples:
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
+    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
 
 positional arguments:
