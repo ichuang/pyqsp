@@ -1,5 +1,7 @@
 # Quantum Signal Processing
 
+![test workflow](https://github.com/ichuang/pyqsp/actions/workflows/run_tests.yml/badge.svg)
+
 ## Introduction
 
 [Quantum signal processing](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.118.010501) is a framework for quantum algorithms including Hamiltonian simulation, quantum linear system solving, amplitude amplification, etc. 
