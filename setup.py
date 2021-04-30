@@ -17,7 +17,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='pyqsp',
-    version='0.1.0',
+    version='0.1.1',
     author='I. Chuang',
     author_email='ichuang@mit.edu',
     packages=['pyqsp', 'pyqsp.test'],
