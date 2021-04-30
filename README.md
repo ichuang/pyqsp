@@ -215,3 +215,4 @@ optional arguments:
 - v0.0.3: initial version, with phase angle generation entirely done using https://arxiv.org/abs/2003.02831
 - v0.1.0: added generation of phase angles using optimization via tensorflow (qsp_model code by Jordan Docter and Zane Rossi)
 - v0.1.1: add tf unit tests to test_main; readme updates
+- v0.1.2: fixed bug in qsp_model plotting (Re[q] wasn't being correctly computed for the qsp_model plot); made tf an optional requirement
