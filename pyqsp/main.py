@@ -227,7 +227,7 @@ Examples:
                      tolerance=args.tolerance,
                      nepochs=args.nepochs,
                      npts_theta=args.npts_theta,
-    )
+                     )
 
     if args.cmd == "poly2angles":
         coefs = args.poly
@@ -390,6 +390,23 @@ Examples:
                 (np.sign(x + 0.5) - np.sign(x - 0.5)) / 2,
                 signal_operator="Wx",
                 title="Threshold Function",
+                **plot_args)
+
+    elif args.cmd == "poly_phase":
+        pg = pyqsp.poly.PolyPhaseEstimation()
+        pcoefs, scale = pg.generate(
+            *args.seqargs,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale *
+                (-1 + np.sign(1/np.sqrt(2) - x) + np.sign(1/np.sqrt(2) + x)),
+                signal_operator="Wx",
+                title="Phase Estimation Polynomial",
                 **plot_args)
 
     elif args.cmd == "poly_rect":

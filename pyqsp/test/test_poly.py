@@ -65,6 +65,15 @@ class Test_poly(unittest.TestCase):
         assert (pfunc(0) > 0.3)
         assert (pfunc(0.9) < 0.1)
 
+    def test_poly_phase1(self):
+        pg = pyqsp.poly.PolyPhaseEstimation()
+        pcoefs, scale = pg.generate(
+            18, 10, ensure_bounded=True, return_scale=True)
+        pfunc = np.polynomial.Polynomial(pcoefs)
+        self.assertLess(pfunc(-0.9) / scale, -0.9)
+        self.assertLess(pfunc(0.9) / scale, -0.9)
+        self.assertGreater(pfunc(0) / scale, 0.9)
+
     def test_poly_gibbs1(self):
         pg = pyqsp.poly.PolyGibbs()
         pfunc = pg.generate(30, 4.5)

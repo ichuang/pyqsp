@@ -6,8 +6,8 @@ from numpy.polynomial.polynomial import Polynomial
 from pyqsp.completion import completion_from_root_finding
 from pyqsp.decomposition import angseq
 from pyqsp.LPoly import LAlg, LPoly
-from pyqsp.response import ComputeQSPResponse
 from pyqsp.poly import StringPolynomial, TargetPolynomial
+from pyqsp.response import ComputeQSPResponse
 
 
 class AngleFindingError(Exception):
@@ -133,8 +133,9 @@ def QuantumSignalProcessingPhases(
             measurement = "z"
 
     if method == "tf":
-        if not signal_operator=="Wx":
-            raise ValueError(f"Must use Wx signal operator model with tf method")
+        if not signal_operator == "Wx":
+            raise ValueError(
+                f"Must use Wx signal operator model with tf method")
         return QuantumSignalProcessingPhasesWithTensorflow(poly, **kwargs)
     elif not method == "laurent":
         raise ValueError(f"Invalid method {method}")

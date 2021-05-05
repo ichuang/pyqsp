@@ -421,6 +421,54 @@ class PolyThreshold(PolyTaylorSeries):
             return pcoefs
 
 
+class PolyPhaseEstimation(PolyTaylorSeries):
+
+    def help(self):
+        return "phase estimation polynomial given "
+
+    def generate(self,
+                 degree=6,
+                 delta=2,
+                 ensure_bounded=True,
+                 return_scale=False):
+        '''
+        Approximation to threshold function at a=1/2; use a bandpass built from two erf's
+        '''
+        degree = int(degree)
+        print(f"[pyqsp.poly.PolyThreshold] degree={degree}, delta={delta}")
+        if (degree % 2):
+            raise Exception("[PolyThreshold] degree must be even")
+
+        def erf_delta(x):
+            return scipy.special.erf(x * delta)
+
+        def threshold(x):
+            return (-1 + erf_delta(1/np.sqrt(2) - x) + erf_delta(1/np.sqrt(2) + x))
+
+        if ensure_bounded and return_scale:
+            the_poly, scale = self.taylor_series(
+                threshold,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+        else:
+            the_poly = self.taylor_series(
+                threshold,
+                degree,
+                ensure_bounded=ensure_bounded,
+                return_scale=return_scale,
+                max_scale=0.9)
+
+        pcoefs = the_poly.coef
+        # force odd coefficients to be zero, since the polynomial must be even
+        pcoefs[1::2] = 0
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
+
+
 class PolyRect(PolyTaylorSeries):
 
     def help(self):
