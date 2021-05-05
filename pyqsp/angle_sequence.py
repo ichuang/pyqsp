@@ -136,7 +136,9 @@ def QuantumSignalProcessingPhases(
         if not signal_operator == "Wx":
             raise ValueError(
                 f"Must use Wx signal operator model with tf method")
-        return QuantumSignalProcessingPhasesWithTensorflow(poly, **kwargs)
+        return QuantumSignalProcessingPhasesWithTensorflow(poly,
+                                                           measurement=measurement,
+                                                           **kwargs)
     elif not method == "laurent":
         raise ValueError(f"Invalid method {method}")
 
@@ -183,6 +185,7 @@ def QuantumSignalProcessingPhasesWithTensorflow(
         npts_theta=30,
         nepochs=5000,
         verbose=0,
+        measurement="z",
         return_all=False):
     '''
     Compute QSP phase angles using optimization, with tensorflow, via the qsp_model submodule
@@ -223,7 +226,7 @@ def QuantumSignalProcessingPhasesWithTensorflow(
     expected_outputs = [poly(np.cos(th_in)), np.zeros(th_in.shape[0])]
 
     # the tensorflow keras model
-    model = qsp_models.construct_qsp_model(poly_deg)
+    model = qsp_models.construct_qsp_model(poly_deg, measurement=measurement)
     history = model.fit(
         x=th_in,
         y=expected_outputs,

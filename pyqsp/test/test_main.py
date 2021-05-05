@@ -26,6 +26,7 @@ test_cmds_tf = [
     '--plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly',
 ]
 
+
 class Test_main(unittest.TestCase):
     def test_main(self):
         for i, cmd in enumerate(test_cmds):

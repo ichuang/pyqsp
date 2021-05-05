@@ -162,6 +162,16 @@ Examples:
         help="when plotting only real component, and not imaginary",
         action="store_true")
     parser.add_argument(
+        "--title",
+        help="plot title",
+        type=str,
+        default=None)
+    parser.add_argument(
+        "--measurement",
+        help="measurement basis if using the polyfunc argument",
+        type=str,
+        default=None)
+    parser.add_argument(
         "--output-json",
         help="output QSP phase angles in JSON format",
         action="store_true")
@@ -177,7 +187,7 @@ Examples:
         "--plot-npts",
         help="number of points to use in plotting",
         type=int,
-        default=100)
+        default=400)
     parser.add_argument(
         "--tolerance",
         help="error tolerance for phase angle optimizer",
@@ -488,10 +498,17 @@ Examples:
         qspp_args['method'] = 'tf'
         poly = StringPolynomial(args.func, args.polydeg)
         phiset = angle_sequence.QuantumSignalProcessingPhases(
-            poly, **qspp_args)
+            poly,
+            measurement=args.measurement,
+            **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
-                phiset, target=poly, signal_operator="Wx", **plot_args)
+                phiset,
+                target=poly,
+                signal_operator="Wx",
+                measurement=args.measurement,
+                title=args.title,
+                **plot_args)
 
     elif args.cmd == "response":
         if not args.phiset:

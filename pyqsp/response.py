@@ -145,7 +145,6 @@ def PlotQSPResponse(
                               signal_operator=signal_operator,
                               measurement=measurement)
     pdat = qspr['pdat']
-
     plt.figure(figsize=[8, 5])
 
     if pcoefs is not None:

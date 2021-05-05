@@ -94,7 +94,7 @@ class QSPCircuit(cirq.Circuit):
         for theta in np.array(thetas).flatten():
             resolver = cirq.ParamResolver({"theta": theta * (-2)})
             u = cirq.resolve_parameters(self, resolver).unitary()
-            denom = np.sqrt(np.sin(theta))
+            denom = np.sin(theta)
             if denom==0:
                 denom = 1.0e-8
             qxs.append(u[0, 1] / (1j * denom))
