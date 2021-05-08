@@ -144,13 +144,14 @@ You can also plot the response given by a given QSP angle sequence, e.g. using:
 ```
 usage: pyqsp [-h] [-v] [-o OUTPUT] [--signal_operator SIGNAL_OPERATOR] [--plot] [--hide-plot] [--return-angles] [--poly POLY] [--func FUNC]
              [--polydeg POLYDEG] [--tau TAU] [--epsilon EPSILON] [--seqname SEQNAME] [--seqargs SEQARGS] [--polyname POLYNAME] [--polyargs POLYARGS]
-             [--plot-magnitude] [--plot-probability] [--plot-real-only] [--output-json] [--plot-positive-only] [--plot-tight-y] [--plot-npts PLOT_NPTS]
-             [--tolerance TOLERANCE] [--method METHOD] [--plot-qsp-model] [--phiset PHISET] [--nepochs NEPOCHS] [--npts-theta NPTS_THETA]
+             [--plot-magnitude] [--plot-probability] [--plot-real-only] [--title TITLE] [--measurement MEASUREMENT] [--output-json]
+             [--plot-positive-only] [--plot-tight-y] [--plot-npts PLOT_NPTS] [--tolerance TOLERANCE] [--method METHOD] [--plot-qsp-model]
+             [--phiset PHISET] [--nepochs NEPOCHS] [--npts-theta NPTS_THETA]
              cmd
 
 usage: pyqsp [options] cmd
 
-Version: 0.1.3
+Version: 0.1.4
 Commands:
 
     poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
@@ -179,6 +180,7 @@ Examples:
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
+    pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
 
 positional arguments:
   cmd                   command
@@ -205,6 +207,9 @@ optional arguments:
   --plot-magnitude      when plotting only show magnitude, instead of separate imaginary and real components
   --plot-probability    when plotting only show squared magnitude, instead of separate imaginary and real components
   --plot-real-only      when plotting only real component, and not imaginary
+  --title TITLE         plot title
+  --measurement MEASUREMENT
+                        measurement basis if using the polyfunc argument
   --output-json         output QSP phase angles in JSON format
   --plot-positive-only  when plotting only a-values (x-axis) from 0 to +1, instead of from -1 to +1 
   --plot-tight-y        when plotting scale y-axis tightly to real part of data
@@ -218,6 +223,7 @@ optional arguments:
   --nepochs NEPOCHS     number of epochs to use in tensorflow optimization
   --npts-theta NPTS_THETA
                         number of discretized values of theta to use in tensorflow optimization
+
 ```
 
 ### Example: plot response polynomial functions for sin(a) approximation
