@@ -60,6 +60,7 @@ Examples:
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
+    pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
 
 """.format(version)
 

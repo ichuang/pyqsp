@@ -98,6 +98,10 @@ This example also shows how an arbitrary function can be specified (using a nump
 
 The code is structured such that tensorflow is not imported by default, so that the package can be run without tensorflow being installed.  If `qsp_model` is used, then tensorflow is required.
 
+### Requirements
+
+This package can be run without tensorflow, if the `qsp_model` code is not used.  If `qsp_model` is desired, then also install the requirements specified in [tf_requirements.txt](https://github.com/ichuang/pyqsp/blob/master/tf_requirements.txt)
+
 ### Unit tests
 
 A set of unit tests is also provided.  Run them using `python setup.py test`
@@ -228,3 +232,4 @@ optional arguments:
 - v0.1.1: add tf unit tests to test_main; readme updates
 - v0.1.2: fixed bug in qsp_model plotting (Re[q] wasn't being correctly computed for the qsp_model plot); made tf an optional requirement
 - v0.1.3: fixed bug in qsp_model.qsp_layers - Re[q] is actually proportional to Imag[u[0,1]]; allow --nepochs and --npts-theta to be specified
+- v0.1.4: add measurement basis option for qsp_models; add phase estimation polynomial
