@@ -10,7 +10,9 @@ Quantum signal processing performs spectral transformation of any unitary U, giv
 
 This python package generates QSP phase angles using the code based on two different methods.  The "laurent" method employs [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extends the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  The "tf" method employs tensorflow + keras, and finds the QSP angles using optimization.
 
-Two QSP model conventions are used in the literature: Wx, where the signal W(a) is an X-rotation and QSP phase shifts are Z-rotations, and Wz, where the signal W(a) is a Z-rotation and QSP phase shifts are X-rotations.
+### QSP conventions
+
+As described in [A Grand Unification of Quantum Algorithms](https://arxiv.org/abs/2105.02859), two important QSP model conventions used in the literature are known as Wx, where the signal W(a) is an X-rotation and QSP signal processing phase shifts are Z-rotations, and Wz, where the signal W(a) is a Z-rotation and QSP signal processing phase shifts are X-rotations.
 
 Specifically, in the Wx convention, the QSP operation sequence is:
 
@@ -38,7 +40,9 @@ They are related by a Hadamard transform:
 
 The Wz convention is convenient for and employed in [Laurent polynomial formulations of QSP](https://arxiv.org/abs/2003.02831), whereas the Wx convention is more traditional, e.g. as employed in [quantum singular value transform](https://arxiv.org/abs/1806.01838) applications of QSP.
 
-This package can generate QSP phase angles for both conventions (whereas the original code only handles the Wz convention).  The challenge is that if one wants a certain polynomial  <!-- P_x(a) = \langle 0|U_x|0\rangle --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_x%28a%29%20%3D%20%5Clangle%200%7CU_x%7C0%5Crangle"/> in the Wx convention, one cannot just use the phases generated for this polynomial in the Wz convention.  Instead, first the Q_x(a) corresponding to P_x(a) is needed to complete the full U_x.  This then gives <!-- P_z(a) = \langle 0|U_z|0\rangle = P_x(a) + Q_x(a) --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_z%28a%29%20%3D%20%5Clangle%200%7CU_z%7C0%5Crangle%20%3D%20P_x%28a%29%20&plus;%20Q_x%28a%29" />.  Computing the QSP phases for P_z(a) in the Wz convention then gives the desired QSP phases for P_x(a) in the Wx convention.  Note that this is not entirely satisfactory, since there is a phase between P_x and Q_x which is left indeterminate, and Q_x may contain errors due to the sensitivity of the completion process to roots of the polynomials involved, but these issues can likely be fixed.
+This package can generate QSP phase angles for both conventions (whereas the original code only handles the Wz convention).  The challenge is that if one wants a certain polynomial  <!-- P_x(a) = \langle 0|U_x|0\rangle --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_x%28a%29%20%3D%20%5Clangle%200%7CU_x%7C0%5Crangle"/> in the Wx convention, one cannot just use the phases generated for this polynomial in the Wz convention.  Instead, first the Q_x(a) corresponding to P_x(a) is needed to complete the full U_x.  This then gives <!-- P_z(a) = \langle 0|U_z|0\rangle = P_x(a) + Q_x(a) --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_z%28a%29%20%3D%20%5Clangle%200%7CU_z%7C0%5Crangle%20%3D%20P_x%28a%29%20&plus;%20Q_x%28a%29" />.  Computing the QSP phases for P_z(a) in the Wz convention then gives the desired QSP phases for P_x(a) in the Wx convention, if suitable care is taken with respect to the Q(a) polynomial.
+
+In addition to specifying the signal rotation operator W and the signal processing operator phase shifts, the QSP signal basis must also be specified.  In this code, the default basis is |+>, but the code also allows the |0> basis to be used (when using tensorflow optimization to generate the phase angles).  See the "--measurement" option.
 
 ## Examples
 
