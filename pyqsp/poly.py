@@ -521,6 +521,55 @@ class PolyRect(PolyTaylorSeries):
         else:
             return pcoefs
 
+# -----------------------------------------------------------------------------
+
+
+class PolyLinearAmplification(PolyTaylorSeries):
+
+    def help(self):
+        return "approximates x/(2*gamma) in region (-2*gamma, 2*gamma) capped to +/- 1 outside for some constant gamma"
+
+    def generate(self,
+                 degree=7,
+                 gamma=0.25,
+                 kappa=10,
+                 ensure_bounded=True,
+                 return_scale=False):
+        degree = int(degree)
+        print(
+            f"[pyqsp.poly.PolyLinearAmplification] degree={degree}, gamma={gamma}")
+        if (degree % 2) != 1:
+            raise Exception("[PolyLinearAmplification] degree must be odd")
+
+        def erf_delta(x):
+            return scipy.special.erf(x * kappa)
+
+        def rect(x):
+            return (erf_delta(x + 2 * gamma) - erf_delta(x - 2 * gamma)) / 2
+
+        def linear_amplification(x):
+            return x * rect(x) / (2 * gamma)
+
+        result = self.taylor_series(
+            linear_amplification,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=1.)
+
+        if ensure_bounded and return_scale:
+            the_poly, scale = result
+        else:
+            the_poly = result
+
+        pcoefs = the_poly.coef
+        # force even coefficients to be zero, since the polynomial must be odd
+        pcoefs[0::2] = 0
+        if ensure_bounded and return_scale:
+            return pcoefs, scale
+        else:
+            return pcoefs
+
 
 # -----------------------------------------------------------------------------
 

@@ -65,6 +65,15 @@ class Test_poly(unittest.TestCase):
         assert (pfunc(0) > 0.3)
         assert (pfunc(0.9) < 0.1)
 
+    def test_poly_linamp1(self):
+        pg = pyqsp.poly.PolyLinearAmplification()
+        pcoefs, scale = pg.generate(19, 0.25, return_scale=True)
+        pfunc = np.polynomial.Polynomial(pcoefs)
+        assert (pfunc(-0.9) < 0.05)
+        assert (np.abs(pfunc(0.25) / scale - 0.5)) < 0.05
+        assert (pfunc(0) < 0.05)
+        assert (pfunc(0.9) < 0.05)
+
     def test_poly_phase1(self):
         pg = pyqsp.poly.PolyPhaseEstimation()
         pcoefs, scale = pg.generate(

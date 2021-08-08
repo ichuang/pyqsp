@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg
@@ -129,6 +130,7 @@ def PlotQSPResponse(
     Returns:
         Response object.
     """
+    print(phiset)
 
     if show_qsp_model_plot:
         import pyqsp.qsp_models as qsp_models
@@ -146,6 +148,19 @@ def PlotQSPResponse(
                               measurement=measurement)
     pdat = qspr['pdat']
     plt.figure(figsize=[8, 5])
+
+    SMALL_SIZE = 18
+    MEDIUM_SIZE = 20
+    BIGGER_SIZE = 20
+
+    plt.rc('font', family='times')
+
+    plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+    plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+    plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+    plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+    plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 
     if pcoefs is not None:
         poly = pcoefs
@@ -178,11 +193,11 @@ def PlotQSPResponse(
 
     # format plot
     plt.ylabel("response")
-    plt.xlabel("a")
-    plt.legend(loc="upper right")
+    plt.xlabel("a", labelpad=-1)
+    plt.legend(loc="lower right")
 
     if title is not None:
-        plt.title(title)
+        plt.title(title, fontsize=BIGGER_SIZE)
 
     plt.xlim([np.min(adat), np.max(adat)])
     if plot_tight_y:

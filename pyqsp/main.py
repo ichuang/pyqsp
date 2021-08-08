@@ -454,6 +454,22 @@ Examples:
                 title="Poly Rect * 1/x",
                 **plot_args)
 
+    elif args.cmd == "poly_linear_amp":
+        pg = pyqsp.poly.PolyLinearAmplification()
+        pcoefs, scale = pg.generate(
+            *args.seqargs,
+            ensure_bounded=True,
+            return_scale=True)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        if args.plot:
+            response.PlotQSPResponse(
+                phiset,
+                target=lambda x: scale * x / (2 * args.seqargs[1]),
+                signal_operator="Wx",
+                title="Linear Amplification Polynomial",
+                **plot_args)
+
     elif args.cmd == "poly":
         if not args.polyname or args.polyname not in polynomial_generators:
             print(

@@ -14,6 +14,7 @@ test_cmds = [
     "--plot-real-only --plot-npts=400 --seqargs=3,0.3 invert",
     "--plot-real-only --plot-npts=400 --seqargs=10,0.1 hamsim",
     "--plot-real-only --plot-npts=400 --seqargs=18,10 poly_thresh",
+    "--plot-real-only --plot-npts=400 --seqargs=19,0.25 poly_linear_amp",
     "--plot-real-only --plot-npts=400 --seqargs=18,10 poly_phase",
     "--plot-positive-only --plot-real-only --seqargs 30,0.3 efilter",
     "--plot-positive-only --plot-real-only --seqargs=20,3.5 gibbs",
