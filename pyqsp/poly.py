@@ -535,6 +535,9 @@ class PolyLinearAmplification(PolyTaylorSeries):
                  kappa=10,
                  ensure_bounded=True,
                  return_scale=False):
+        '''
+        Approximation to the truncated linear function described in Low's thesis (2017)
+        '''
         degree = int(degree)
         print(
             f"[pyqsp.poly.PolyLinearAmplification] degree={degree}, gamma={gamma}")
