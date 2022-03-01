@@ -34,7 +34,7 @@ setup(
         ],
     },
     install_requires=['matplotlib',
-                      'numpy~=1.19.2',
+                      'numpy>1.19.1',
                       'scipy',
                       ],
     package_dir={'pyqsp': 'pyqsp'},
