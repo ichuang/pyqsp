@@ -660,7 +660,7 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
                 return_scale=return_scale,
                 max_scale=max_scale)
         else:
-            the_poly, scale = self.taylor_series(
+            the_poly = self.taylor_series(
                 efpoly,
                 degree,
                 ensure_bounded=ensure_bounded,
@@ -691,7 +691,9 @@ class PolyRelu(PolyTaylorSeries):
             degree=6,
             delta=0.2,
             max_scale=0.99,
-            ensure_bounded=True):
+            ensure_bounded=True,
+            return_scale=False,
+    ):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyRelu] degree={degree}, delta={delta}")
         if (degree % 2):
@@ -710,7 +712,11 @@ class PolyRelu(PolyTaylorSeries):
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
-        return pcoefs
+        if ensure_bounded and return_scale:
+            scale = max_scale
+            return pcoefs, scale
+        else:
+            return pcoefs
 
 
 class PolySoftPlus(PolyTaylorSeries):
