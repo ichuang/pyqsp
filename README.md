@@ -234,6 +234,10 @@ optional arguments:
 
     pyqsp --plot-qsp-model --phiset="[-1.63276817 0.20550406 -0.84198335  0.39732059 -0.26820613 2.41324245  0.04662674 -2.02847501 1.11311765  0.04662674 -0.72835021 -0.26820613 0.39732059 -0.84198335  0.20550406 -0.06197184]" response
 
+## Citing this repository
+
+To cite this repository please include a reference to [our paper](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040203) and [Chao et al.](https://github.com/alibaba-edu/angle-sequence).
+A full list of references can be found [here](https://github.com/ichuang/pyqsp/blob/master/CITATION).
 
 ## History
 
