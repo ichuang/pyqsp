@@ -1,0 +1,45 @@
+@article{PRXQuantum.2.040203,
+  title = {Grand Unification of Quantum Algorithms},
+  author = {Martyn, John M. and Rossi, Zane M. and Tan, Andrew K. and Chuang, Isaac L.},
+  journal = {PRX Quantum},
+  volume = {2},
+  issue = {4},
+  pages = {040203},
+  numpages = {40},
+  year = {2021},
+  month = {Dec},
+  publisher = {American Physical Society},
+  doi = {10.1103/PRXQuantum.2.040203},
+  url = {https://link.aps.org/doi/10.1103/PRXQuantum.2.040203}
+}
+
+@article{chao2020finding,
+      title={Finding Angles for Quantum Signal Processing with Machine Precision}, 
+      author={Rui Chao and Dawei Ding and Andras Gilyen and Cupjin Huang and Mario Szegedy},
+      year={2020},
+      eprint={2003.02831},
+      archivePrefix={arXiv},
+      primaryClass={quant-ph}
+}
+
+@article{Haah2019product,
+  doi = {10.22331/q-2019-10-07-190},
+  url = {https://doi.org/10.22331/q-2019-10-07-190},
+  title = {Product {D}ecomposition of {P}eriodic {F}unctions in {Q}uantum {S}ignal {P}rocessing},
+  author = {Haah, Jeongwan},
+  journal = {{Quantum}},
+  issn = {2521-327X},
+  publisher = {{Verein zur F{\"{o}}rderung des Open Access Publizierens in den Quantenwissenschaften}},
+  volume = {3},
+  pages = {190},
+  month = oct,
+  year = {2019}
+}
+
+@inproceedings{gilyen2019quantum,
+  title={Quantum singular value transformation and beyond: exponential improvements for quantum matrix arithmetics},
+  author={Gily{\'e}n, Andr{\'a}s and Su, Yuan and Low, Guang Hao and Wiebe, Nathan},
+  booktitle={Proceedings of the 51st Annual ACM SIGACT Symposium on Theory of Computing},
+  pages={193--204},
+  year={2019}
+}
