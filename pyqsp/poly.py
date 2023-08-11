@@ -327,6 +327,34 @@ class PolyTaylorSeries(PolyGenerator):
 # -----------------------------------------------------------------------------
 
 
+class PolyExtraction(PolyTaylorSeries):
+
+    def help(self):
+        return "approximation to the function 1/sqrt(1 - x^2) ; given delta"
+    
+    def generate(
+        self,
+        degree=7,
+        delta=2
+        ):
+        pass
+
+
+class PolyInvChebyshev(PolyTaylorSeries):
+
+    def help(self):
+        return "approximation to the right-inverse of T_{2^n}(x) ; given delta"
+    
+    def generate(
+        self,
+        n=1,
+        degree=7,
+        delta=2
+        ):
+        pass
+
+
+
 class PolySign(PolyTaylorSeries):
 
     def help(self):

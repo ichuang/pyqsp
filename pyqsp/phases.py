@@ -24,9 +24,18 @@ class PhaseGenerator:
 
     def generate(self):
         '''
-        return list of floats specifying the QSP phase angles
+        return list of floats specifying the QSP (M-QSP) phase angles
         '''
         return [0, 0]
+
+    def generate_s(self):
+        '''
+        return list of integers specifying invocation of unitaries from a particular pool
+        '''
+        return [0, 0]
+
+
+######################### Single-variable protocols #####################
 
 
 class FPSearch(PhaseGenerator):
@@ -100,6 +109,13 @@ class erf_step(PhaseGenerator):
         elif n == 23:
             return phi_n23_erf
         raise Exception("[pyqsp.phases.erf_step] n must be 7 or 23")
+
+
+##################### Multi-variate protocols #################################
+
+
+class 
+
 
 # -----------------------------------------------------------------------------
 
