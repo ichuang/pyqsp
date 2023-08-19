@@ -8,6 +8,7 @@ Functionality that we want
     - We want the ability, for a given collection of gadgets, to output the M-QSP sequence which will yield the desired functional output
     - We want the ability to determine the true function that is implemented, and to compare it to the idealized function
     - We want the ability to compute the cost of applying a particular network of gadgets
+    - We want the ability to draw gadget networks
     - Determine whether the output of a gadget is half-twisted embeddable?
 
 
