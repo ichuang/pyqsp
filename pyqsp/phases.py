@@ -114,7 +114,30 @@ class erf_step(PhaseGenerator):
 ##################### Multi-variate protocols #################################
 
 
-class 
+class MultiplicationSequence(PhaseGenerator):
+    """
+    Multiplication M-QSP protocol
+    """
+    def generate(self, phi=None):
+        """Phase angles"""
+        return 
+    
+    def generate_s(self):
+        """s-sequence"""
+        return 
+
+
+class AdditionSequence(PhaseGenerator):
+    """
+    Addition M-QSP protocol
+    """
+    def generate(self, phi=None):
+        """Phase angles"""
+        return 
+    
+    def generate_s(self):
+        """s-sequence"""
+        return 
 
 
 # -----------------------------------------------------------------------------
