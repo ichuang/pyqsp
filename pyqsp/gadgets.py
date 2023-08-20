@@ -14,7 +14,6 @@ Functionality that we want
 
 '''
 import numpy as np
-import sympy
 
 
 class Gadget:
@@ -25,47 +24,58 @@ class Gadget:
         a (int): Number of input legs to gadget
         b (int): Number of output legs to gadget 
     Kwargs:
-        var_label (str): A string which defines the base variable symbol assigned to the functions induced by 
-        the gadget
-        F (func): Function of type R^a --> R^b encoded by the gadget
-        F_ideal (func): Function of type R^a --> R^b which the gadget is approximating
-        domain (dict[list]): The domain on which the variable corresponding to each input leg is valid
-        epsilon (float): The approximation error |F - F_ideal| on the domain of validity
+        var_labels (list)
     """
-    def __init__(self, a, b, label=None, var_label=None, F=None, F_ideal=None, domain=None, epsilon=None):
+    def __init__(self, a, b, labels=None):
         self.a, self.b = a, b
         self.shape = (a, b)
-        #################################
-        # Sets the variables to be tracked implicitly
 
-        self.label = hash(self) if label is None else label
-        self.var_label = "x_{}".format(self.label) if var_label is None else var_label
-        self.F = F 
+        # Labels the input legs of a gadget
+        self.labels = labels
 
-        ##################################
-        # Extra information
-
-        self.F_ideal = F_ideal
-        self.domain = {j : [-1, 1] for j in range(a)} if domain is None else domain
-        self.epsilon = epsilon
+    @classmethod
+    def unitary(self):
+        """
+        The unitary mapping effectuated by a gadget
+        """
+        raise NotImplementedError
 
 
 class AtomicGadget(Gadget):
     """
     Class for atomic gadgets
     """
-    def __init__(self, Xi, S, var_label, label=None, F_ideal=None, domain=None, epsilon=None):
+    def __init__(self, Xi, S, labels=None):
+        self.labels = labels
         self.Xi = Xi
         self.S = S
-        a, b = len(set(S)), len(Xi)
-        super().__init__(a, b)
+
+        a, b = len(set([tuple(s) for s in S])), len(Xi)
+        super().__init__(a, b, labels=labels)
     
-    def get_polynomial(self, leg, symbolic=False):
+    def unitary(self, label):
+        """
+        Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
+        gadget
+        """
+        leg = self.labels.index(label)
+        return lambda U : compute_mqsp_unitary(U, self.Xi[leg], self.S[leg])
+
+    def get_polynomial(self, label):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
         """
-        pass
+        leg = self.labels.index(label)
+        input_unitaries = lambda vars : [W(vars[self.var_labels[i]]) for i in range(len(self.var_labels))]
+        return lambda vars : self.unitary(leg)(input_unitaries(vars))[0][0]
+
+    def interlink(self, gadget, interlink):
+        """
+        Performs an interlink of an atomic gadget with a gadget
+        """
+        a, b = gadget.a + (self.a - len(interlink)), self.b + (gadget.b - len(interlink))
+        return CompositeGadget
 
 
 class CompositeGadget(Gadget):
@@ -73,14 +83,12 @@ class CompositeGadget(Gadget):
     A particular class of gadget arising from interlinking of gadgets, which 
     tracks the internal structure of each gadget being linked.
     """
-    def __init__(self, a, b):
-        super().__init__(a, b)
+    def __init__(self, gadgets, interlinks):
+        self.gadgets = gadgets
+        self.interlinks = interlinks
 
-    def compute_leg_tape(self, k):
-        """
-        Computes the tape of a given output leg, which allows for realization as a quantum circuit
-        """ 
-        pass
+        self.a, self.b = None, None
+        super().__init__(self.a, self.b)
 
 
 class Interlink:
@@ -111,32 +119,6 @@ def permute(gadget, permutations):
     """
     Permutes the legs of a gadget
     """
-
-
-def interlink(gadget1, gadget2, interlink):
-    """
-    Defines a new gadget from the interlink of two gadgets
-
-    The idea behind the interlink function is to 
-    """
-    interlink_arr = np.array(interlink).T
-
-    # Gets the new leg dimensions of the composite gadget
-    a, b = gadget1.a + (gadget2.a - len(interlink)), gadget2.b + (gadget1.b - len(interlink))
-
-    # Gets the input legs
-    fn_in = lambda x : True if gadget2.vars.index(x) not in interlink_arr[1] else False
-    #fn_out = lambda x : True if gadget1.vars.
-
-    input_vars_1, input_vars_2 = gadget1.vars, list(filter(fn, gadget2.vars))
-
-    # Defines the new function
-    def F(x):
-        input_1 = gadget1.F(x[0:a])
-        return input_1
-
-    #gadget = CompositeGadget(a, b)
-    return None
 
 
 def multiply_gadget_legs(gadget1, gadget2, leg1, leg2):
@@ -192,7 +174,39 @@ class AdditionGadget(AtomicGadget):
     An addition gadget
     """
     def __init__(self, phi=-np.pi/4):
-        self.Phi = np.array([phi, np.pi/4, -np.pi/4, -phi])
+        self.Phi = np.array([phi, -phi])
         self.S = np.array([0, 1, 0, 1, 0, 1, 0, 1])
 
         self.Xi = [self.Phi, self.S] # Defines the gadget phase sequence 
+
+
+################################################################################################
+
+def Rz(phi):
+    """
+    sigma_z-rotation
+    """
+    return np.array([
+        [np.exp(1j * phi), 0],
+        [0, np.exp(-1j * phi)]
+    ])
+
+
+def W(x):
+    """
+    Standard sigma_x signal operator
+    """
+    return np.array([
+        [x, 1j * np.sqrt(1 - x ** 2)],
+        [1j * np.sqrt(1 - x ** 2), x]
+    ])
+
+
+def compute_mqsp_unitary(U, Phi, s):
+    """
+    Computes an M-QSP unitary
+    """
+    output_U = Rz(Phi[0])
+    for i in range(len(s)):
+        output_U = output_U @ U[s[i]] @ Rz(Phi[i])
+    return output_U
