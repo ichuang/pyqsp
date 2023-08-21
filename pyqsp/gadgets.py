@@ -74,30 +74,27 @@ class AtomicGadget(Gadget):
         """
         Performs an interlink of an atomic gadget with a gadget
         """
-        a, b = gadget.a + (self.a - len(interlink)), self.b + (gadget.b - len(interlink))
-        return CompositeGadget
+        return CompositeGadget(gadget, self, interlink)
 
 
 class CompositeGadget(Gadget):
     """
-    A particular class of gadget arising from interlinking of gadgets, which 
+    A particular class of gadget arising from interlinking of two gadgets, which 
     tracks the internal structure of each gadget being linked.
     """
-    def __init__(self, gadgets, interlinks):
-        self.gadgets = gadgets
-        self.interlinks = interlinks
+    def __init__(self, gadget_1, gadget_2, interlink):
+        self.gadget_1, self.gadget_2 = gadget_1, gadget_2
+        self.interlink = interlink
+        a, b = gadget_1.a + (gadget_2.a - len(interlink)), gadget_2.b + (gadget_1.b - len(interlink))
 
         self.a, self.b = None, None
         super().__init__(self.a, self.b)
 
-
-class Interlink:
-    """
-    A class for representing a gadget interlink
-    """
-    def __init__(self, gadgets, interlink_params):
-        self.B, self.C, self.J = interlink_params
-        self.gadgets = gadgets
+    def get_sequence():
+        """
+        Gets the composite sequence arising from gadget composition. Both gadget involved in 
+        the composition must be atomic gadgets, with defined M-QSP sequences.
+        """
     
 ################################################################################
 # Operations on gadgets and collections of gadgets
@@ -108,25 +105,21 @@ def correction(gadget, legs):
     """
     pass
 
-
 def pin(gadget, legs, vals):
     """
     Pins a gadget
     """
-
 
 def permute(gadget, permutations):
     """
     Permutes the legs of a gadget
     """
 
-
 def multiply_gadget_legs(gadget1, gadget2, leg1, leg2):
     """
     Multiply the legs of gadgets
     """
     pass
-
 
 def sum_gadget_legs(gadget1, gadget2, leg1, leg2):
     """
@@ -135,7 +128,6 @@ def sum_gadget_legs(gadget1, gadget2, leg1, leg2):
     pass
 
 ########################################################################################
-
 
 class GadgetAssemblage:
     """
@@ -178,6 +170,14 @@ class AdditionGadget(AtomicGadget):
         self.S = np.array([0, 1, 0, 1, 0, 1, 0, 1])
 
         self.Xi = [self.Phi, self.S] # Defines the gadget phase sequence 
+
+
+class InvChebyshevGadget(AtomicGadget):
+    """
+    An inverse Chebyshev polynomial gadget
+    """
+    def __init__(self, n, phi=-np.pi/4):
+        pass
 
 
 ################################################################################################
