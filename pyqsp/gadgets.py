@@ -10,8 +10,6 @@ Functionality that we want
     - We want the ability to compute the cost of applying a particular network of gadgets
     - We want the ability to draw gadget networks
     - Determine whether the output of a gadget is half-twisted embeddable?
-
-
 '''
 import numpy as np
 
@@ -26,12 +24,13 @@ class Gadget:
     Kwargs:
         var_labels (list)
     """
-    def __init__(self, a, b, labels=None):
+    def __init__(self, a, b, label=None):
         self.a, self.b = a, b
         self.shape = (a, b)
 
         # Labels the input legs of a gadget
-        self.labels = labels
+        self.label = label
+        self.in_labels, self.out_labels = [(label, j) for j in range(a)], [(label, j) for j in range(b)]
 
     @classmethod
     def unitary(self):
@@ -43,12 +42,14 @@ class Gadget:
 
 class AtomicGadget(Gadget):
     """
-    Class for atomic gadgets
+    Class for not-quite atomic gadgets: to be precise, this class encompasses the closure of all gadgets which 
+    can be achieved via interlinking atomic gadgets and correction protocols, arbitrarily.
     """
     def __init__(self, Xi, S, labels=None):
         self.labels = labels
         self.Xi = Xi
         self.S = S
+        self.ancillas = []
 
         a, b = len(set([tuple(s) for s in S])), len(Xi)
         super().__init__(a, b, labels=labels)
@@ -74,10 +75,10 @@ class AtomicGadget(Gadget):
         """
         Performs an interlink of an atomic gadget with a gadget
         """
-        return CompositeGadget(gadget, self, interlink)
+        return CompositeAtomicGadget(gadget, self, interlink)
 
 
-class CompositeGadget(Gadget):
+class CompositeAtomicGadget(Gadget):
     """
     A particular class of gadget arising from interlinking of two gadgets, which 
     tracks the internal structure of each gadget being linked.
@@ -90,18 +91,21 @@ class CompositeGadget(Gadget):
         self.a, self.b = None, None
         super().__init__(self.a, self.b)
 
-    def get_sequence():
+    def get_sequence(label):
         """
         Gets the composite sequence arising from gadget composition. Both gadget involved in 
         the composition must be atomic gadgets, with defined M-QSP sequences.
         """
+
+
     
 ################################################################################
 # Operations on gadgets and collections of gadgets
+# STILL NEED TO DEFINE SEQUENCE FOR CORRECTION
 
 def correction(gadget, legs):
     """
-    Applies the correction protocol to a gadget
+    Applies the correction protocol to an atomic gadget
     """
     pass
 
