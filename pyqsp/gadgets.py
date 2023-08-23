@@ -24,11 +24,10 @@ class Gadget:
     Kwargs:
         var_labels (list)
     """
-    def __init__(self, a, b, label=None):
+    def __init__(self, a, b, label):
         self.a, self.b = a, b
-        self.shape = (a, b)
 
-        # Labels the input legs of a gadget
+        # Assigns generic labels the input legs of a gadget
         self.label = label
         self.in_labels, self.out_labels = [(label, j) for j in range(a)], [(label, j) for j in range(b)]
 
@@ -45,60 +44,87 @@ class AtomicGadget(Gadget):
     Class for not-quite atomic gadgets: to be precise, this class encompasses the closure of all gadgets which 
     can be achieved via interlinking atomic gadgets and correction protocols, arbitrarily.
     """
-    def __init__(self, Xi, S, labels=None):
-        self.labels = labels
+    def __init__(self, Xi, S, label):
         self.Xi = Xi
         self.S = S
         self.ancillas = []
 
         a, b = len(set([tuple(s) for s in S])), len(Xi)
-        super().__init__(a, b, labels=labels)
+        super().__init__(a, b, label)
     
-    def unitary(self, label):
+    def unitary(self, leg):
         """
         Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
         gadget
         """
-        leg = self.labels.index(label)
         return lambda U : compute_mqsp_unitary(U, self.Xi[leg], self.S[leg])
 
-    def get_polynomial(self, label):
+    def get_polynomial(self, leg):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
         """
-        leg = self.labels.index(label)
         input_unitaries = lambda vars : [W(vars[self.var_labels[i]]) for i in range(len(self.var_labels))]
         return lambda vars : self.unitary(leg)(input_unitaries(vars))[0][0]
+    
+    def get_sequence(self, label):
+        """
+        Gets the sequence
+        """
+        leg = self.out_labels.index(label)
+        return self.Xi[leg], [(self.label, s) for s in self.S[leg]]
 
     def interlink(self, gadget, interlink):
         """
         Performs an interlink of an atomic gadget with a gadget
         """
-        return CompositeAtomicGadget(gadget, self, interlink)
+        return CompositeAtomicGadget(self, gadget, interlink)
 
 
 class CompositeAtomicGadget(Gadget):
     """
-    A particular class of gadget arising from interlinking of two gadgets, which 
+    A particular class of gadget arising from interlinking of two gadgets AtomicGadget instances, which 
     tracks the internal structure of each gadget being linked.
     """
     def __init__(self, gadget_1, gadget_2, interlink):
         self.gadget_1, self.gadget_2 = gadget_1, gadget_2
+        self.gadget_labels = {gadget_1.label : gadget_1, gadget_2.label : gadget_2}
+        
+        # Interlink parameters
         self.interlink = interlink
-        a, b = gadget_1.a + (gadget_2.a - len(interlink)), gadget_2.b + (gadget_1.b - len(interlink))
+        self.B, self.C = list(np.array(interlink).T[0]), list(np.array(interlink).T[1])
 
-        self.a, self.b = None, None
-        super().__init__(self.a, self.b)
+        # Gets the input and output legs
+        self.a, self.b = gadget_1.a + (gadget_2.a - len(interlink)), gadget_2.b + (gadget_1.b - len(interlink))
+        self.in_labels = gadget_1.in_labels + list(filter(lambda x : x[1] not in self.C, gadget_2.in_labels))
+        self.out_labels = gadget_2.out_labels + list(filter(lambda x : x[1] not in self.B, gadget_1.out_labels))
 
-    def get_sequence(label):
+    def get_sequence(self, label):
         """
         Gets the composite sequence arising from gadget composition. Both gadget involved in 
         the composition must be atomic gadgets, with defined M-QSP sequences.
         """
+        if label[0] == self.gadget_2.label:
+            external_Xi, external_S = self.gadget_2.get_sequence(label) # Gets the output gadget's sequence
+            Phi_seq, S_seq = [], []
 
+            for j in range(len(external_S)):
+                if external_S[j][0] == self.gadget_2.label and external_S[j][1] in self.C:
+                    new_leg = self.B[self.C.index(external_S[j][1])]
+                    internal_Phi, internal_S = self.gadget_1.get_sequence((self.gadget_1.label, new_leg))
+                    S_seq.extend(internal_S)
 
-    
+                    internal_Phi[0] = external_Xi[j] + internal_Phi[0]
+                    Phi_seq.extend(internal_Phi)
+                else:
+                    Phi_seq.append(external_Xi[j])
+                    S_seq.append(external_S[j])
+                Phi_seq.append(external_Xi[len(external_Xi) - 1])
+        if label[0] == self.gadget_1.label:
+            Phi_seq, S_seq = self.gadget_1.get_sequence(label)
+        return Phi_seq, S_seq
+
+ 
 ################################################################################
 # Operations on gadgets and collections of gadgets
 # STILL NEED TO DEFINE SEQUENCE FOR CORRECTION
@@ -132,6 +158,7 @@ def sum_gadget_legs(gadget1, gadget2, leg1, leg2):
     pass
 
 ########################################################################################
+# Not really sure how we'll incorporate this, warrants discussion
 
 class GadgetAssemblage:
     """
