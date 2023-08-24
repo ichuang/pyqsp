@@ -81,6 +81,18 @@ class AtomicGadget(Gadget):
         return CompositeAtomicGadget(self, gadget, interlink)
 
 
+def _seq_extend(seq, extension):
+    """Extends a sequence"""
+    if len(seq) > 0:
+        print(seq)
+        print(extension)
+        extension[0] = seq[len(seq)-1] + extension[0]
+        seq = list(seq[:-1]) + list(extension)
+    else:
+        seq = extension
+    return seq
+
+
 class CompositeAtomicGadget(Gadget):
     """
     A particular class of gadget arising from interlinking of two gadgets AtomicGadget instances, which 
@@ -106,7 +118,7 @@ class CompositeAtomicGadget(Gadget):
         """
         if label[0] == self.gadget_2.label:
             external_Xi, external_S = self.gadget_2.get_sequence(label) # Gets the output gadget's sequence
-            Phi_seq, S_seq = [], []
+            Phi_seq, S_seq = [external_Xi[0]], []
 
             for j in range(len(external_S)):
                 if external_S[j][0] == self.gadget_2.label and external_S[j][1] in self.C:
@@ -114,12 +126,11 @@ class CompositeAtomicGadget(Gadget):
                     internal_Xi, internal_S = self.gadget_1.get_sequence((self.gadget_1.label, new_leg))
                     S_seq.extend(internal_S)
 
-                    internal_Xi[0] = external_Xi[j] + internal_Xi[0]
-                    Phi_seq.extend(internal_Xi)
+                    internal_Xi[len(internal_Xi)-1] = external_Xi[j + 1] + internal_Xi[len(internal_Xi)-1]
+                    Phi_seq = _seq_extend(Phi_seq, internal_Xi)
                 else:
-                    Phi_seq.append(external_Xi[j])
+                    Phi_seq.append(external_Xi[j + 1])
                     S_seq.append(external_S[j])
-                Phi_seq.append(external_Xi[len(external_Xi) - 1])
         if label[0] == self.gadget_1.label:
             Phi_seq, S_seq = self.gadget_1.get_sequence(label)
         return Phi_seq, S_seq
