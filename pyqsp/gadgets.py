@@ -111,11 +111,11 @@ class CompositeAtomicGadget(Gadget):
             for j in range(len(external_S)):
                 if external_S[j][0] == self.gadget_2.label and external_S[j][1] in self.C:
                     new_leg = self.B[self.C.index(external_S[j][1])]
-                    internal_Phi, internal_S = self.gadget_1.get_sequence((self.gadget_1.label, new_leg))
+                    internal_Xi, internal_S = self.gadget_1.get_sequence((self.gadget_1.label, new_leg))
                     S_seq.extend(internal_S)
 
-                    internal_Phi[0] = external_Xi[j] + internal_Phi[0]
-                    Phi_seq.extend(internal_Phi)
+                    internal_Xi[0] = external_Xi[j] + internal_Xi[0]
+                    Phi_seq.extend(internal_Xi)
                 else:
                     Phi_seq.append(external_Xi[j])
                     S_seq.append(external_S[j])
