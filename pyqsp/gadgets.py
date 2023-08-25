@@ -52,20 +52,24 @@ class AtomicGadget(Gadget):
         a, b = len(set([tuple(s) for s in S])), len(Xi)
         super().__init__(a, b, label)
     
-    def unitary(self, leg):
+    def unitary(self, label):
         """
         Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
         gadget
         """
-        return lambda U : compute_mqsp_unitary(U, self.Xi[leg], self.S[leg])
+        Xi, S = self.get_sequence(label)
+        return lambda U : compute_mqsp_unitary(U, Xi, S) 
 
-    def get_polynomial(self, leg):
+    def get_polynomial(self, label):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
+
+        Args:
+            vars (dict): A dictionary assigning values to input legs
         """
-        input_unitaries = lambda vars : [W(vars[self.var_labels[i]]) for i in range(len(self.var_labels))]
-        return lambda vars : self.unitary(leg)(input_unitaries(vars))[0][0]
+        input_unitaries = lambda vars : [W(vars[l]) for l in self.in_labels]
+        return lambda vars : self.unitary(label)(input_unitaries(vars))[0][0] # Returns top-left entry
     
     def get_sequence(self, label):
         """
@@ -134,6 +138,25 @@ class CompositeAtomicGadget(Gadget):
         if label[0] == self.gadget_1.label:
             Phi_seq, S_seq = self.gadget_1.get_sequence(label)
         return Phi_seq, S_seq
+    
+    def unitary(self, label):
+        """
+        Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
+        gadget
+        """
+        Xi, S = self.get_sequence(label)
+        return lambda U : compute_mqsp_unitary(U, Xi, S)
+
+    def get_polynomial(self, label):
+        """
+        Generates and returns the polynomial corresponding to a particular output leg
+        of an atomic gadget.
+
+        Args:
+            vars (dict): A dictionary assigning values to input legs
+        """
+        input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels}
+        return lambda vars : self.unitary(label)(input_unitaries(vars))[0][0] # Returns top-left entry 
 
  
 ################################################################################
@@ -188,9 +211,6 @@ class GadgetAssemblage:
         """
         if isinstance(operation, Gadget):
             self.gadgets.append(operation)
-        if isinstance(operation, Interlink):
-            self.interlinks.append(operation, Interlink)
-
 
 ###################### Instances of gadgets ######################
 
@@ -252,3 +272,6 @@ def compute_mqsp_unitary(U, Phi, s):
     for i in range(len(s)):
         output_U = output_U @ U[s[i]] @ Rz(Phi[i])
     return output_U
+
+
+###############################################################################################
