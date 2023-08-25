@@ -12,6 +12,7 @@ Functionality that we want
     - Determine whether the output of a gadget is half-twisted embeddable?
 '''
 import numpy as np
+import copy
 
 
 class Gadget:
@@ -52,7 +53,7 @@ class AtomicGadget(Gadget):
         a, b = len(set([tuple(s) for s in S])), len(Xi)
         super().__init__(a, b, label)
     
-    def unitary(self, label):
+    def get_unitary(self, label):
         """
         Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
         gadget
@@ -60,7 +61,7 @@ class AtomicGadget(Gadget):
         Xi, S = self.get_sequence(label)
         return lambda U : compute_mqsp_unitary(U, Xi, S) 
 
-    def get_polynomial(self, label):
+    def get_qsp_unitary(self, label):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
@@ -69,7 +70,7 @@ class AtomicGadget(Gadget):
             vars (dict): A dictionary assigning values to input legs
         """
         input_unitaries = lambda vars : [W(vars[l]) for l in self.in_labels]
-        return lambda vars : self.unitary(label)(input_unitaries(vars))[0][0] # Returns top-left entry
+        return lambda vars : self.get_unitary(label)(input_unitaries(vars))
     
     def get_sequence(self, label):
         """
@@ -88,8 +89,6 @@ class AtomicGadget(Gadget):
 def _seq_extend(seq, extension):
     """Extends a sequence"""
     if len(seq) > 0:
-        print(seq)
-        print(extension)
         extension[0] = seq[len(seq)-1] + extension[0]
         seq = list(seq[:-1]) + list(extension)
     else:
@@ -128,6 +127,8 @@ class CompositeAtomicGadget(Gadget):
                 if external_S[j][0] == self.gadget_2.label and external_S[j][1] in self.C:
                     new_leg = self.B[self.C.index(external_S[j][1])]
                     internal_Xi, internal_S = self.gadget_1.get_sequence((self.gadget_1.label, new_leg))
+                    internal_Xi, internal_S = copy.deepcopy(internal_Xi), copy.deepcopy(internal_S) # Copies
+
                     S_seq.extend(internal_S)
 
                     internal_Xi[len(internal_Xi)-1] = external_Xi[j + 1] + internal_Xi[len(internal_Xi)-1]
@@ -139,7 +140,7 @@ class CompositeAtomicGadget(Gadget):
             Phi_seq, S_seq = self.gadget_1.get_sequence(label)
         return Phi_seq, S_seq
     
-    def unitary(self, label):
+    def get_unitary(self, label):
         """
         Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
         gadget
@@ -147,7 +148,7 @@ class CompositeAtomicGadget(Gadget):
         Xi, S = self.get_sequence(label)
         return lambda U : compute_mqsp_unitary(U, Xi, S)
 
-    def get_polynomial(self, label):
+    def get_qsp_unitary(self, label):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
@@ -156,7 +157,7 @@ class CompositeAtomicGadget(Gadget):
             vars (dict): A dictionary assigning values to input legs
         """
         input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels}
-        return lambda vars : self.unitary(label)(input_unitaries(vars))[0][0] # Returns top-left entry 
+        return lambda vars : self.get_unitary(label)(input_unitaries(vars)) # Returns top-left entry 
 
  
 ################################################################################
