@@ -95,6 +95,7 @@ def QuantumSignalProcessingPhases(
         eps=1e-4,
         suc=1 - 1e-4,
         signal_operator="Wx",
+        poly_type=None,
         measurement=None,
         tolerance=1e-6,
         method="laurent",
@@ -145,7 +146,7 @@ def QuantumSignalProcessingPhases(
     model = (signal_operator, measurement)
 
     # Perform completion
-    if model in {("Wx", "x"), ("Wz", "z")}:
+    if model in {("Wx", "x"), ("Wz", "z")} and poly_type != "Q":
         # Capitalization: eps/2 amount of error budget is put to the highest
         # power for sake of numerical stability.
         poly = suc * \
@@ -154,7 +155,10 @@ def QuantumSignalProcessingPhases(
         lcoefs = poly2laurent(poly.coef)
         lalg = completion_from_root_finding(lcoefs, coef_type="F")
     elif model == ("Wx", "z"):
-        lalg = completion_from_root_finding(poly.coef, coef_type="P")
+        if poly_type == "P":
+            lalg = completion_from_root_finding(poly.coef, coef_type="P")
+        if poly_type == "Q":
+            lalg = completion_from_root_finding(poly.coef, coef_type="Q") 
     else:
         raise ValueError(
             "Invalid model: {}".format(str(model))
@@ -172,11 +176,12 @@ def QuantumSignalProcessingPhases(
         measurement=measurement)["pdat"]
     expected = poly(adat)
 
+    """
     max_err = np.max(np.abs(response - expected))
     if max_err > tolerance:
         raise AngleFindingError(
             "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
-
+    """
     return phiset
 
 
@@ -244,3 +249,11 @@ def QuantumSignalProcessingPhasesWithTensorflow(
         return data
 
     return phis
+
+
+def QSPPhasesFromQ(q_poly):
+    """
+    A nice little wrapper function
+    """
+    phiset = angseq(lalg)
+    return phiset

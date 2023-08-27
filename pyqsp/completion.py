@@ -110,6 +110,57 @@ def _pq_completion(P):
     return Q * norm
 
 
+def _qp_completion(Q):
+    """
+    Finds the polynomial P from Q
+    """
+    qcoefs = Q.coef
+
+    Q = Polynomial(qcoefs)
+    Qc = Polynomial(qcoefs.conj())
+    roots = (1. - Polynomial([1, 0, -1]) * Q * Qc).roots()
+
+    # catagorize roots
+    real_roots = np.array([], dtype=np.float64)
+    imag_roots = np.array([], dtype=np.float64)
+    cplx_roots = np.array([], dtype=np.complex128)
+
+    tol = 1e-6
+    for root in roots:
+        if np.abs(np.imag(root)) < tol:
+            # real roots
+            real_roots = np.append(real_roots, np.real(root))
+        elif np.real(root) > -tol and np.imag(root) > -tol:
+            if np.real(root) < tol:
+                imag_roots = np.append(imag_roots, np.imag(root))
+            else:
+                cplx_roots = np.append(cplx_roots, root)
+
+    # choose real roots in +/- pairs
+    real_roots = np.sort(real_roots)
+    real_roots = real_roots[::2]
+
+    # include negative conjugate of complex roots
+    cplx_roots = np.r_[cplx_roots, -cplx_roots]
+
+    # construct Q
+    P = Polynomial(
+        polyfromroots(
+            np.r_[
+                real_roots,
+                1j *
+                imag_roots,
+                cplx_roots]))
+    Pc = Polynomial(P.coef.conj())
+
+    # normalize
+    norm = np.sqrt((1 - P * Pc).coef[-1] /
+                   (Q * Qc * Polynomial([1, 0, -1])).coef[-1])
+
+    return P / norm
+
+
+
 def _fg_completion(F, seed):
     """
     Find polynomial G given Laurent polynomial F such that the following matrix
@@ -221,6 +272,31 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
 
             fcoefs[(deg + 1) // 2] = np.real(pcheb[0])
             gcoefs[(deg + 1) // 2] = np.imag(pcheb[0])
+    elif coef_type == "Q" or coef_type == "q":
+        qcoefs = np.array(coefs, dtype=np.complex128)
+        Q = Polynomial(qcoefs)
+        P = _qp_completion(Q)
+        pcoefs = P.coef
+        deg = pcoefs.size - 1
+
+        pcheb = poly2cheb(pcoefs, kind='T')
+        qcheb = np.r_[0., poly2cheb(qcoefs, kind='U')]
+
+        pcheb = pcheb[deg % 2::2]
+        qcheb = qcheb[deg % 2::2]
+
+        fcoefs = np.zeros(deg + 1)
+        gcoefs = np.zeros(deg + 1)
+
+        if deg % 2 == 0:
+            fcoefs[:(deg + 1) // 2] = np.real(pcheb[:0:-1] - qcheb[:0:-1]) / 2
+            fcoefs[(deg + 1) // 2 + 1:] = np.real(pcheb[1:] + qcheb[1:]) / 2
+
+            gcoefs[:(deg + 1) // 2] = np.imag(pcheb[:0:-1] + qcheb[:0:-1]) / 2
+            gcoefs[(deg + 1) // 2 + 1:] = np.imag(pcheb[1:] - qcheb[1:]) / 2
+
+            fcoefs[(deg + 1) // 2] = np.real(pcheb[0])
+            gcoefs[(deg + 1) // 2] = np.imag(pcheb[0])
         else:
             fcoefs[:(deg + 1) // 2] = np.real(pcheb[::-1] - qcheb[::-1]) / 2
             fcoefs[(deg + 1) // 2:] = np.real(pcheb + qcheb) / 2
@@ -236,8 +312,10 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
 
     # check completion
     ncoefs = (ipoly * ~ipoly + xpoly * ~xpoly).coefs
-    ncoefs_expected = np.zeros(ncoefs.size)
+    print(ncoefs)
+    ncoefs_expected = np.zeros(ncoefs.size) 
     ncoefs_expected[ncoefs.size // 2] = 1.
+    print(ncoefs_expected)
     success = np.max(np.abs(ncoefs - ncoefs_expected)) < tol
 
     if not success:
@@ -246,3 +324,41 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
                 coef_type, coefs))
 
     return LAlg(ipoly, xpoly)
+
+
+def get_low_alg_element(P_coefs, Q_coefs):
+    """
+    Gets elements of Low algebra, for a pair of QSP polynomials
+    """
+    pcoefs, qcoefs = np.array(P_coefs, dtype=np.complex128), np.array(Q_coefs, dtype=np.complex128)
+    deg = pcoefs.size - 1
+
+    pcheb = poly2cheb(pcoefs, kind='T')
+    qcheb = poly2cheb(pcoefs, kind='U')
+
+    pcheb = pcheb[deg % 2::2]
+    qcheb = qcheb[deg % 2::2]
+
+    fcoefs = np.zeros(deg + 1)
+    gcoefs = np.zeros(deg + 1)
+
+    if deg % 2 == 0:
+        fcoefs[:(deg + 1) // 2] = np.real(pcheb[:0:-1] - qcheb[:0:-1]) / 2
+        fcoefs[(deg + 1) // 2 + 1:] = np.real(pcheb[1:] + qcheb[1:]) / 2
+
+        gcoefs[:(deg + 1) // 2] = np.imag(pcheb[:0:-1] + qcheb[:0:-1]) / 2
+        gcoefs[(deg + 1) // 2 + 1:] = np.imag(pcheb[1:] - qcheb[1:]) / 2
+
+        fcoefs[(deg + 1) // 2] = np.real(pcheb[0])
+        gcoefs[(deg + 1) // 2] = np.imag(pcheb[0])
+    else:
+        fcoefs[:(deg + 1) // 2] = np.real(pcheb[::-1] - qcheb[::-1]) / 2
+        fcoefs[(deg + 1) // 2:] = np.real(pcheb + qcheb) / 2
+
+        gcoefs[:(deg + 1) // 2] = np.imag(pcheb[::-1] + qcheb[::-1]) / 2
+        gcoefs[(deg + 1) // 2:] = np.imag(pcheb - qcheb) / 2
+
+    ipoly = LPoly(fcoefs, -len(fcoefs) + 1)
+    xpoly = LPoly(gcoefs, -len(gcoefs) + 1)
+
+    return LAlg(ipoly, xpoly) 

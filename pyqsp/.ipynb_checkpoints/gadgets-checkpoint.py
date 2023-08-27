@@ -13,8 +13,6 @@ Functionality that we want
 '''
 import numpy as np
 import copy
-from .poly import PolyExtraction
-from .phases import ExtractionSequence
 
 
 class Gadget:
@@ -51,8 +49,6 @@ class AtomicGadget(Gadget):
         self.Xi = Xi
         self.S = S
         self.ancillas = []
-        self.is_corrected = False
-        self.labels = [label]
 
         a, b = len(set([tuple(s) for s in S])), len(Xi)
         super().__init__(a, b, label)
@@ -83,12 +79,6 @@ class AtomicGadget(Gadget):
         leg = self.out_labels.index(label)
         return self.Xi[leg], [(self.label, s) for s in self.S[leg]]
 
-    def get_corrected_gadget(self):
-        """
-        Gets corrected sequence
-        """
-        pass
-
     def interlink(self, gadget, interlink):
         """
         Performs an interlink of an atomic gadget with a gadget
@@ -114,34 +104,29 @@ class CompositeAtomicGadget(Gadget):
     def __init__(self, gadget_1, gadget_2, interlink):
         self.gadget_1, self.gadget_2 = gadget_1, gadget_2
         self.gadget_labels = {gadget_1.label : gadget_1, gadget_2.label : gadget_2}
-        self.label = "{} - {}".format(gadget_1.label, gadget_2.label)
-        self.labels = gadget_1.labels + gadget_2.labels
-
-        # Gets ancillas
-        #self.ancillas = gadget_1.ancillas + gadget_2.ancillas
         
         # Interlink parameters
-        self.B, self.C = [x[0] for x in interlink], [x[1] for x in interlink]
+        self.interlink = interlink
+        self.B, self.C = list(np.array(interlink).T[0]), list(np.array(interlink).T[1])
 
         # Gets the input and output legs
         self.a, self.b = gadget_1.a + (gadget_2.a - len(interlink)), gadget_2.b + (gadget_1.b - len(interlink))
-        self.in_labels = gadget_1.in_labels + list(filter(lambda x : x not in self.C, gadget_2.in_labels))
-        self.out_labels = gadget_2.out_labels + list(filter(lambda x : x not in self.B, gadget_1.out_labels))
+        self.in_labels = gadget_1.in_labels + list(filter(lambda x : x[1] not in self.C, gadget_2.in_labels))
+        self.out_labels = gadget_2.out_labels + list(filter(lambda x : x[1] not in self.B, gadget_1.out_labels))
 
     def get_sequence(self, label):
-        print(self.gadget_1.labels)
         """
         Gets the composite sequence arising from gadget composition. Both gadget involved in 
         the composition must be atomic gadgets, with defined M-QSP sequences.
         """
-        if label[0] in self.gadget_2.labels:
+        if label[0] == self.gadget_2.label:
             external_Xi, external_S = self.gadget_2.get_sequence(label) # Gets the output gadget's sequence
             Phi_seq, S_seq = [external_Xi[0]], []
 
             for j in range(len(external_S)):
-                if external_S[j] in self.C:
-                    new_leg = self.B[self.C.index(external_S[j])]
-                    internal_Xi, internal_S = self.gadget_1.get_sequence(new_leg)
+                if external_S[j][0] == self.gadget_2.label and external_S[j][1] in self.C:
+                    new_leg = self.B[self.C.index(external_S[j][1])]
+                    internal_Xi, internal_S = self.gadget_1.get_sequence((self.gadget_1.label, new_leg))
                     internal_Xi, internal_S = copy.deepcopy(internal_Xi), copy.deepcopy(internal_S) # Copies
 
                     S_seq.extend(internal_S)
@@ -151,7 +136,7 @@ class CompositeAtomicGadget(Gadget):
                 else:
                     Phi_seq.append(external_Xi[j + 1])
                     S_seq.append(external_S[j])
-        if label[0] in self.gadget_1.labels:
+        if label[0] == self.gadget_1.label:
             Phi_seq, S_seq = self.gadget_1.get_sequence(label)
         return Phi_seq, S_seq
     
@@ -174,24 +159,16 @@ class CompositeAtomicGadget(Gadget):
         input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels}
         return lambda vars : self.get_unitary(label)(input_unitaries(vars)) # Returns top-left entry 
 
-    def interlink(self, gadget, interlink):
-        """
-        Performs an interlink of an atomic gadget with a gadget
-        """
-        return CompositeAtomicGadget(self, gadget, interlink)
-
  
 ################################################################################
 # Operations on gadgets and collections of gadgets
 # STILL NEED TO DEFINE SEQUENCE FOR CORRECTION
 
-def correction(gadget, label, eps, delta):
+def correction(gadget, legs):
     """
     Applies the correction protocol to an atomic gadget
     """
-    correction_Phi = get_corrective_phi(eps, delta)
-    internal_Xi, internal_S = gadget.get_sequence(label)
-
+    pass
 
 def pin(gadget, legs, vals):
     """
@@ -256,6 +233,7 @@ class AdditionGadget(AtomicGadget):
     def __init__(self, phi=-np.pi/4):
         self.Phi = np.array([phi, -phi])
         self.S = np.array([0, 1, 0, 1, 0, 1, 0, 1])
+
         self.Xi = [self.Phi, self.S] # Defines the gadget phase sequence 
 
 
@@ -266,18 +244,6 @@ class InvChebyshevGadget(AtomicGadget):
     def __init__(self, n, phi=-np.pi/4):
         pass
 
-
-class ExtractionGadget(AtomicGadget):
-    """
-    The gadget which corresponds to the extraction protocol. This protocol has both a specific 
-    P and Q polynomial associated with it, for arbitrary precisions, and is therefore easy to 
-    implement, without performing a QSP completion.
-    """
-    def __init__(self, deg):
-        self.a, self.b = 1, 1
-        self.deg = deg
-        phi = ExtractionSequence().generate(deg)
-        self.Xi, self.S = [phi], [0 for _ in range(len(phi)-1)]
 
 ################################################################################################
 
@@ -310,11 +276,5 @@ def compute_mqsp_unitary(U, Phi, s):
         output_U = output_U @ U[s[i]] @ Rz(Phi[i])
     return output_U
 
-
-def get_corrective_phi(eps, delta):
-    """
-    Generates the corrective Phi sequence, for a certain error tolerance
-    """
-    pass
 
 ###############################################################################################

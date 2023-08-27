@@ -328,16 +328,25 @@ class PolyTaylorSeries(PolyGenerator):
 
 
 class PolyExtraction(PolyTaylorSeries):
-
     def help(self):
-        return "approximation to the function 1/sqrt(1 - x^2) ; given delta"
-    
+        return "approximation to the extraction function"
+
     def generate(
-        self,
-        degree=7,
-        delta=2
-        ):
-        pass
+            self,
+            degree=7):
+        '''
+        Approximation to sign function, using erf(delta * x)
+        '''
+        degree = int(degree)
+
+        def extraction(x):
+            return 1 / np.sqrt(1 - x ** 2)
+
+        # Generates the coefficients
+        pcoefs = np.array([0 if k % 2 == 1 else scipy.special.binom(-0.5, (k/2)) * (-1) ** (k/2) for k in range(degree + 1)])
+        # force odd coefficients to be zero, since the polynomial must be odd
+        pcoefs[1::2] = 0
+        return TargetPolynomial(pcoefs, target=lambda x: extraction(x)) 
 
 
 class PolyInvChebyshev(PolyTaylorSeries):

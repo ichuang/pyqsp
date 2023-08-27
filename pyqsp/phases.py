@@ -5,6 +5,8 @@ Known QSP phases for specific responses, in the Wx convention
 '''
 
 import numpy as np
+from .poly import PolyExtraction
+from .angle_sequence import QuantumSignalProcessingPhases
 
 
 class PhaseGenerator:
@@ -120,11 +122,11 @@ class MultiplicationSequence(PhaseGenerator):
     """
     def generate(self, phi=None):
         """Phase angles"""
-        return 
+        return 0
     
     def generate_s(self):
         """s-sequence"""
-        return 
+        return 0
 
 
 class AdditionSequence(PhaseGenerator):
@@ -133,11 +135,26 @@ class AdditionSequence(PhaseGenerator):
     """
     def generate(self, phi=None):
         """Phase angles"""
-        return 
+        return 0
     
     def generate_s(self):
         """s-sequence"""
-        return 
+        return 0
+
+
+class ExtractionSequence(PhaseGenerator):
+    """
+    Extraction M-QSP protocol
+    """
+    def generate(self, n):
+        """Phase angles"""
+        Q = PolyExtraction().generate(degree=n)
+        phi = QuantumSignalProcessingPhases(Q, poly_type="Q", measurement="z")
+        return phi
+    
+    def generate_s(self):
+        """s-sequence"""
+        return None 
 
 
 # -----------------------------------------------------------------------------
