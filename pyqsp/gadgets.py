@@ -15,7 +15,7 @@ import numpy as np
 import copy
 from .poly import PolyExtraction
 from .phases import ExtractionSequence
-
+import itertools
 
 class Gadget:
     """
@@ -54,7 +54,7 @@ class AtomicGadget(Gadget):
         self.is_corrected = False
         self.labels = [label]
 
-        a, b = len(set([tuple(s) for s in S])), len(Xi)
+        a, b = len(set(list(itertools.chain.from_iterable(S)))), len(Xi)
         super().__init__(a, b, label)
     
     def get_unitary(self, label):
@@ -129,7 +129,6 @@ class CompositeAtomicGadget(Gadget):
         self.out_labels = gadget_2.out_labels + list(filter(lambda x : x not in self.B, gadget_1.out_labels))
 
     def get_sequence(self, label):
-        print(self.gadget_1.labels)
         """
         Gets the composite sequence arising from gadget composition. Both gadget involved in 
         the composition must be atomic gadgets, with defined M-QSP sequences.
@@ -273,11 +272,12 @@ class ExtractionGadget(AtomicGadget):
     P and Q polynomial associated with it, for arbitrary precisions, and is therefore easy to 
     implement, without performing a QSP completion.
     """
-    def __init__(self, deg):
+    def __init__(self, deg, label):
         self.a, self.b = 1, 1
         self.deg = deg
         phi = ExtractionSequence().generate(deg)
-        self.Xi, self.S = [phi], [0 for _ in range(len(phi)-1)]
+        Xi, S = [phi], [[0 for _ in range(len(phi)-1)]]
+        super().__init__(Xi, S, label)
 
 ################################################################################################
 
