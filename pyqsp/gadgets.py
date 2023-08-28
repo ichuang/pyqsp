@@ -13,7 +13,6 @@ Functionality that we want
 '''
 import numpy as np
 import copy
-from .poly import PolyExtraction
 from .phases import ExtractionSequence
 import itertools
 
@@ -51,11 +50,12 @@ class AtomicGadget(Gadget):
         self.Xi = Xi
         self.S = S
         self.ancillas = []
-        self.is_corrected = False
         self.labels = [label]
 
         a, b = len(set(list(itertools.chain.from_iterable(S)))), len(Xi)
         super().__init__(a, b, label)
+
+        self.depth = 1
     
     def get_unitary(self, label):
         """
@@ -73,15 +73,18 @@ class AtomicGadget(Gadget):
         Args:
             vars (dict): A dictionary assigning values to input legs
         """
-        input_unitaries = lambda vars : [W(vars[l]) for l in self.in_labels]
-        return lambda vars : self.get_unitary(label)(input_unitaries(vars))
+        input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels}
+        return lambda vars : self.get_unitary(label)(input_unitaries(vars)) # Returns top-left entry  
     
-    def get_sequence(self, label):
+    def get_sequence(self, label, correction=None):
         """
         Gets the sequence
         """
         leg = self.out_labels.index(label)
-        return self.Xi[leg], [(self.label, s) for s in self.S[leg]]
+        Phi, S = self.Xi[leg], [(self.label, s) for s in self.S[leg]]
+        if correction is not None:
+            Phi, S = corrected_sequence(Phi, S, self.depth, correction)
+        return Phi, S
 
     def get_corrected_gadget(self):
         """
@@ -117,18 +120,16 @@ class CompositeAtomicGadget(Gadget):
         self.label = "{} - {}".format(gadget_1.label, gadget_2.label)
         self.labels = gadget_1.labels + gadget_2.labels
 
-        # Gets ancillas
-        #self.ancillas = gadget_1.ancillas + gadget_2.ancillas
-        
+        self.depth = gadget_1.depth + gadget_2.depth
         # Interlink parameters
-        self.B, self.C = [x[0] for x in interlink], [x[1] for x in interlink]
+        self.B, self.C, self.correction = [x[0] for x in interlink], [x[1] for x in interlink], [x[2] for x in interlink]
 
         # Gets the input and output legs
         self.a, self.b = gadget_1.a + (gadget_2.a - len(interlink)), gadget_2.b + (gadget_1.b - len(interlink))
         self.in_labels = gadget_1.in_labels + list(filter(lambda x : x not in self.C, gadget_2.in_labels))
         self.out_labels = gadget_2.out_labels + list(filter(lambda x : x not in self.B, gadget_1.out_labels))
 
-    def get_sequence(self, label):
+    def get_sequence(self, label, correction=None):
         """
         Gets the composite sequence arising from gadget composition. Both gadget involved in 
         the composition must be atomic gadgets, with defined M-QSP sequences.
@@ -139,8 +140,9 @@ class CompositeAtomicGadget(Gadget):
 
             for j in range(len(external_S)):
                 if external_S[j] in self.C:
-                    new_leg = self.B[self.C.index(external_S[j])]
-                    internal_Xi, internal_S = self.gadget_1.get_sequence(new_leg)
+                    new_leg_ind = self.C.index(external_S[j])
+                    new_leg, corr = self.B[new_leg_ind], self.correction[new_leg_ind]
+                    internal_Xi, internal_S = self.gadget_1.get_sequence(new_leg, correction=corr)
                     internal_Xi, internal_S = copy.deepcopy(internal_Xi), copy.deepcopy(internal_S) # Copies
 
                     S_seq.extend(internal_S)
@@ -152,6 +154,8 @@ class CompositeAtomicGadget(Gadget):
                     S_seq.append(external_S[j])
         if label[0] in self.gadget_1.labels:
             Phi_seq, S_seq = self.gadget_1.get_sequence(label)
+        if correction is not None:
+            Phi_seq, S_seq = corrected_sequence(Phi_seq, S_seq, self.depth, correction) 
         return Phi_seq, S_seq
     
     def get_unitary(self, label):
@@ -184,12 +188,22 @@ class CompositeAtomicGadget(Gadget):
 # Operations on gadgets and collections of gadgets
 # STILL NEED TO DEFINE SEQUENCE FOR CORRECTION
 
-def correction(gadget, label, eps, delta):
+def corrected_sequence(Phi, S, ancilla, deg):
     """
-    Applies the correction protocol to an atomic gadget
+    Applies the correction protocol to a gadget leg, gets the resulting sequence
+    Steps to resolving this issue: 
     """
-    correction_Phi = get_corrective_phi(eps, delta)
-    internal_Xi, internal_S = gadget.get_sequence(label)
+    extraction_gadget = ExtractionGadget(deg, "G_ext")
+    temporary_gadget = AtomicGadget([Phi], [S], "G")
+
+    gadget_phase = temporary_gadget.interlink(extraction_gadget, [(("G", 0), ("G_ext", 0), None)])
+    phase_Phi, phase_S = gadget_phase.get_sequence(("G_ext", 0))
+
+    cswap_identifier = ("CSWAP", ancilla)
+
+    new_Phi = [0, cswap_identifier] + list(phase_Phi) + [cswap_identifier] + list(Phi) + [cswap_identifier] + list(-1 * np.array(phase_Phi)[::-1]) + [cswap_identifier, 0]
+    new_S = [cswap_identifier] + phase_S + [cswap_identifier] + S + [cswap_identifier] + phase_S[::-1] + [cswap_identifier]
+    return new_Phi, new_S
 
 
 def pin(gadget, legs, vals):
@@ -245,7 +259,7 @@ class MultiplicationGadget(AtomicGadget):
     """
     def __init__(self, phi=-np.pi/4):
         self.Phi, self.S = np.array([phi, np.pi/4, -np.pi/4, -phi]), np.array([0, 1, 0])
-        self.Xi = [self.Phi, self.S] # Defines the gadget phase sequence
+        self.Xi = [[self.Phi], [self.S]] # Defines the gadget phase sequence
 
 
 class AdditionGadget(AtomicGadget):
@@ -255,7 +269,7 @@ class AdditionGadget(AtomicGadget):
     def __init__(self, phi=-np.pi/4):
         self.Phi = np.array([phi, -phi])
         self.S = np.array([0, 1, 0, 1, 0, 1, 0, 1])
-        self.Xi = [self.Phi, self.S] # Defines the gadget phase sequence 
+        self.Xi = [[self.Phi], [self.S]] # Defines the gadget phase sequence 
 
 
 class InvChebyshevGadget(AtomicGadget):
@@ -306,8 +320,8 @@ def compute_mqsp_unitary(U, Phi, s):
     Computes an M-QSP unitary
     """
     output_U = Rz(Phi[0])
-    for i in range(len(s)):
-        output_U = output_U @ U[s[i]] @ Rz(Phi[i])
+    for i in range(0, len(s)):
+        output_U = output_U @ U[s[i]] @ Rz(Phi[i + 1])
     return output_U
 
 
