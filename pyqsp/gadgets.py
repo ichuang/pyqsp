@@ -66,9 +66,31 @@ class Corrective_CSWAP(Gate):
         dev = pl.device('default.qubit', wires=[0] + [(0, q) for q in ancilla_qubits] + [(1, q) for q in ancilla_qubits])
         @pl.qnode(dev)
         def circ():
+            pl.PauliX(wires=[(0, self.ancilla)])
             pl.CSWAP(wires=[(0, self.ancilla), (1, self.ancilla), 0])
+            pl.PauliX(wires=[(0, self.ancilla)])
             return pl.state()
         return pl.matrix(circ)() 
+
+
+class iX_Gate(Gate):
+    """
+    iX Gate
+    """
+    def matrix(self, ancilla_qubits):
+        """Gets the matrix"""
+        N = 2 * len(ancilla_qubits) + 1
+        return extend_dim(pl.RX(np.pi/2, wires=0).matrix(), N)
+
+
+class iX_Gate_Inv(Gate):
+    """
+    iX Gate
+    """
+    def matrix(self, ancilla_qubits):
+        """Gets the matrix"""
+        N = 2 * len(ancilla_qubits) + 1
+        return extend_dim(pl.RX(-np.pi/2, wires=0).matrix(), N)
 
 
 class Corrective_SWAP(Gate):
@@ -132,16 +154,44 @@ class AtomicGadget(Gadget):
         super().__init__(a, b, label)
 
         self.depth = 1 
+        self.ancilla_register = list(range(self.depth))
     
-    def get_unitary(self, label):
+    def get_unitary(self, label, correction=None):
         """
         Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
         gadget
         """
-        Xi, S = self.get_sequence(label)
-        return lambda U : compute_mqsp_unitary(U, Xi, S) 
+        seq = self.get_sequence(label, correction=correction)
 
-    def get_qsp_unitary(self, label):
+        if correction is None:
+            def func(U):
+                mat = np.eye(2)
+                for s in seq:
+                    if isinstance(s, QSP_Signal):
+                        mat = mat @ s.matrix(U[s.label])
+                    elif isinstance(s, QSP_Rotation):
+                        mat = mat @ s.matrix()
+                return mat
+            return func 
+        else:
+            ancilla_reg = self.ancilla_register
+
+            N = 2 * len(ancilla_reg) + 1
+            dim = 2 ** N
+
+            def func(U):
+                mat = np.eye(dim)
+                for s in seq:
+                    if isinstance(s, QSP_Signal):
+                        mat = mat @ extend_dim(s.matrix(U[s.label]), N)
+                    elif isinstance(s, QSP_Rotation):
+                        mat = mat @ extend_dim(s.matrix(), N)
+                    else:
+                        mat = mat @ s.matrix(ancilla_reg)
+                return mat
+            return func
+
+    def get_qsp_unitary(self, label, correction=None, rot=None):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
@@ -149,18 +199,12 @@ class AtomicGadget(Gadget):
         Args:
             vars (dict): A dictionary assigning values to input legs
         """
-        input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels}
-        return lambda vars : self.get_unitary(label)(input_unitaries(vars)) # Returns top-left entry  
+        if rot is not None:
+            input_unitaries = lambda vars : {l : W(vars[l], rot=rot[l]) for l in self.in_labels}
+        else:
+            input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels} 
+        return lambda vars : self.get_unitary(label, correction=correction)(input_unitaries(vars)) # Returns top-left entry  
     
-    """
-    def get_sequence(self, label, correction=None):
-        leg = self.out_labels.index(label)
-        Phi, S = self.Xi[leg], self.S[leg]
-        if correction is not None:
-            Phi, S = corrected_sequence(Phi, S, self.depth, correction)
-        return Phi, S
-    """
-
     def get_sequence(self, label, correction=None):
         """
         Gets the gate sequence corresponding to an output leg
@@ -173,7 +217,7 @@ class AtomicGadget(Gadget):
             seq.append(QSP_Signal(S_sub[j]))
             seq.append(QSP_Rotation(Xi_sub[j + 1]))
         if correction is not None:
-            seq = corrected_sequence(seq, self.depth, correction)
+            seq = corrected_sequence(seq, self.depth-1, correction)
         return seq
 
     def get_corrected_gadget(self):
@@ -220,33 +264,6 @@ class CompositeAtomicGadget(Gadget):
         self.in_labels = gadget_1.in_labels + list(filter(lambda x : x not in self.C, gadget_2.in_labels))
         self.out_labels = gadget_2.out_labels + list(filter(lambda x : x not in self.B, gadget_1.out_labels))
 
-    """
-    def get_sequence(self, label, correction=None):
-        if label[0] in self.gadget_2.labels:
-            external_Xi, external_S = self.gadget_2.get_sequence(label) # Gets the output gadget's sequence
-            Phi_seq, S_seq = [external_Xi[0]], []
-
-            for j in range(len(external_S)):
-                if external_S[j] in self.C:
-                    new_leg_ind = self.C.index(external_S[j])
-                    new_leg, corr = self.B[new_leg_ind], self.correction[new_leg_ind]
-                    internal_Xi, internal_S = self.gadget_1.get_sequence(new_leg, correction=corr)
-                    internal_Xi, internal_S = copy.deepcopy(internal_Xi), copy.deepcopy(internal_S) # Copies
-
-                    S_seq.extend(internal_S)
-
-                    internal_Xi[len(internal_Xi)-1] = external_Xi[j + 1] + internal_Xi[len(internal_Xi)-1]
-                    Phi_seq = _seq_extend(Phi_seq, internal_Xi)
-                else:
-                    Phi_seq.append(external_Xi[j + 1])
-                    S_seq.append(external_S[j])
-        if label[0] in self.gadget_1.labels:
-            Phi_seq, S_seq = self.gadget_1.get_sequence(label)
-        if correction is not None:
-            Phi_seq, S_seq = corrected_sequence(Phi_seq, S_seq, self.depth, correction) 
-        return Phi_seq, S_seq
-    """
-
     def get_sequence(self, label, correction=None):
         if label[0] in self.gadget_2.labels:
             external_seq = self.gadget_2.get_sequence(label) # Gets the output gadget's sequence
@@ -266,15 +283,15 @@ class CompositeAtomicGadget(Gadget):
         if label[0] in self.gadget_1.labels:
             seq = self.gadget_1.get_sequence(label)
         if correction is not None:
-            seq = corrected_sequence(seq, self.depth, correction)
+            seq = corrected_sequence(seq, self.depth-1, correction)
         return seq
     
-    def get_unitary(self, label):
+    def get_unitary(self, label, correction=None):
         """
         Returns a function which takes input unitaries, and outputs unitaries corresponding to the 
         gadget
         """
-        seq = self.get_sequence(label)
+        seq = self.get_sequence(label, correction=correction)
         ancilla_reg = self.ancilla_register
 
         N = 2 * len(ancilla_reg) + 1
@@ -292,7 +309,7 @@ class CompositeAtomicGadget(Gadget):
             return mat
         return func
 
-    def get_qsp_unitary(self, label):
+    def get_qsp_unitary(self, label, correction=None, rot=None):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
@@ -300,8 +317,11 @@ class CompositeAtomicGadget(Gadget):
         Args:
             vars (dict): A dictionary assigning values to input legs
         """
-        input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels}
-        return lambda vars : self.get_unitary(label)(input_unitaries(vars)) # Returns top-left entry 
+        if rot is not None:
+            input_unitaries = lambda vars : {l : W(vars[l], rot=rot[l]) for l in self.in_labels}
+        else:
+            input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels} 
+        return lambda vars : self.get_unitary(label, correction=correction)(input_unitaries(vars)) # Returns top-left entry  
 
     def interlink(self, gadget, interlink):
         """
@@ -332,7 +352,7 @@ def corrected_sequence(ext_seq, ancilla, deg):
         seq_conj.append(s_copy)
     seq_conj = seq_conj[::-1]
 
-    new_seq = [Corrective_CSWAP(ancilla)] + seq + [Corrective_CSWAP(ancilla), Corrective_SWAP(ancilla)] + ext_seq + [Corrective_SWAP(ancilla), Corrective_CSWAP(ancilla)] + seq_conj + [Corrective_CSWAP(ancilla)]
+    new_seq = [Corrective_CSWAP(ancilla), iX_Gate()] + seq + [Corrective_CSWAP(ancilla), Corrective_SWAP(ancilla)] + ext_seq + [Corrective_SWAP(ancilla), Corrective_CSWAP(ancilla)] + seq_conj + [iX_Gate_Inv(), Corrective_CSWAP(ancilla)]
     return new_seq
 
 
@@ -362,6 +382,9 @@ def sum_gadget_legs(gadget1, gadget2, leg1, leg2):
 
 
 def nested_seq(external_seq, internal_seq):
+    """
+    Utility function for nesting composition of gadgets
+    """
     seq = []
 
     for j in range(len(external_seq)):
@@ -449,14 +472,18 @@ def Rz(phi):
     ])
 
 
-def W(x):
+def W(x, rot=None):
     """
     Standard sigma_x signal operator
     """
-    return np.array([
+    X = np.array([
         [x, 1j * np.sqrt(1 - x ** 2)],
         [1j * np.sqrt(1 - x ** 2), x]
     ])
+    if rot is None:
+        return X
+    else:
+        return Rz(rot) @ X @ Rz(-rot)
 
 
 def compute_mqsp_unitary(U, Phi, s):
@@ -472,13 +499,6 @@ def mult_with_ragged_dim(A, B):
     """
     Multiplies gates with different dimensions
     """
-
-
-def CSWAP():
-    """
-    CSWAP operation
-    """
-
 
 def unitary_from_tape(Phi, S_tilde):
     """

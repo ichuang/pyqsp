@@ -312,10 +312,8 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
 
     # check completion
     ncoefs = (ipoly * ~ipoly + xpoly * ~xpoly).coefs
-    print(ncoefs)
     ncoefs_expected = np.zeros(ncoefs.size) 
     ncoefs_expected[ncoefs.size // 2] = 1.
-    print(ncoefs_expected)
     success = np.max(np.abs(ncoefs - ncoefs_expected)) < tol
 
     if not success:
