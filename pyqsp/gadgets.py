@@ -456,10 +456,10 @@ class SqrtGadget(AtomicGadget):
     """
     Implements the square root/inverse Chebyshev gadget
     """
-    def __init__(self, deg, label):
+    def __init__(self, deg, delta, label):
         self.a, self.b = 1, 1
         self.deg = deg
-        phi = SqrtSequence().generate(deg)
+        phi = SqrtSequence().generate(deg, delta)
         Xi, S = [phi], [[0 for _ in range(len(phi)-1)]]
         super().__init__(Xi, S, label) 
 

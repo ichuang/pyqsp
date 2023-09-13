@@ -6,8 +6,9 @@ Known QSP phases for specific responses, in the Wx convention
 
 import numpy as np
 from .poly import PolyExtraction
+from .completion import poly2cheb
 from scipy.interpolate import approximate_taylor_polynomial
-from .angle_sequence import QuantumSignalProcessingPhases
+from .angle_sequence import QuantumSignalProcessingPhases, QSPPhaseFromL
 import copy
 
 
@@ -123,8 +124,7 @@ class ExtractionSequence(PhaseGenerator):
         return phi
 
 
-###### SQRT SEQUENCE
-
+###### SQRT SEQUENCE #######
 
 # Generates the polynomials corresponding to inverse Chebyshev polynomials
 def B(x):
@@ -140,36 +140,23 @@ def generate_BC(n, delta):
     B_coeffs, C_coeffs = approximate_taylor_polynomial(B, 0, n, 1 - delta), approximate_taylor_polynomial(C, 0, n-1, 1 - delta)
     return np.polynomial.Polynomial(B_coeffs.coeffs[::-1]), np.polynomial.Polynomial(C_coeffs.coeffs[::-1])
 
-# Generates the Chebyshev coefficients
-from scipy.special import chebyt, chebyu
-
-def poly2chebyfn(pcoefs, kind="T"):
-    P = copy.deepcopy(pcoefs)
-    if kind == "T":
-        cfunc = lambda x : list(reversed(chebyt(x).coef))
-    elif kind == "U":
-        cfunc = lambda x : list(reversed(chebyu(x).coef))
-
-    deg = len(P)-1
-    C = []
-    for l in range(deg, -1, -1):
-        r = P[l]
-        poly_term = cfunc(l)
-        
-        C.append(r / poly_term[len(poly_term)-1])
-        P = P - (r / poly_term[len(poly_term)-1])  * np.array(cfunc(l) + [0.0 for _ in range(l, deg)])
-    return list(reversed(C))
-
+###################################
 
 class SqrtSequence(PhaseGenerator):
     """
     Sqrt M-QSP sequence
     """
-    def generate(self, n):
-        Q = PolyExtraction().generate(degree=n)
-        phi = QuantumSignalProcessingPhases(Q, poly_type="Q", measurement="z")
-        return phi
+    def generate(self, n, delta):
+        
+        B_poly, C_poly = generate_BC(n, delta)
+        X_norm = np.linspace(-1, 1, 500)
+        Y_norm = (B_poly(X_norm) ** 2) + (1 - X_norm ** 2) * (C_poly(X_norm) ** 2)
+        B_cheb, C_cheb = poly2cheb(B_poly.coef, kind="T") / max(abs(Y_norm)), poly2cheb(C_poly.coef, kind="U") / max(abs(Y_norm))
 
+        L_coeffs = list(reversed(list((B_cheb[1:] - C_cheb)/2))) + [B_cheb[0]] + list((B_cheb[1:] + C_cheb)/2)
+        phi = QSPPhaseFromL(np.array(L_coeffs), signal_operator="Wz", measurement="z")
+
+        return phi
 
 # -----------------------------------------------------------------------------
 

@@ -189,32 +189,27 @@ def QuantumSignalProcessingPhases(
     return phiset
 
 
-def QSPPhaseFromL(
-        lcoefs,
-        signal_operator="Wx",
-        measurement=None,
-        **kwargs):
-            model = (signal_operator, measurement)
+def QSPPhaseFromL(lcoefs, signal_operator="Wx", measurement=None, **kwargs):
+    """phases from lcoefs"""
+    model = (signal_operator, measurement)
 
-            if measurement is None:
-                if signal_operator == "Wx":
-                    measurement = "x"
-                elif signal_operator == "Wz":
-                    measurement = "z"
+    if measurement is None:
+        if signal_operator == "Wx":
+            measurement = "x"
+        elif signal_operator == "Wz":
+            measurement = "z"
 
-            # Perform completion
-            if model in {("Wx", "x"), ("Wz", "z")}:
-                # Capitalization: eps/2 amount of error budget is put to the highest
-                # power for sake of numerical stability.
-                lalg = completion_from_root_finding(lcoefs, coef_type="F")
-            else:
-                raise ValueError(
-                    "Invalid model: {}".format(str(model))
-                )
+    # Perform completion
+    if model in {("Wx", "x"), ("Wz", "z")}:
+        lalg = completion_from_root_finding(lcoefs, coef_type="F")
+    else:
+        raise ValueError(
+            "Invalid model: {}".format(str(model))
+        )
 
-            # Decomposition phase
-            phiset = angseq(lalg) 
-            return phiset
+    # Decomposition phase
+    phiset = angseq(lalg) 
+    return phiset
 
 
 def QuantumSignalProcessingPhasesWithTensorflow(
