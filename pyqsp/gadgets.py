@@ -522,3 +522,31 @@ class Test_gadgets(unittest.TestCase):
     def test_iX_Gate_simple1(self):
         g = iX_Gate()
         assert g is not None
+
+    def test_two_atomic_gadgets(self):
+        Xi_1 = [np.array([0, 1, 2, -2, 1, 0])]
+        S_1 = [[0, 1, 0, 1, 0]]
+        G = AtomicGadget(Xi_1, S_1, label="G")
+
+        Xi_2 = np.array([[np.pi/3, np.pi/2, 0, -0, -np.pi/2, -np.pi/3]])
+        S_2 = [[0, 1, 0, 1, 0]]
+        G_tilde = AtomicGadget(Xi_2, S_2, label="G_tilde")
+
+        # Performs an interlink of the G gadget with the extraction gadget. Note that 4 is the 
+        # degree of the polynomial used in the correction. If it were instead "None" no correction
+        # would be applied
+        
+        G_interlink = G.interlink(G_tilde, [
+            (('G1', 0), ('G_tilde', 0), 4)
+        ])        
+        assert G_interlink is not None
+        assert hasattr(G_interlink, 'get_sequence')
+        print("In legs = {}".format(G_interlink.in_labels))
+        print("Out legs = {}".format(G_interlink.out_labels))
+        assert len(G_interlink.in_labels)==3
+
+        # Gets the sequence of a leg of the gadget interlink
+        x = G_interlink.get_sequence(('G_tilde', 0))
+        assert len(x)==200
+
+        
