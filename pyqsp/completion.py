@@ -281,6 +281,10 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
 
             fcoefs[(deg + 1) // 2] = np.real(pcheb[0])
             gcoefs[(deg + 1) // 2] = np.imag(pcheb[0])
+
+        ipoly = LPoly(fcoefs, -len(fcoefs) + 1)
+        xpoly = LPoly(gcoefs, -len(gcoefs) + 1)
+
     elif coef_type == "Q" or coef_type == "q":
         qcoefs = np.array(coefs, dtype=np.complex128)
         Q = Polynomial(qcoefs)
