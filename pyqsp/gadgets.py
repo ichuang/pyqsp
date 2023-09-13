@@ -20,6 +20,7 @@ from pyqsp import qsp_models
 from .phases import ExtractionSequence, SqrtSequence
 import itertools
 import pennylane as pl
+from .response import ComputeQSPResponse
 
 
 ##############################################################################
@@ -429,15 +430,6 @@ class AdditionGadget(AtomicGadget):
         self.S = np.array([0, 1, 0, 1, 0, 1, 0, 1])
         self.Xi = [[self.Phi], [self.S]] # Defines the gadget phase sequence 
 
-
-class InvChebyshevGadget(AtomicGadget):
-    """
-    An inverse Chebyshev polynomial gadget
-    """
-    def __init__(self, n, phi=-np.pi/4):
-        pass
-
-
 class ExtractionGadget(AtomicGadget):
     """
     The gadget which corresponds to the extraction protocol. This protocol has both a specific 
@@ -450,6 +442,11 @@ class ExtractionGadget(AtomicGadget):
         phi = ExtractionSequence().generate(deg)
         Xi, S = [phi], [[0 for _ in range(len(phi)-1)]]
         super().__init__(Xi, S, label)
+    
+    def get_response(self):
+        adat = np.linspace(-1, 1, 500)
+        response = ComputeQSPResponse(adat, np.array(self.Xi[0]), signal_operator="Wx", measurement="z")["pdat"]
+        return adat, response
 
 
 class SqrtGadget(AtomicGadget):
@@ -462,6 +459,11 @@ class SqrtGadget(AtomicGadget):
         phi = SqrtSequence().generate(deg, delta)
         Xi, S = [phi], [[0 for _ in range(len(phi)-1)]]
         super().__init__(Xi, S, label) 
+    
+    def get_response(self):
+        adat = np.linspace(-1, 1, 500)
+        response = ComputeQSPResponse(adat, np.array(self.Xi[0]), signal_operator="Wz", measurement="z")["pdat"]
+        return adat, response
 
 ################################################################################################
 
