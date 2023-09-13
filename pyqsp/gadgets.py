@@ -174,33 +174,19 @@ class AtomicGadget(Gadget):
         gadget
         """
         seq = self.get_sequence(label, correction=correction)
+        ancilla_reg = list(range(self.depth))
+        N = 2 * len(ancilla_reg) + 1
+        dim = 2 ** N
 
-        if correction is None:
-            def func(U):
-                mat = np.eye(2)
-                for s in seq:
-                    if isinstance(s, QSP_Signal):
-                        mat = mat @ s.matrix(U[s.label])
-                    elif isinstance(s, QSP_Rotation):
-                        mat = mat @ s.matrix()
-                return mat
-            return func 
-        else:
-            ancilla_reg = list(range(self.depth))
-            N = 2 * len(ancilla_reg) + 1
-            dim = 2 ** N
-
-            def func(U):
-                mat = np.eye(dim)
-                for s in seq:
-                    if isinstance(s, QSP_Signal):
-                        mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
-                    elif isinstance(s, QSP_Rotation):
-                        mat = mat @ _extend_dim(s.matrix(), N)
-                    else:
-                        mat = mat @ s.matrix(ancilla_reg)
-                return mat
-            return func
+        def func(U):
+            mat = np.eye(dim)
+            for s in seq:
+                if isinstance(s, QSP_Signal):
+                    mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
+                elif isinstance(s, QSP_Rotation):
+                    mat = mat @ _extend_dim(s.matrix(), N)
+            return mat
+        return func
 
     def get_qsp_unitary(self, label, correction=None, rot=None):
         """
@@ -296,39 +282,24 @@ class CompositeAtomicGadget(Gadget):
         gadget
         """
         seq = self.get_sequence(label, correction=correction)
+        ancilla_reg = list(range(self.depth))
 
-        if correction is None:
-            ancilla_reg = list(range(self.depth-1))
-            N = 2 * len(ancilla_reg) + 1
-            dim = 2 ** N
+        N = 2 * len(ancilla_reg) + 1
+        dim = 2 ** N
 
-            def func(U):
-                mat = np.eye(dim)
-                for s in seq:
-                    if isinstance(s, QSP_Signal):
-                        mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
-                    elif isinstance(s, QSP_Rotation):
-                        mat = mat @ _extend_dim(s.matrix(), N)
-                    else:
-                        mat = mat @ s.matrix(ancilla_reg)
-                return mat
-            return func
-        else:
-            ancilla_reg = list(range(self.depth))
+        def func(U):
+            mat = np.eye(dim)
+            for s in seq:
+                if isinstance(s, QSP_Signal):
+                    mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
+                elif isinstance(s, QSP_Rotation):
+                    mat = mat @ _extend_dim(s.matrix(), N)
+                elif isinstance(s, Corrective_Z):
+                    mat = 0
+                elif isinstance(s, iX_Gate):
+                    mat = mat @ _extend_dim(s.matrix())
 
-            N = 2 * len(ancilla_reg) + 1
-            dim = 2 ** N
-
-            def func(U):
-                mat = np.eye(dim)
-                for s in seq:
-                    if isinstance(s, QSP_Signal):
-                        mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
-                    elif isinstance(s, QSP_Rotation):
-                        mat = mat @ _extend_dim(s.matrix(), N)
-                    else:
-                        mat = mat @ s.matrix(ancilla_reg)
-                return mat
+            return mat
             return func
 
     def get_qsp_unitary(self, label, correction=None, rot=None):
@@ -361,7 +332,7 @@ def corrected_sequence(ext_seq, ancilla, deg):
     Steps to resolving this issue: 
     """
     extraction_gadget = ExtractionGadget(deg, "G_ext").get_sequence(("G_ext", 0))
-    seq = _nested_seq(extraction_gadget, ext_seq)
+    seq = [iX_Gate()] + _nested_seq(extraction_gadget, ext_seq)
 
     seq_conj = []
     for s in seq:
@@ -371,7 +342,7 @@ def corrected_sequence(ext_seq, ancilla, deg):
         if isinstance(s, QSP_Rotation):
             s_copy.theta = -s_copy.theta
         seq_conj.append(s_copy)
-    seq_conj = seq_conj[::-1]
+    seq_conj = seq_conj[::-1] + [iX_Gate(inv=True)]
 
     corr, corr_dagger = Corrective_Z(seq, ancilla), Corrective_Z(seq_conj, ancilla)
     new_seq = [corr] + ext_seq + [corr_dagger] 
