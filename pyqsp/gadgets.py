@@ -519,5 +519,6 @@ class Test_gadgets(unittest.TestCase):
     '''
     unit tests for pyqsp gadgets
     '''
-    g = iX_Gate()
-    assert g is not None
+    def test_iX_Gate_simple1(self):
+        g = iX_Gate()
+        assert g is not None
