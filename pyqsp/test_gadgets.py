@@ -60,5 +60,6 @@ class Test_gadgets(unittest.TestCase):
 
         Phi = Phi[::-1]
         Phi_prime = Phi_prime[::-1]    
-
+        assert len(Phi_prime)==25
+        
         
