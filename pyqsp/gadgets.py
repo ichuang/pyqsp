@@ -120,8 +120,26 @@ class Corrective_Z(Gate):
         self.unitary = None
         self.seq = seq
 
-    def matrix(self):
-        return self.unitary
+    def matrix(self, ancilla_reg):
+        if self.unitary is not None:
+            return self.unitary
+        else:
+            # Calculates the unitary
+            restricted_ancillas = []
+            for r in ancilla_reg:
+                if r != self.ancilla:
+                    restricted_ancillas.append(r)
+            target_unitary = _get_unitary(self.seq, restricted_ancillas)
+
+            # Constructs the controlled variant of the unitary
+            dev = pl.device('default.qubit', wires=[0] + [("a", q) for q in ancilla_reg])
+            @pl.qnode(dev)
+            def circ():
+                pl.ControlledQubitUnitary(target_unitary, ("a", self.ancilla), [0] + restricted_ancillas)
+                return pl.state()
+            self.unitary = pl.matrix(circ)()
+            return self.unitary
+
 
 ###########################################################################
 
@@ -394,9 +412,8 @@ def _extend_dim(U, dim):
     """
     return np.kron(U, np.eye(2 ** (dim - 1)))
 
-"""
-def _get_unitary(seq):
-    ancilla_reg = list(range(self.depth-1))
+
+def _get_unitary(seq, ancilla_reg):
     N = 2 * len(ancilla_reg) + 1
     dim = 2 ** N
 
@@ -405,13 +422,12 @@ def _get_unitary(seq):
         for s in seq:
             if isinstance(s, QSP_Signal):
                 mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
-            elif isinstance(s, QSP_Rotation):
+            elif isinstance(s, QSP_Rotation) or isinstance(s, iX_Gate):
                 mat = mat @ _extend_dim(s.matrix(), N)
-            else:
-                mat = mat @ s.matrix(ancilla_reg)
+            elif isinstance(s, Corrective_Z) or isinstance(s, Corrective_SWAP):
+                mat = mat @ _extend_dim(s.matrix(ancilla_reg), N)
         return mat
     return func
-"""
 
 ###################### Instances of gadgets ######################
 
