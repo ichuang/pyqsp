@@ -82,15 +82,16 @@ class iX_Gate(Gate):
     """
     iX Gate
     """
-    def __init__(self, inv=False):
+    def __init__(self, inv=False, phi=np.pi):
         self.inv = inv
+        self.phi = phi
     
     def matrix(self):
         """Gets the matrix"""
         if self.inv:
-            return pl.RX(-np.pi, wires=0).matrix()
+            return pl.RX(-self.phi, wires=0).matrix()
         else:
-            return pl.RX(np.pi, wires=0).matrix()
+            return pl.RX(self.phi, wires=0).matrix()
 
 
 class Corrective_SWAP(Gate):
@@ -321,7 +322,7 @@ class CompositeAtomicGadget(Gadget):
             return mat
         return func
 
-    def get_qsp_unitary(self, label, correction=None, rot=None):
+    def get_qsp_unitary(self, label, correction=None, rot=None, shift=None):
         """
         Generates and returns the polynomial corresponding to a particular output leg
         of an atomic gadget.
@@ -329,8 +330,12 @@ class CompositeAtomicGadget(Gadget):
         Args:
             vars (dict): A dictionary assigning values to input legs
         """
-        if rot is not None:
+        if rot is not None and shift is None:
             input_unitaries = lambda vars : {l : W(vars[l], rot=rot[l]) for l in self.in_labels}
+        elif rot is None and shift is not None:
+            input_unitaries = lambda vars : {l : W(vars[l], shift=shift[l]) for l in self.in_labels} 
+        elif rot is not None and shift is not None:
+            input_unitaries = lambda vars : {l : W(vars[l], shift=shift[l], rot=rot[l]) for l in self.in_labels} 
         else:
             input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels} 
         return lambda vars : self.get_unitary(label, correction=correction)(input_unitaries(vars)) # Returns top-left entry  
@@ -436,9 +441,9 @@ class MultiplicationGadget(AtomicGadget):
     """
     An multiplication gadget
     """
-    def __init__(self, phi=-np.pi/4):
-        self.Phi, self.S = np.array([phi, np.pi/4, -np.pi/4, -phi]), np.array([0, 1, 0])
-        self.Xi = [[self.Phi], [self.S]] # Defines the gadget phase sequence
+    def __init__(self, label, phi=-np.pi/4):
+        Xi, S = [np.array([phi, np.pi/4, -np.pi/4, -phi])], [np.array([0, 1, 0])]
+        super().__init__(Xi, S, label)
 
 
 class AdditionGadget(AtomicGadget):
@@ -507,7 +512,7 @@ def Rx(phi):
     ]) 
 
 
-def W(x, rot=None):
+def W(x, rot=None, shift=None):
     """
     Standard sigma_x signal operator
     """
@@ -515,10 +520,11 @@ def W(x, rot=None):
         [x, 1j * np.sqrt(1 - x ** 2)],
         [1j * np.sqrt(1 - x ** 2), x]
     ])
-    if rot is None:
-        return X
-    else:
-        return Rz(rot) @ X @ Rz(-rot)
+    if shift is not None:
+        X = Rx(shift) @ X
+    if rot is not None:
+        X = Rz(rot) @ X @ Rz(-rot)
+    return X
 
 def compute_mqsp_unitary(U, Phi, s, rot_gate="z"):
     """
