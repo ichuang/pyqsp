@@ -91,7 +91,7 @@ def poly2laurent(pcoefs):
 
 
 def QuantumSignalProcessingPhases(
-        lcoefs,
+        poly,
         eps=1e-4,
         suc=1 - 1e-4,
         signal_operator="Wx",
@@ -153,20 +153,16 @@ def QuantumSignalProcessingPhases(
     if model in {("Wx", "x"), ("Wz", "z")} and poly_type != "Q":
         # Capitalization: eps/2 amount of error budget is put to the highest
         # power for sake of numerical stability.
-        """
         poly = suc * \
             (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
-        """
 
-        #lcoefs = poly2laurent(poly.coef)
+        lcoefs = poly2laurent(poly.coef)
         lalg = completion_from_root_finding(lcoefs, coef_type="F")
     elif model == ("Wx", "z"):
         if poly_type == "P":
-            pass
-            #lalg = completion_from_root_finding(poly.coef, coef_type="P")
+            lalg = completion_from_root_finding(poly.coef, coef_type="P")
         if poly_type == "Q":
-            pass
-            #lalg = completion_from_root_finding(poly.coef, coef_type="Q") 
+            lalg = completion_from_root_finding(poly.coef, coef_type="Q") 
     else:
         raise ValueError(
             "Invalid model: {}".format(str(model))
@@ -176,7 +172,6 @@ def QuantumSignalProcessingPhases(
     phiset = angseq(lalg)
 
     # Verify by reconstruction
-    """
     adat = np.linspace(-1., 1., 100)
     response = ComputeQSPResponse(
         adat,
@@ -186,11 +181,40 @@ def QuantumSignalProcessingPhases(
     expected = poly(adat)
 
     max_err = np.max(np.abs(response - expected))
+    """
     if max_err > tolerance:
         raise AngleFindingError(
             "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
     """
     return phiset
+
+
+def QSPPhaseFromL(
+        lcoefs,
+        signal_operator="Wx",
+        measurement=None,
+        **kwargs):
+            model = (signal_operator, measurement)
+
+            if measurement is None:
+                if signal_operator == "Wx":
+                    measurement = "x"
+                elif signal_operator == "Wz":
+                    measurement = "z"
+
+            # Perform completion
+            if model in {("Wx", "x"), ("Wz", "z")}:
+                # Capitalization: eps/2 amount of error budget is put to the highest
+                # power for sake of numerical stability.
+                lalg = completion_from_root_finding(lcoefs, coef_type="F")
+            else:
+                raise ValueError(
+                    "Invalid model: {}".format(str(model))
+                )
+
+            # Decomposition phase
+            phiset = angseq(lalg) 
+            return phiset
 
 
 def QuantumSignalProcessingPhasesWithTensorflow(
