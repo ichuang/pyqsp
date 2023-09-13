@@ -85,13 +85,12 @@ class iX_Gate(Gate):
     def __init__(self, inv=False):
         self.inv = inv
     
-    def matrix(self, ancilla_qubits):
+    def matrix(self):
         """Gets the matrix"""
-        N = 2 * len(ancilla_qubits) + 1
         if self.inv:
-            return _extend_dim(pl.RX(-np.pi, wires=0).matrix(), N)
+            return pl.RX(-np.pi, wires=0).matrix()
         else:
-            return _extend_dim(pl.RX(np.pi, wires=0).matrix(), N)
+            return pl.RX(np.pi, wires=0).matrix()
 
 
 class Corrective_SWAP(Gate):
@@ -120,7 +119,7 @@ class Corrective_Z(Gate):
         self.unitary = None
         self.seq = seq
 
-    def matrix(self, ancilla_reg):
+    def matrix(self, U, ancilla_reg):
         if self.unitary is not None:
             return self.unitary
         else:
@@ -129,13 +128,13 @@ class Corrective_Z(Gate):
             for r in ancilla_reg:
                 if r != self.ancilla:
                     restricted_ancillas.append(r)
-            target_unitary = _get_unitary(self.seq, restricted_ancillas)
+            target_unitary = _get_unitary(self.seq, restricted_ancillas)(U)
 
             # Constructs the controlled variant of the unitary
             dev = pl.device('default.qubit', wires=[0] + [("a", q) for q in ancilla_reg])
             @pl.qnode(dev)
             def circ():
-                pl.ControlledQubitUnitary(target_unitary, ("a", self.ancilla), [0] + restricted_ancillas)
+                pl.ControlledQubitUnitary(target_unitary, control_wires=[("a", self.ancilla)], wires=[0] + restricted_ancillas)
                 return pl.state()
             self.unitary = pl.matrix(circ)()
             return self.unitary
