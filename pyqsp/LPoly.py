@@ -148,15 +148,8 @@ class LPoly():
         if self.iszero:
             return 1
         res = self.coefs.dot(
-            numpy.exp(
-                1j *
-                numpy.outer(
-                    numpy.arange(
-                        self.dmin,
-                        self.dmax +
-                        1,
-                        2),
-                    angles)))
+            numpy.exp(1j * numpy.outer(
+                    numpy.arange(self.dmin,self.dmax +1,2), angles)))
         return res
 
     @classmethod

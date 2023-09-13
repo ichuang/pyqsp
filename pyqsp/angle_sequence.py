@@ -91,7 +91,7 @@ def poly2laurent(pcoefs):
 
 
 def QuantumSignalProcessingPhases(
-        poly,
+        lcoefs,
         eps=1e-4,
         suc=1 - 1e-4,
         signal_operator="Wx",
@@ -122,10 +122,12 @@ def QuantumSignalProcessingPhases(
         sequence to specified tolerance.
         ValueError: Raised if invalid model (or method) is specified.
     """
+    """
     if isinstance(poly, np.ndarray) or isinstance(poly, list):
         poly = Polynomial(poly)
     elif isinstance(poly, TargetPolynomial):
         poly = Polynomial(poly.coef)
+    """
 
     if measurement is None:
         if signal_operator == "Wx":
@@ -133,6 +135,7 @@ def QuantumSignalProcessingPhases(
         elif signal_operator == "Wz":
             measurement = "z"
 
+    """
     if method == "tf":
         if not signal_operator == "Wx":
             raise ValueError(
@@ -142,6 +145,7 @@ def QuantumSignalProcessingPhases(
                                                            **kwargs)
     elif not method == "laurent":
         raise ValueError(f"Invalid method {method}")
+    """
 
     model = (signal_operator, measurement)
 
@@ -149,16 +153,20 @@ def QuantumSignalProcessingPhases(
     if model in {("Wx", "x"), ("Wz", "z")} and poly_type != "Q":
         # Capitalization: eps/2 amount of error budget is put to the highest
         # power for sake of numerical stability.
+        """
         poly = suc * \
             (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
+        """
 
-        lcoefs = poly2laurent(poly.coef)
+        #lcoefs = poly2laurent(poly.coef)
         lalg = completion_from_root_finding(lcoefs, coef_type="F")
     elif model == ("Wx", "z"):
         if poly_type == "P":
-            lalg = completion_from_root_finding(poly.coef, coef_type="P")
+            pass
+            #lalg = completion_from_root_finding(poly.coef, coef_type="P")
         if poly_type == "Q":
-            lalg = completion_from_root_finding(poly.coef, coef_type="Q") 
+            pass
+            #lalg = completion_from_root_finding(poly.coef, coef_type="Q") 
     else:
         raise ValueError(
             "Invalid model: {}".format(str(model))
@@ -168,6 +176,7 @@ def QuantumSignalProcessingPhases(
     phiset = angseq(lalg)
 
     # Verify by reconstruction
+    """
     adat = np.linspace(-1., 1., 100)
     response = ComputeQSPResponse(
         adat,
@@ -176,7 +185,6 @@ def QuantumSignalProcessingPhases(
         measurement=measurement)["pdat"]
     expected = poly(adat)
 
-    """
     max_err = np.max(np.abs(response - expected))
     if max_err > tolerance:
         raise AngleFindingError(
@@ -249,11 +257,3 @@ def QuantumSignalProcessingPhasesWithTensorflow(
         return data
 
     return phis
-
-
-def QSPPhasesFromQ(q_poly):
-    """
-    A nice little wrapper function
-    """
-    phiset = angseq(lalg)
-    return phiset

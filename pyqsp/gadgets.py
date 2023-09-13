@@ -15,10 +15,12 @@ import numpy as np
 import copy
 
 from pyqsp import qsp_models
-from .phases import ExtractionSequence
+from .phases import ExtractionSequence, SqrtSequence
 import itertools
 import pennylane as pl
 
+
+##############################################################################
 
 class Gate:
     """
@@ -77,20 +79,16 @@ class iX_Gate(Gate):
     """
     iX Gate
     """
+    def __init__(self, inv):
+        self.inv = inv
+    
     def matrix(self, ancilla_qubits):
         """Gets the matrix"""
         N = 2 * len(ancilla_qubits) + 1
-        return extend_dim(pl.RX(np.pi/2, wires=0).matrix(), N)
-
-
-class iX_Gate_Inv(Gate):
-    """
-    iX Gate
-    """
-    def matrix(self, ancilla_qubits):
-        """Gets the matrix"""
-        N = 2 * len(ancilla_qubits) + 1
-        return extend_dim(pl.RX(-np.pi/2, wires=0).matrix(), N)
+        if self.inv:
+            return _extend_dim(pl.RX(-np.pi, wires=0).matrix(), N)
+        else:
+            return _extend_dim(pl.RX(np.pi, wires=0).matrix(), N)
 
 
 class Corrective_SWAP(Gate):
@@ -154,7 +152,6 @@ class AtomicGadget(Gadget):
         super().__init__(a, b, label)
 
         self.depth = 1 
-        self.ancilla_register = list(range(self.depth))
     
     def get_unitary(self, label, correction=None):
         """
@@ -174,8 +171,7 @@ class AtomicGadget(Gadget):
                 return mat
             return func 
         else:
-            ancilla_reg = self.ancilla_register
-
+            ancilla_reg = list(range(self.depth))
             N = 2 * len(ancilla_reg) + 1
             dim = 2 ** N
 
@@ -183,9 +179,9 @@ class AtomicGadget(Gadget):
                 mat = np.eye(dim)
                 for s in seq:
                     if isinstance(s, QSP_Signal):
-                        mat = mat @ extend_dim(s.matrix(U[s.label]), N)
+                        mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
                     elif isinstance(s, QSP_Rotation):
-                        mat = mat @ extend_dim(s.matrix(), N)
+                        mat = mat @ _extend_dim(s.matrix(), N)
                     else:
                         mat = mat @ s.matrix(ancilla_reg)
                 return mat
@@ -204,7 +200,7 @@ class AtomicGadget(Gadget):
         else:
             input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels} 
         return lambda vars : self.get_unitary(label, correction=correction)(input_unitaries(vars)) # Returns top-left entry  
-    
+
     def get_sequence(self, label, correction=None):
         """
         Gets the gate sequence corresponding to an output leg
@@ -233,16 +229,6 @@ class AtomicGadget(Gadget):
         return CompositeAtomicGadget(self, gadget, interlink)
 
 
-def _seq_extend(seq, extension):
-    """Extends a sequence"""
-    if len(seq) > 0:
-        extension[0] = seq[len(seq)-1] + extension[0]
-        seq = list(seq[:-1]) + list(extension)
-    else:
-        seq = extension
-    return seq
-
-
 class CompositeAtomicGadget(Gadget):
     """
     A particular class of gadget arising from interlinking of two gadgets AtomicGadget instances, which 
@@ -254,7 +240,10 @@ class CompositeAtomicGadget(Gadget):
         self.label = "{} - {}".format(gadget_1.label, gadget_2.label)
         self.labels = gadget_1.labels + gadget_2.labels
 
+        # This will break
         self.depth = gadget_1.depth + gadget_2.depth
+        #######################
+
         self.ancilla_register = list(range(self.depth))
         # Interlink parameters
         self.B, self.C, self.correction = [x[0] for x in interlink], [x[1] for x in interlink], [x[2] for x in interlink]
@@ -292,22 +281,40 @@ class CompositeAtomicGadget(Gadget):
         gadget
         """
         seq = self.get_sequence(label, correction=correction)
-        ancilla_reg = self.ancilla_register
 
-        N = 2 * len(ancilla_reg) + 1
-        dim = 2 ** N
+        if correction is None:
+            ancilla_reg = list(range(self.depth-1))
+            N = 2 * len(ancilla_reg) + 1
+            dim = 2 ** N
 
-        def func(U):
-            mat = np.eye(dim)
-            for s in seq:
-                if isinstance(s, QSP_Signal):
-                    mat = mat @ extend_dim(s.matrix(U[s.label]), N)
-                elif isinstance(s, QSP_Rotation):
-                    mat = mat @ extend_dim(s.matrix(), N)
-                else:
-                    mat = mat @ s.matrix(ancilla_reg)
-            return mat
-        return func
+            def func(U):
+                mat = np.eye(dim)
+                for s in seq:
+                    if isinstance(s, QSP_Signal):
+                        mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
+                    elif isinstance(s, QSP_Rotation):
+                        mat = mat @ _extend_dim(s.matrix(), N)
+                    else:
+                        mat = mat @ s.matrix(ancilla_reg)
+                return mat
+            return func
+        else:
+            ancilla_reg = list(range(self.depth))
+
+            N = 2 * len(ancilla_reg) + 1
+            dim = 2 ** N
+
+            def func(U):
+                mat = np.eye(dim)
+                for s in seq:
+                    if isinstance(s, QSP_Signal):
+                        mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
+                    elif isinstance(s, QSP_Rotation):
+                        mat = mat @ _extend_dim(s.matrix(), N)
+                    else:
+                        mat = mat @ s.matrix(ancilla_reg)
+                return mat
+            return func
 
     def get_qsp_unitary(self, label, correction=None, rot=None):
         """
@@ -332,7 +339,6 @@ class CompositeAtomicGadget(Gadget):
  
 ################################################################################
 # Operations on gadgets and collections of gadgets
-# STILL NEED TO DEFINE SEQUENCE FOR CORRECTION
 
 def corrected_sequence(ext_seq, ancilla, deg):
     """
@@ -340,7 +346,7 @@ def corrected_sequence(ext_seq, ancilla, deg):
     Steps to resolving this issue: 
     """
     extraction_gadget = ExtractionGadget(deg, "G_ext").get_sequence(("G_ext", 0))
-    seq = nested_seq(extraction_gadget, ext_seq)
+    seq = _nested_seq(extraction_gadget, ext_seq)
 
     seq_conj = []
     for s in seq:
@@ -352,7 +358,8 @@ def corrected_sequence(ext_seq, ancilla, deg):
         seq_conj.append(s_copy)
     seq_conj = seq_conj[::-1]
 
-    new_seq = [Corrective_CSWAP(ancilla), iX_Gate()] + seq + [Corrective_CSWAP(ancilla), Corrective_SWAP(ancilla)] + ext_seq + [Corrective_SWAP(ancilla), Corrective_CSWAP(ancilla)] + seq_conj + [iX_Gate_Inv(), Corrective_CSWAP(ancilla)]
+    new_seq = [Corrective_CSWAP(ancilla), iX_Gate(inv=False)] + seq + [Corrective_CSWAP(ancilla)]
+    #new_seq = [Corrective_CSWAP(ancilla), iX_Gate(inv=False)] + seq + [Corrective_CSWAP(ancilla), Corrective_SWAP(ancilla)] + ext_seq + [Corrective_SWAP(ancilla), Corrective_CSWAP(ancilla)] + seq_conj + [iX_Gate(inv=True), Corrective_CSWAP(ancilla)]
     return new_seq
 
 
@@ -381,7 +388,7 @@ def sum_gadget_legs(gadget1, gadget2, leg1, leg2):
     pass
 
 
-def nested_seq(external_seq, internal_seq):
+def _nested_seq(external_seq, internal_seq):
     """
     Utility function for nesting composition of gadgets
     """
@@ -394,29 +401,11 @@ def nested_seq(external_seq, internal_seq):
             seq.append(external_seq[j])
     return seq
 
-def extend_dim(U, dim):
+def _extend_dim(U, dim):
+    """
+    Utility function for extending the dimension of quantum gates
+    """
     return np.kron(U, np.eye(2 ** (dim - 1)))
-
-########################################################################################
-# Not really sure how we'll incorporate this, warrants discussion
-
-class GadgetAssemblage:
-    """
-    Global gadget assemblage
-
-    Keeps a records of gadgets and interlinks
-    """
-    def __init__(self, width):
-         self.width = width
-         self.gadgets = []
-         self.interlinks = []
-    
-    def queue(self, operation):
-        """
-        Appends gadgets and interlinks for a gadget assemblage
-        """
-        if isinstance(operation, Gadget):
-            self.gadgets.append(operation)
 
 ###################### Instances of gadgets ######################
 
@@ -460,6 +449,18 @@ class ExtractionGadget(AtomicGadget):
         Xi, S = [phi], [[0 for _ in range(len(phi)-1)]]
         super().__init__(Xi, S, label)
 
+
+class SqrtGadget(AtomicGadget):
+    """
+    Implements the square root/inverse Chebyshev gadget
+    """
+    def __init__(self, deg, label):
+        self.a, self.b = 1, 1
+        self.deg = deg
+        phi = SqrtSequence().generate(deg)
+        Xi, S = [phi], [[0 for _ in range(len(phi)-1)]]
+        super().__init__(Xi, S, label) 
+
 ################################################################################################
 
 def Rz(phi):
@@ -470,6 +471,16 @@ def Rz(phi):
         [np.exp(1j * phi), 0],
         [0, np.exp(-1j * phi)]
     ])
+
+
+def Rx(phi):
+    """
+    sigma_x-rotation
+    """
+    return np.array([
+        [np.cos(phi), 1j * np.sin(phi)],
+        [1j * np.sin(phi), np.cos(phi)]
+    ]) 
 
 
 def W(x, rot=None):
@@ -485,34 +496,19 @@ def W(x, rot=None):
     else:
         return Rz(rot) @ X @ Rz(-rot)
 
-
-def compute_mqsp_unitary(U, Phi, s):
+def compute_mqsp_unitary(U, Phi, s, rot_gate="z"):
     """
     Computes an M-QSP unitary
     """
-    output_U = Rz(Phi[0])
-    for i in range(0, len(s)):
-        output_U = output_U @ U[s[i]] @ Rz(Phi[i + 1])
-    return output_U
-
-def mult_with_ragged_dim(A, B):
-    """
-    Multiplies gates with different dimensions
-    """
-
-def unitary_from_tape(Phi, S_tilde):
-    """
-    Reads the tape
-    """
-    Phi_copy, S_tilde_copy = copy.deepcopy(Phi), copy.deepcopy(S_tilde)
-    if S_tilde[0][0] == "CSWAP":
-        starting_op = CSWAP(S_tilde[1])
-
-
-def get_corrective_phi(eps, delta):
-    """
-    Generates the corrective Phi sequence, for a certain error tolerance
-    """
-    pass
+    if rot_gate == "z":
+        output_U = Rz(Phi[0])
+        for i in range(0, len(s)):
+            output_U = output_U @ U[s[i]] @ Rz(Phi[i + 1])
+        return output_U
+    elif rot_gate == "x":
+        output_U = Rx(Phi[0])
+        for i in range(0, len(s)):
+            output_U = output_U @ U[s[i]] @ Rx(Phi[i + 1])
+        return output_U 
 
 ###############################################################################################

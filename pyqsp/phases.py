@@ -6,7 +6,9 @@ Known QSP phases for specific responses, in the Wx convention
 
 import numpy as np
 from .poly import PolyExtraction
+from scipy.interpolate import approximate_taylor_polynomial
 from .angle_sequence import QuantumSignalProcessingPhases
+import copy
 
 
 class PhaseGenerator:
@@ -26,16 +28,10 @@ class PhaseGenerator:
 
     def generate(self):
         '''
-        return list of floats specifying the QSP (M-QSP) phase angles
+        return list of floats specifying the QSP phase angles
         '''
         return [0, 0]
-
-    def generate_s(self):
-        '''
-        return list of integers specifying invocation of unitaries from a particular pool
-        '''
-        return [0, 0]
-
+    
 
 ######################### Single-variable protocols #####################
 
@@ -116,32 +112,6 @@ class erf_step(PhaseGenerator):
 ##################### Multi-variate protocols #################################
 
 
-class MultiplicationSequence(PhaseGenerator):
-    """
-    Multiplication M-QSP protocol
-    """
-    def generate(self, phi=None):
-        """Phase angles"""
-        return 0
-    
-    def generate_s(self):
-        """s-sequence"""
-        return 0
-
-
-class AdditionSequence(PhaseGenerator):
-    """
-    Addition M-QSP protocol
-    """
-    def generate(self, phi=None):
-        """Phase angles"""
-        return 0
-    
-    def generate_s(self):
-        """s-sequence"""
-        return 0
-
-
 class ExtractionSequence(PhaseGenerator):
     """
     Extraction M-QSP protocol
@@ -151,10 +121,54 @@ class ExtractionSequence(PhaseGenerator):
         Q = PolyExtraction().generate(degree=n)
         phi = QuantumSignalProcessingPhases(Q, poly_type="Q", measurement="z")
         return phi
-    
-    def generate_s(self):
-        """s-sequence"""
-        return None 
+
+
+###### SQRT SEQUENCE
+
+
+# Generates the polynomials corresponding to inverse Chebyshev polynomials
+def B(x):
+    # The half-angle function
+    return np.sqrt(0.5 + 0.5 * np.sqrt((1 + x)/2))
+
+def C(x):
+    # The other half-angle function
+    return 0.5 * (1 / np.sqrt(1 + x)) * (1 / np.sqrt(1 + np.sqrt((1 + x)/2)))
+
+def generate_BC(n, delta):
+    # Generates the Taylor approximations
+    B_coeffs, C_coeffs = approximate_taylor_polynomial(B, 0, n, 1 - delta), approximate_taylor_polynomial(C, 0, n-1, 1 - delta)
+    return np.polynomial.Polynomial(B_coeffs.coeffs[::-1]), np.polynomial.Polynomial(C_coeffs.coeffs[::-1])
+
+# Generates the Chebyshev coefficients
+from scipy.special import chebyt, chebyu
+
+def poly2chebyfn(pcoefs, kind="T"):
+    P = copy.deepcopy(pcoefs)
+    if kind == "T":
+        cfunc = lambda x : list(reversed(chebyt(x).coef))
+    elif kind == "U":
+        cfunc = lambda x : list(reversed(chebyu(x).coef))
+
+    deg = len(P)-1
+    C = []
+    for l in range(deg, -1, -1):
+        r = P[l]
+        poly_term = cfunc(l)
+        
+        C.append(r / poly_term[len(poly_term)-1])
+        P = P - (r / poly_term[len(poly_term)-1])  * np.array(cfunc(l) + [0.0 for _ in range(l, deg)])
+    return list(reversed(C))
+
+
+class SqrtSequence(PhaseGenerator):
+    """
+    Sqrt M-QSP sequence
+    """
+    def generate(self, n):
+        Q = PolyExtraction().generate(degree=n)
+        phi = QuantumSignalProcessingPhases(Q, poly_type="Q", measurement="z")
+        return phi
 
 
 # -----------------------------------------------------------------------------

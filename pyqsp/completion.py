@@ -3,6 +3,7 @@ from numpy.polynomial.polynomial import Polynomial, polyfromroots
 from scipy.special import chebyt, chebyu
 
 from pyqsp.LPoly import Id, LAlg, LPoly
+import copy
 
 
 class CompletionError(Exception):
@@ -28,6 +29,7 @@ def cheb2poly(ccoefs, kind="T"):
 
 
 def poly2cheb(pcoefs, kind="T"):
+    pc = copy.deepcopy(pcoefs)
     ccoefs = np.zeros(len(pcoefs), dtype=pcoefs.dtype)
     cfunc = None
     if kind == "T":
@@ -37,11 +39,11 @@ def poly2cheb(pcoefs, kind="T"):
     else:
         raise Exception("Invalid kind specifier: {}".format(kind))
 
-    for i, pcoef in enumerate(pcoefs[::-1]):
-        deg = pcoefs.size - i - 1
+    for i, pcoef in enumerate(pc[::-1]):
+        deg = pc.size - i - 1
         basis = cfunc(deg).coef[::-1]
         ccoefs[deg] = pcoef / basis[-1]
-        pcoefs[:deg + 1] -= ccoefs[deg] * basis
+        pc[:deg + 1] -= ccoefs[deg] * basis
 
     return ccoefs
 
@@ -112,8 +114,16 @@ def _pq_completion(P):
 
 def _qp_completion(Q):
     """
-    Finds the polynomial P from Q
-    """
+    Find polynomial P given Q such that the following matrix is unitary.
+    [[P(a), i Q(a) sqrt(1-a^2)],
+      i Q*(a) sqrt(1-a^2), P*(a)]]
+
+    Args:
+        Q: Polynomial object Q.
+
+    Returns:
+        Polynomial object P giving described unitary matrix.
+    """ 
     qcoefs = Q.coef
 
     Q = Polynomial(qcoefs)
@@ -143,7 +153,7 @@ def _qp_completion(Q):
     # include negative conjugate of complex roots
     cplx_roots = np.r_[cplx_roots, -cplx_roots]
 
-    # construct Q
+    # construct P
     P = Polynomial(
         polyfromroots(
             np.r_[
@@ -158,7 +168,6 @@ def _qp_completion(Q):
                    (Q * Qc * Polynomial([1, 0, -1])).coef[-1])
 
     return P / norm
-
 
 
 def _fg_completion(F, seed):
