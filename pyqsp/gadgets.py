@@ -14,6 +14,8 @@ Functionality that we want
 import numpy as np
 import copy
 
+import unittest
+
 from pyqsp import qsp_models
 from .phases import ExtractionSequence, SqrtSequence
 import itertools
@@ -79,7 +81,7 @@ class iX_Gate(Gate):
     """
     iX Gate
     """
-    def __init__(self, inv):
+    def __init__(self, inv=False):
         self.inv = inv
     
     def matrix(self, ancilla_qubits):
@@ -512,3 +514,10 @@ def compute_mqsp_unitary(U, Phi, s, rot_gate="z"):
         return output_U 
 
 ###############################################################################################
+
+class Test_gadgets(unittest.TestCase):
+    '''
+    unit tests for pyqsp gadgets
+    '''
+    g = iX_Gate()
+    assert g is not None
