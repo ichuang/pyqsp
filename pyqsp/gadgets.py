@@ -103,10 +103,10 @@ class Corrective_SWAP(Gate):
 
     def matrix(self, ancilla_qubits):
         """Gets the matrix"""
-        dev = pl.device('default.qubit', wires=[0] + [(0, q) for q in ancilla_qubits] + [(1, q) for q in ancilla_qubits])
+        dev = pl.device('default.qubit', wires=[0] + [("a", q) for q in ancilla_qubits])
         @pl.qnode(dev)
         def circ():
-            pl.SWAP(wires=[(0, self.ancilla), 0])
+            pl.SWAP(wires=[("a", self.ancilla), 0])
             return pl.state()
         return pl.matrix(circ)()
 
@@ -345,7 +345,7 @@ def corrected_sequence(ext_seq, ancilla, deg):
     seq_conj = seq_conj[::-1] + [iX_Gate(inv=True)]
 
     corr, corr_dagger = Corrective_Z(seq, ancilla), Corrective_Z(seq_conj, ancilla)
-    new_seq = [corr] + ext_seq + [corr_dagger] 
+    new_seq = [Corrective_SWAP(ancilla), corr, Corrective_SWAP(ancilla)] + ext_seq + [Corrective_SWAP(ancilla), corr_dagger, Corrective_SWAP(ancilla)] 
 
     return new_seq
 
