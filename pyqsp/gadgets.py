@@ -39,6 +39,7 @@ class QSP_Rotation(Gate):
     A QSP rotation/phase gate
     """
     def __init__(self, theta):
+        self.ancilla, self.ancilla_reg = None, None
         self.theta = theta # Angle corresponding to the phase gate
     
     def matrix(self):
@@ -50,6 +51,7 @@ class QSP_Signal(Gate):
     A QSP signal gate
     """
     def __init__(self, label):
+        self.ancilla, self.ancilla_reg = None, None
         self.inv = False
         self.label = label
     
@@ -107,7 +109,19 @@ class Corrective_SWAP(Gate):
             pl.SWAP(wires=[(0, self.ancilla), 0])
             return pl.state()
         return pl.matrix(circ)()
-        
+
+
+class Corrective_Z(Gate):
+    """
+    Corrective sigma_z-rotation
+    """
+    def __init__(self, seq, ancilla):
+        self.ancilla = ancilla
+        self.unitary = None
+        self.seq = seq
+
+    def matrix(self):
+        return self.unitary
 
 ###########################################################################
 
@@ -359,8 +373,9 @@ def corrected_sequence(ext_seq, ancilla, deg):
         seq_conj.append(s_copy)
     seq_conj = seq_conj[::-1]
 
-    new_seq = [Corrective_CSWAP(ancilla), iX_Gate(inv=False)] + seq + [Corrective_CSWAP(ancilla)]
-    #new_seq = [Corrective_CSWAP(ancilla), iX_Gate(inv=False)] + seq + [Corrective_CSWAP(ancilla), Corrective_SWAP(ancilla)] + ext_seq + [Corrective_SWAP(ancilla), Corrective_CSWAP(ancilla)] + seq_conj + [iX_Gate(inv=True), Corrective_CSWAP(ancilla)]
+    corr, corr_dagger = Corrective_Z(seq, ancilla), Corrective_Z(seq_conj, ancilla)
+    new_seq = [corr] + ext_seq + [corr_dagger] 
+
     return new_seq
 
 
@@ -407,6 +422,25 @@ def _extend_dim(U, dim):
     Utility function for extending the dimension of quantum gates
     """
     return np.kron(U, np.eye(2 ** (dim - 1)))
+
+"""
+def _get_unitary(seq):
+    ancilla_reg = list(range(self.depth-1))
+    N = 2 * len(ancilla_reg) + 1
+    dim = 2 ** N
+
+    def func(U):
+        mat = np.eye(dim)
+        for s in seq:
+            if isinstance(s, QSP_Signal):
+                mat = mat @ _extend_dim(s.matrix(U[s.label]), N)
+            elif isinstance(s, QSP_Rotation):
+                mat = mat @ _extend_dim(s.matrix(), N)
+            else:
+                mat = mat @ s.matrix(ancilla_reg)
+        return mat
+    return func
+"""
 
 ###################### Instances of gadgets ######################
 
