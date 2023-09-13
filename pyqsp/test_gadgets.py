@@ -1,4 +1,5 @@
 from pyqsp.gadgets import *
+import pennylane as qml
 
 import unittest
 
@@ -61,5 +62,51 @@ class Test_gadgets(unittest.TestCase):
         Phi = Phi[::-1]
         Phi_prime = Phi_prime[::-1]    
         assert len(Phi_prime)==25
+
+        # Testing the protocol!
+
+        dev = qml.device('default.qubit', wires=[0, 1, 2])
+
+        def V():
+            qml.CSWAP(wires=[0, 1, 2])
+            qml.RX(0.4, wires=2)
+            qml.CSWAP(wires=[0, 1, 2])
+
+        @qml.qnode(dev)
+        def func():
+            for p in range(len(Phi[0:len(Phi)-2])):
+                qml.RZ(Phi[p], wires=2)        
         
+        dev = qml.device('default.qubit', wires=[0, 1, 2])
+
+        @qml.qnode(dev)
+        def func():
+            qml.RZ(-0.8, wires=2)
+            qml.CSWAP(wires=[0, 1, 2])
+            qml.RZ(0.8, wires=1)
+            qml.CSWAP(wires=[0, 1, 2])
+            return qml.state()
+
+        m = Corrective_CSWAP(1).matrix([1])        
+        assert m is not None
+
+        # Construct atomic gadgets
+        Xi_1 = np.array([[0, 0]])
+        S_1 = [[0]]
+        G1 = AtomicGadget(Xi_1, S_1, label="G1")
+        
+        Xi_2 = np.array([[1, 2, -2, -1]])
+        S_2 = [[0, 1, 0]]
+        G2 = AtomicGadget(Xi_2, S_2, label="G2")        
+
+        # Construct the interlink between the gadgets
+        G = G1.interlink(G2, [(('G1', 0), ('G2', 0), 20)])
+
+        assert len(G1.get_sequence(('G1', 0), correction=8))==40
+
+        # Gets the QSP unitary
+        U = lambda x : G1.get_qsp_unitary(('G1', 0), correction=20, rot={('G1', 0):0.4})( {('G1', 0) : x})
+        m = U(0.3) @ np.kron(np.kron(np.array([1, 0]), np.array([0, 1])), np.array([1, 0]))
+        assert(abs(m[2].imag - np.sin(0.8)) < 1.0e-7)
+        assert(abs(m[2] - ( -(np.cos(0.8) - 1j * np.sin(0.8)) * (1j * np.sqrt(1 - 0.1 ** 2)) * -1j )) < 1e-2)
         
