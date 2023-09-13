@@ -95,7 +95,7 @@ def QuantumSignalProcessingPhases(
         eps=1e-4,
         suc=1 - 1e-4,
         signal_operator="Wx",
-        poly_type=None,
+        poly_type='P',
         measurement=None,
         tolerance=1e-6,
         method="laurent",
@@ -108,6 +108,7 @@ def QuantumSignalProcessingPhases(
         eps: capitilization parameter for numerical stability
         suc: scaling factor for numerical stability
         signal_operator: QSP signal-dependent operation ['Wx', 'Wz']
+        poly_type: string specifying polynomial type, whether 'P' or 'Q' (defaults to 'P')
         measurement: measurement basis (defaults to signal operator basis)
         tolerance: error tolerance in final reconstruction
         method: method to use for computing phase angles ['laurent', 'tf']
@@ -122,12 +123,10 @@ def QuantumSignalProcessingPhases(
         sequence to specified tolerance.
         ValueError: Raised if invalid model (or method) is specified.
     """
-    """
     if isinstance(poly, np.ndarray) or isinstance(poly, list):
         poly = Polynomial(poly)
     elif isinstance(poly, TargetPolynomial):
         poly = Polynomial(poly.coef)
-    """
 
     if measurement is None:
         if signal_operator == "Wx":
@@ -135,7 +134,6 @@ def QuantumSignalProcessingPhases(
         elif signal_operator == "Wz":
             measurement = "z"
 
-    """
     if method == "tf":
         if not signal_operator == "Wx":
             raise ValueError(
@@ -145,7 +143,6 @@ def QuantumSignalProcessingPhases(
                                                            **kwargs)
     elif not method == "laurent":
         raise ValueError(f"Invalid method {method}")
-    """
 
     model = (signal_operator, measurement)
 

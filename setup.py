@@ -36,6 +36,7 @@ setup(
     install_requires=['matplotlib',
                       'numpy>1.19.1',
                       'scipy',
+                      'pennylane',
                       ],
     package_dir={'pyqsp': 'pyqsp'},
     test_suite="pyqsp.test",

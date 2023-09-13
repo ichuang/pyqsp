@@ -266,6 +266,14 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
         pcheb = poly2cheb(pcoefs, kind='T')
         qcheb = np.r_[0., poly2cheb(Q.coef, kind='U')]
 
+        if not len(qcheb)==len(pcheb):
+            print(f"[pyqsp/completion] chebyshev polynomial shapes not equal: deg={deg}, pcheb={pcheb.shape}, qcheb={qcheb.shape}")
+            print(f"pcheb={pcheb}")
+            print(f"qcheb={qcheb}")
+            if len(qcheb) < len(pcheb):
+                qcheb = np.r_[qcheb, 0.]
+                print(f"[pyqsp/completion] padding qcheb by +1 to size {pcheb.shape}")
+
         pcheb = pcheb[deg % 2::2]
         qcheb = qcheb[deg % 2::2]
 
@@ -281,6 +289,10 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
 
             fcoefs[(deg + 1) // 2] = np.real(pcheb[0])
             gcoefs[(deg + 1) // 2] = np.imag(pcheb[0])
+
+        ipoly = LPoly(fcoefs, -len(fcoefs) + 1)
+        xpoly = LPoly(gcoefs, -len(gcoefs) + 1)
+
     elif coef_type == "Q" or coef_type == "q":
         qcoefs = np.array(coefs, dtype=np.complex128)
         Q = Polynomial(qcoefs)
@@ -323,12 +335,13 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
     ncoefs = (ipoly * ~ipoly + xpoly * ~xpoly).coefs
     ncoefs_expected = np.zeros(ncoefs.size) 
     ncoefs_expected[ncoefs.size // 2] = 1.
+    ncerr = np.abs(ncoefs - ncoefs_expected).mean()
     success = np.max(np.abs(ncoefs - ncoefs_expected)) < tol
 
     if not success:
         raise CompletionError(
-            "Completion Failed. Input {} = {} could not be completed".format(
-                coef_type, coefs))
+            "Completion Failed. Input {} = {} could not be completed, mean error={}".format(
+                coef_type, coefs, ncerr))
 
     return LAlg(ipoly, xpoly)
 
