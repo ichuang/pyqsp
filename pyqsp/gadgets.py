@@ -134,7 +134,9 @@ class Corrective_Z(Gate):
             dev = pl.device('default.qubit', wires=[0] + [("a", q) for q in ancilla_reg])
             @pl.qnode(dev)
             def circ():
+                pl.SWAP(wires=[("a", self.ancilla), 0])
                 pl.ControlledQubitUnitary(target_unitary, control_wires=[("a", self.ancilla)], wires=[0] + restricted_ancillas)
+                pl.SWAP(wires=[("a", self.ancilla), 0])
                 return pl.state()
             self.unitary = pl.matrix(circ)()
             return self.unitary
@@ -262,7 +264,7 @@ class CompositeAtomicGadget(Gadget):
         self.depth = gadget_1.depth + gadget_2.depth
         #######################
 
-        self.ancilla_register = list(range(self.depth))
+        self.ancilla_register = list(range(self.depth-1))
         # Interlink parameters
         self.B, self.C, self.correction = [x[0] for x in interlink], [x[1] for x in interlink], [x[2] for x in interlink]
 
@@ -299,9 +301,9 @@ class CompositeAtomicGadget(Gadget):
         gadget
         """
         seq = self.get_sequence(label, correction=correction)
-        ancilla_reg = list(range(self.depth))
+        ancilla_reg = list(range(self.depth-1))
 
-        N = 2 * len(ancilla_reg) + 1
+        N = len(ancilla_reg) + 1
         dim = 2 ** N
 
         def func(U):
@@ -312,12 +314,12 @@ class CompositeAtomicGadget(Gadget):
                 elif isinstance(s, QSP_Rotation):
                     mat = mat @ _extend_dim(s.matrix(), N)
                 elif isinstance(s, Corrective_Z):
-                    mat = 0
+                    mat = mat @ s.matrix(U, ancilla_reg)
                 elif isinstance(s, iX_Gate):
-                    mat = mat @ _extend_dim(s.matrix())
+                    mat = mat @ _extend_dim(s.matrix(), N)
 
             return mat
-            return func
+        return func
 
     def get_qsp_unitary(self, label, correction=None, rot=None):
         """
@@ -362,7 +364,7 @@ def corrected_sequence(ext_seq, ancilla, deg):
     seq_conj = seq_conj[::-1] + [iX_Gate(inv=True)]
 
     corr, corr_dagger = Corrective_Z(seq, ancilla), Corrective_Z(seq_conj, ancilla)
-    new_seq = [Corrective_SWAP(ancilla), corr, Corrective_SWAP(ancilla)] + ext_seq + [Corrective_SWAP(ancilla), corr_dagger, Corrective_SWAP(ancilla)] 
+    new_seq = [corr] + ext_seq + [corr_dagger] 
 
     return new_seq
 
