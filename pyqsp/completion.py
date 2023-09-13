@@ -273,7 +273,12 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
         gcoefs = np.zeros(deg + 1)
 
         if deg % 2 == 0:
-            fcoefs[:(deg + 1) // 2] = np.real(pcheb[:0:-1] - qcheb[:0:-1]) / 2
+            print(f"[pyqsp/completion] error for shapes pcheb={pcheb.shape} qcheb={qcheb.shape}")
+            try:
+                fcoefs[:(deg + 1) // 2] = np.real(pcheb[:0:-1] - qcheb[:0:-1]) / 2
+            except Exception as err:
+                print(f"[pyqsp/completion] error for shapes pcheb={pcheb.shape} qcheb={qcheb.shape}, err={err}")
+                raise
             fcoefs[(deg + 1) // 2 + 1:] = np.real(pcheb[1:] + qcheb[1:]) / 2
 
             gcoefs[:(deg + 1) // 2] = np.imag(pcheb[:0:-1] + qcheb[:0:-1]) / 2
