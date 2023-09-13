@@ -10,6 +10,9 @@ class Test_gadgets(unittest.TestCase):
     unit tests for pyqsp gadgets
     '''
     def test_iX_Gate_simple1(self):
+        '''
+        Create an iX gate
+        '''
         g = iX_Gate()
         assert g is not None
 
@@ -44,6 +47,10 @@ class Test_gadgets(unittest.TestCase):
         assert len(x)==200
 
     def test_extraction_gadget1(self):
+        '''
+        Extraction gets the z-phase shift of a QSP sequence, such that
+        it can be removed and the QSP sequence corrected to become just an x-rotation.
+        '''
         n = 24
 
         L = ExtractionGadget(n, 'G').get_sequence(('G', 0))
@@ -109,4 +116,52 @@ class Test_gadgets(unittest.TestCase):
         m = U(0.3) @ np.kron(np.kron(np.array([1, 0]), np.array([0, 1])), np.array([1, 0]))
         assert(abs(m[2].imag - np.sin(0.8)) < 1.0e-7)
         assert(abs(m[2] - ( -(np.cos(0.8) - 1j * np.sin(0.8)) * (1j * np.sqrt(1 - 0.1 ** 2)) * -1j )) < 1e-2)
+        
+    def test_sqrt_gadget1(self):
+        '''
+        Test the SQRT gadget, which is used to perform a sqrt of a unitary.
+        Needed for the correction procedure for gadgets.
+        '''
+        # Defines two atomic gadget
+
+        Xi_1 = [np.array([0, 1, 2, -2, 1, 0])]
+        S_1 = [[0, 1, 0, 1, 0]]
+        G = AtomicGadget(Xi_1, S_1, label="G")
+        
+        Xi_2 = np.array([[np.pi/3, np.pi/2, 0, -0, -np.pi/2, -np.pi/3]])
+        S_2 = [[0, 1, 0, 1, 0]]
+        G_tilde = AtomicGadget(Xi_2, S_2, label="G_tilde")
+
+        # Performs an interlink of the G gadget with the extraction gadget. Note that 20 is the 
+        # degree of the polynomial used in the correction. If it were instead "None" no correction
+        # would be applied
+
+        G_interlink = G.interlink(G_tilde, [
+            (('G1', 0), ('G_tilde', 0), 4)
+        ])
+
+        print("In legs = {}".format(G_interlink.in_labels))
+        print("Out legs = {}".format(G_interlink.out_labels))
+
+        # Gets the sequence of a leg of the gadget interlink
+        G_interlink.get_sequence(('G', 0))
+
+        # Performs tests of the extraction and sqrt gadgets
+        G_extraction = ExtractionGadget(29, 'G_ext')
+        G_sqrt = SqrtGadget(40, 0.05, 'G_sqrt')
+
+        # check the response function of the extraction gadget
+        X, Y = G_extraction.get_response()
+        
+        # should be near zero for all of abs(X) < 0.7
+        # diverges to +1 for X near 1 and to -1 for X near -1
+        assert (Y[np.where(X>0.95)] > 0.25).all()
+        assert (Y[np.where(X<-0.95)] < -0.25).all()
+        assert (abs(Y[np.where(abs(X)<0.8)]) < 0.1).all()        
+        assert (abs(Y[np.where(abs(X)<0.7)]) < 0.01).all()        
+
+        # Gets the response function of the sqrt gadget
+        X, Y = G_sqrt.get_response()
+        y2 = abs(X)*0.25 + 0.75
+        assert abs((Y - y2).mean()) < 0.02
         
