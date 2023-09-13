@@ -122,12 +122,10 @@ def QuantumSignalProcessingPhases(
         sequence to specified tolerance.
         ValueError: Raised if invalid model (or method) is specified.
     """
-    """
     if isinstance(poly, np.ndarray) or isinstance(poly, list):
         poly = Polynomial(poly)
     elif isinstance(poly, TargetPolynomial):
         poly = Polynomial(poly.coef)
-    """
 
     if measurement is None:
         if signal_operator == "Wx":
@@ -135,7 +133,6 @@ def QuantumSignalProcessingPhases(
         elif signal_operator == "Wz":
             measurement = "z"
 
-    """
     if method == "tf":
         if not signal_operator == "Wx":
             raise ValueError(
@@ -145,7 +142,6 @@ def QuantumSignalProcessingPhases(
                                                            **kwargs)
     elif not method == "laurent":
         raise ValueError(f"Invalid method {method}")
-    """
 
     model = (signal_operator, measurement)
 
