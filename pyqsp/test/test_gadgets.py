@@ -16,6 +16,19 @@ class Test_gadgets(unittest.TestCase):
         g = iX_Gate()
         assert g is not None
 
+    def test_cubic_gadget(self):
+        '''
+        Test cubic polynomial p(x) = x**3 as a gadget
+        '''
+        G_cubic = AtomicGadget([[0, np.pi/3, -np.pi/3, 0]], [[0, 0, 0]], label="G_cubic")
+        G_cheb = AtomicGadget([[0, 0, 0]], [[0, 0]], label="G_cheb")
+        # X, Y = G.get_response()
+        fn_2 = lambda x : G_cubic.get_qsp_unitary(('G_cheb', 0))({('G_cubic', 0) : x})[0][0]
+        X = np.linspace(-1, 1, 200)
+        Y= [fn_2(x) for x in X]
+        # plt.plot(X, Y)
+        assert abs((Y - X**3).mean()) < 1.0e-10        
+
     def test_two_atomic_gadgets(self):
         '''
         create two atomic gadgets and link them together to create a CompositeAtomicGadget
