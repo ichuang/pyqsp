@@ -165,3 +165,44 @@ class Test_gadgets(unittest.TestCase):
         y2 = abs(X)*0.25 + 0.75
         assert abs((Y - y2).mean()) < 0.02
         
+    def test_abs_gadget1(self):
+        '''
+        Test the ABS gadget (not yet a class)
+        '''
+        G_sqrt = SqrtGadget(40, 0.06, 'G_sqrt')
+        G_cheb = AtomicGadget([[0, 0, 0]], [[0, 0]], label="G_cheb")
+        G_id = G_sqrt.interlink(G_cheb, [
+            (('G_sqrt', 0), ('G_cheb', 0), None)
+        ])
+
+        fn_2 = lambda x : G_id.get_qsp_unitary(('G_cheb', 0))({('G_sqrt', 0) : x})[0][0]
+        X, Y = G_sqrt.get_response()
+        data = [fn_2(x) for x in X]
+        error = (abs(data - np.abs(X))).mean()
+        assert error < 0.08
+        
+    def test_abs_gadget2(self):
+        '''
+        Test the ABS gadget (not yet a class) on a cubic polynomial
+        '''
+        G_cubic = AtomicGadget([[0, np.pi/3, -np.pi/3, 0]], [[0, 0, 0]], label="G_cubic")
+        G_cheb = AtomicGadget([[0, 0, 0]], [[0, 0]], label="G_cheb")
+        G_sqrt = SqrtGadget(40, 0.06, 'G_sqrt')
+
+        G_id_1 = G_cubic.interlink(G_sqrt, [
+            (('G_cubic', 0), ('G_sqrt', 0), None)
+        ])
+
+        G_id_2 = G_id_1.interlink(G_cheb, [
+            (('G_sqrt', 0), ('G_cheb', 0), None)
+        ])
+        
+        fn_2 = lambda x : G_id_2.get_qsp_unitary(('G_cheb', 0))({('G_cubic', 0) : x})[0][0]
+
+        X, Y = G_sqrt.get_response()
+        data = [fn_2(x) for x in X]
+        expected = np.abs(X**3)
+        idx = np.where(abs(X)> 0.3)
+        error = (abs(data - expected))[idx].mean()
+        assert error < 0.2
+
