@@ -193,5 +193,57 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         self.assertEqual(len(i_legs_0), in_leg_num)
         self.assertEqual(len(o_legs_0), out_leg_num)
 
+    def test_sum_gadget(self):
+        # Four parallel sqrt gadgets.
+        g0 = Gadget(1, 1, "g0")
+        g1 = Gadget(1, 1, "g1")
+        g2 = Gadget(1, 1, "g2")
+        g3 = Gadget(1, 1, "g3")
+
+        # Four parallel sqrt gadgets.
+        h0 = Gadget(1, 1, "h0")
+        h1 = Gadget(1, 1, "h1")
+        h2 = Gadget(1, 1, "h2")
+        h3 = Gadget(1, 1, "h3")
+
+        # Two sum/difference sqrt gadgets.
+        f0 = Gadget(2, 1, "f0")
+        f1 = Gadget(2, 1, "f1")
+
+        # One product gadget.
+        k0 = Gadget(2, 1, "k0")
+
+        # Generate banks of parallel gadgets.
+        a0 = wrap_parallel_gadgets([g0, g1, g2, g3])
+        a1 = wrap_parallel_gadgets([h0, h1, h2, h3])
+        a2 = wrap_parallel_gadgets([f0, f1])
+        a3 = k0.wrap_gadget()
+
+        # Link banks of parallel gadgets.
+        b0 = a0.link_assemblage(a1, [
+                                    (("g0", 0), ("h0", 0)), 
+                                    (("g1", 0), ("h1", 0)), 
+                                    (("g2", 0), ("h2", 0)), 
+                                    (("g3", 0), ("h3", 0))])
+        b1 = b0.link_assemblage(a2, [
+                                    (("h0", 0), ("f0", 0)), 
+                                    (("h1", 0), ("f0", 1)),
+                                    (("h2", 0), ("f1", 0)),
+                                    (("h3", 0), ("f1", 1))])
+        b2 = b1.link_assemblage(a3, [
+                                    (("f0", 0), ("k0", 0)),
+                                    (("f1", 0), ("k0", 1))])
+
+        # Assert proper size.
+        y_size = len(b2.global_grid)
+        x_size = len(b2.global_grid[0])
+        self.assertEqual(y_size, 14)
+        self.assertEqual(x_size, 12)
+
+        # Assert proper input and output leg number.
+        i_legs_0, o_legs_0, i_dict_0, o_dict_0 = b2.get_terminal_legs()
+        self.assertEqual(len(i_legs_0), 4)
+        self.assertEqual(len(o_legs_0), 1)
+
 if __name__ == '__main__':
     unittest.main()

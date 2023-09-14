@@ -1555,7 +1555,6 @@ class GadgetAssemblage:
 
         return leg_origin_guide
 
-
 """
 An external function which takes a list of gadgets and returns a gadget assemblage in which they are implemented in parallel (i.e., without linking).
 """
@@ -1570,92 +1569,8 @@ def wrap_parallel_gadgets(gadgets):
         current_assemblage = current_assemblage.link_assemblage(assemblage_list[k], [])
     return current_assemblage
 
-
 def main():
-
-    ###################################
-    ###################################
-    ###################################
-    g0 = Gadget(1, 2, "g0")
-    g1 = Gadget(1, 2, "g1")
-    g2 = Gadget(1, 2, "g2")
-
-    a0 = g0.wrap_gadget()
-    a1 = g1.wrap_gadget()
-    a2 = g2.wrap_gadget()
-
-    a3 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
-    a4 = a3.link_assemblage(a2, [(("g1", 0), ("g2", 0))])
-
-    print()
-    print("GADGET EXPRESSIBLE FORMAT")
-    print(a4.print_assemblage())
-
-    ###################################
-    ###################################
-    ###################################
-    h0 = Gadget(1, 2, "h0")
-    h1 = Gadget(2, 1, "h1")
-    h2 = Gadget(3, 2, "h2")
-
-    a0 = wrap_parallel_gadgets([h0, h1, h2])
-    print("PARALLEL INSTANTIATION")
-    print(a0.print_assemblage())
-
-    ###################################
-    ###################################
-    ###################################
-    map0 = {(0, 0):(0, 0), (0, 1):(0, 1), (1, 1):(1, 1)}
-    
-    map1 = {(0, 0):(2, 1), (0, 1):(2, 2), 
-            (1, 0):(3, 1)}
-    
-    map2 = {(0, 0):(4, 2), (0, 1):(4, 3), 
-            (1, 0):(5, 2), (1, 1):(5, 3), (2, 0):(6, 2)}
-
-    map3 = {(0, 0):(0, 0), (1, 0):(1, 0), (2, 0):(2, 0), 
-            (3, 0):(3, 0), (4, 0):(4, 0), (5, 0):(5, 0),(6, 0):(6, 0), 
-            (0, 1):(5, 0), (1, 1):(1, 0), (2, 1):(2, 0), 
-            (3, 1):(0, 0), (4, 1):(4, 0), (5, 1):(3, 0),(6, 1):(6, 0)}
-
-    map4 = {(0, 0):(0, 1), (1, 0):(1, 1), (2, 0):(2, 1), 
-            (3, 0):(3, 1), (4, 0):(4, 1), (5, 0):(5, 1),(6, 0):(6, 1),
-            (0, 1):(0, 1), (1, 1):(3, 1), (2, 1):(2, 1), 
-            (3, 1):(1, 1), (4, 1):(6, 1), (5, 1):(5, 1),(6, 1):(4, 1)}
-
-    map5 = {(0, 0):(0, 2), (1, 0):(1, 2), (2, 0):(2, 2), 
-            (3, 0):(3, 2), (4, 0):(4, 2), (5, 0):(5, 2),(6, 0):(6, 2),
-            (0, 1):(0, 2), (1, 1):(2, 2), (2, 1):(1, 2), 
-            (3, 1):(3, 2), (4, 1):(5, 2), (5, 1):(4, 2),(6, 1):(6, 2),}
-
-    map6 = {(0, 0):(0, 3), (1, 0):(1, 3), (2, 0):(2, 3), 
-            (3, 0):(3, 3), (4, 0):(4, 3), (5, 0):(5, 3),(6, 0):(6, 3),
-            (0, 1):(4, 3), (1, 1):(0, 3), (2, 1):(1, 3), 
-            (3, 1):(3, 3), (4, 1):(5, 3), (5, 1):(2, 3),(6, 1):(6, 3),}
-
-    # Construct gadgets.
-    g0 = Gadget(1, 2, "g0", map0)
-    g1 = Gadget(2, 1, "g1", map1)
-    g2 = Gadget(3, 2, "g2", map2)
-
-    # Construct interlinks.
-    i0 = Interlink(7, "i0", map3)
-    i1 = Interlink(7, "i1", map4)
-    i2 = Interlink(7, "i2", map5)
-    i3 = Interlink(7, "i3", map6)
-
-    # Assemble gadgets and interlinks.
-    assemblage = GadgetAssemblage([g0, g1, g2], [i0, i1, i2, i3])
-    # Swap swapped object
-    new_assemblage = assemblage.swap_gadgets("g1", "g2")
-
-    print()
-    print("GADGET EXPRESSIBLE FORMAT")
-    print(assemblage.print_assemblage())
-
-    print()
-    print("SWAPPED GADGET EXPRESSIBLE FORMAT")
-    print(new_assemblage.print_assemblage())
+    pass
 
 if __name__ == "__main__":
     main()
