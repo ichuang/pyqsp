@@ -34,7 +34,7 @@ class Test_gadgets(unittest.TestCase):
         # would be applied
         
         G_interlink = G.interlink(G_tilde, [
-            (('G1', 0), ('G_tilde', 0), 4)
+            (('G', 0), ('G_tilde', 0), 4)
         ])        
         assert G_interlink is not None
         assert hasattr(G_interlink, 'get_sequence')
@@ -109,7 +109,7 @@ class Test_gadgets(unittest.TestCase):
         # Construct the interlink between the gadgets
         G = G1.interlink(G2, [(('G1', 0), ('G2', 0), 20)])
 
-        assert len(G1.get_sequence(('G1', 0), correction=8))==40
+        assert len(G.get_sequence(('G2', 0), correction=8))==40
 
         # Gets the QSP unitary
         U = lambda x : G1.get_qsp_unitary(('G1', 0), correction=20, rot={('G1', 0):0.4})( {('G1', 0) : x})
