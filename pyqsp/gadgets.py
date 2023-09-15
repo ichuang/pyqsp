@@ -15,7 +15,7 @@ import numpy as np
 import copy
 
 from pyqsp import qsp_models
-from .phases import ExtractionSequence, SqrtSequence
+from .phases import ExtractionSequence, SqrtSequence, FourthRootSequence
 import itertools
 import pennylane as pl
 from .response import ComputeQSPResponse
@@ -162,6 +162,7 @@ class Gadget:
         # Assigns generic labels the input legs of a gadget
         self.label = label
         self.in_labels, self.out_labels = [(label, j) for j in range(a)], [(label, j) for j in range(b)]
+        self.pinned_inputs = dict()
 
     @classmethod
     def unitary(self):
@@ -169,6 +170,20 @@ class Gadget:
         The unitary mapping effectuated by a gadget
         """
         raise NotImplementedError
+    
+    @property
+    def pinned_in_labels(self):
+        """
+        Pinned input legs
+        """
+        return self.pinned_inputs.keys()
+
+    
+    def pin(self, label, unitary):
+        """
+        Pins an input leg
+        """
+        self.pinned_inputs[label] = unitary
 
 
 class AtomicGadget(Gadget):
@@ -199,6 +214,8 @@ class AtomicGadget(Gadget):
         dim = 2 ** N
 
         def func(U):
+            U = {**U, **self.pinned_inputs} 
+
             mat = np.eye(dim)
             for s in seq:
                 if isinstance(s, QSP_Signal):
@@ -216,10 +233,14 @@ class AtomicGadget(Gadget):
         Args:
             vars (dict): A dictionary assigning values to input legs
         """
+        free_in_labels = []
+        for l in self.in_labels:
+            if l not in self.pinned_in_labels:
+                free_in_labels.append(l)
         if rot is not None:
-            input_unitaries = lambda vars : {l : W(vars[l], rot=rot[l]) for l in self.in_labels}
+            input_unitaries = lambda vars : {l : W(vars[l], rot=rot[l]) for l in free_in_labels}
         else:
-            input_unitaries = lambda vars : {l : W(vars[l]) for l in self.in_labels} 
+            input_unitaries = lambda vars : {l : W(vars[l]) for l in free_in_labels} 
         return lambda vars : self.get_unitary(label, correction=correction)(input_unitaries(vars)) # Returns top-left entry  
 
     def get_sequence(self, label, correction=None):
@@ -450,10 +471,10 @@ class AdditionGadget(AtomicGadget):
     """
     An addition gadget
     """
-    def __init__(self, phi=-np.pi/4):
-        self.Phi = np.array([phi, -phi])
-        self.S = np.array([0, 1, 0, 1, 0, 1, 0, 1])
-        self.Xi = [[self.Phi], [self.S]] # Defines the gadget phase sequence 
+    def __init__(self, label, phi=-np.pi/4):
+        Xi = np.array([phi, 0, np.pi/4, np.pi/2, -np.pi/2, np.pi/2, -3 * np.pi/4, 0, -phi])
+        S = np.array([0, 1, 0, 1, 0, 1, 0, 1])
+        super().__init__([Xi], [S], label) 
 
 class ExtractionGadget(AtomicGadget):
     """
@@ -489,6 +510,24 @@ class SqrtGadget(AtomicGadget):
         adat = np.linspace(-1, 1, 500)
         response = ComputeQSPResponse(adat, np.array(self.Xi[0]), signal_operator="Wz", measurement="z")["pdat"]
         return adat, response
+
+
+class FourthRootGadget(AtomicGadget):
+    """
+    Implements the square root/inverse Chebyshev gadget
+    """
+    def __init__(self, deg, delta, label):
+        self.a, self.b = 1, 1
+        self.deg = deg
+        phi = FourthRootSequence().generate(deg, delta)
+        Xi, S = [phi], [[0 for _ in range(len(phi)-1)]]
+        super().__init__(Xi, S, label) 
+    
+    def get_response(self):
+        adat = np.linspace(-1, 1, 500)
+        response = ComputeQSPResponse(adat, np.array(self.Xi[0]), signal_operator="Wz", measurement="z")["pdat"]
+        return adat, response
+
 
 ################################################################################################
 

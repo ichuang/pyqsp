@@ -140,6 +140,13 @@ def generate_BC(n, delta):
     B_coeffs, C_coeffs = approximate_taylor_polynomial(B, 0, n, 1 - delta), approximate_taylor_polynomial(C, 0, n-1, 1 - delta)
     return np.polynomial.Polynomial(B_coeffs.coeffs[::-1]), np.polynomial.Polynomial(C_coeffs.coeffs[::-1])
 
+BB, CC = lambda x : B(B(x)), lambda x : C(C(x))
+
+def generate_BBCC(n, delta):
+    # Generates the Taylor approximations
+    B_coeffs, C_coeffs = approximate_taylor_polynomial(BB, 0, n, 1 - delta), approximate_taylor_polynomial(CC, 0, n-1, 1 - delta)
+    return np.polynomial.Polynomial(B_coeffs.coeffs[::-1]), np.polynomial.Polynomial(C_coeffs.coeffs[::-1])
+
 ###################################
 
 class SqrtSequence(PhaseGenerator):
@@ -157,6 +164,23 @@ class SqrtSequence(PhaseGenerator):
         phi = QSPPhaseFromL(np.array(L_coeffs), signal_operator="Wz", measurement="z")
 
         return phi
+
+
+class FourthRootSequence(PhaseGenerator):
+    """
+    Fourth-root M-QSP sequence
+    """
+    def generate(self, n, delta):
+        BB_poly, CC_poly = generate_BBCC(n, delta)
+        X_norm = np.linspace(-1, 1, 500)
+        Y_norm = (BB_poly(X_norm) ** 2) + (1 - X_norm ** 2) * (CC_poly(X_norm) ** 2)
+        B_cheb, C_cheb = poly2cheb(BB_poly.coef, kind="T") / max(abs(Y_norm)), poly2cheb(CC_poly.coef, kind="U") / max(abs(Y_norm))
+
+        L_coeffs = list(reversed(list((B_cheb[1:] - C_cheb)/2))) + [B_cheb[0]] + list((B_cheb[1:] + C_cheb)/2)
+        phi = QSPPhaseFromL(np.array(L_coeffs), signal_operator="Wz", measurement="z")
+
+        return phi
+
 
 # -----------------------------------------------------------------------------
 
