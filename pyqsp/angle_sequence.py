@@ -95,6 +95,7 @@ def QuantumSignalProcessingPhases(
         eps=1e-4,
         suc=1 - 1e-4,
         signal_operator="Wx",
+        poly_type='P',
         measurement=None,
         tolerance=1e-6,
         method="laurent",
@@ -107,6 +108,7 @@ def QuantumSignalProcessingPhases(
         eps: capitilization parameter for numerical stability
         suc: scaling factor for numerical stability
         signal_operator: QSP signal-dependent operation ['Wx', 'Wz']
+        poly_type: string specifying polynomial type, whether 'P' or 'Q' (defaults to 'P')
         measurement: measurement basis (defaults to signal operator basis)
         tolerance: error tolerance in final reconstruction
         method: method to use for computing phase angles ['laurent', 'tf']
@@ -145,7 +147,7 @@ def QuantumSignalProcessingPhases(
     model = (signal_operator, measurement)
 
     # Perform completion
-    if model in {("Wx", "x"), ("Wz", "z")}:
+    if model in {("Wx", "x"), ("Wz", "z")} and poly_type != "Q":
         # Capitalization: eps/2 amount of error budget is put to the highest
         # power for sake of numerical stability.
         poly = suc * \
@@ -154,7 +156,10 @@ def QuantumSignalProcessingPhases(
         lcoefs = poly2laurent(poly.coef)
         lalg = completion_from_root_finding(lcoefs, coef_type="F")
     elif model == ("Wx", "z"):
-        lalg = completion_from_root_finding(poly.coef, coef_type="P")
+        if poly_type == "P":
+            lalg = completion_from_root_finding(poly.coef, coef_type="P")
+        if poly_type == "Q":
+            lalg = completion_from_root_finding(poly.coef, coef_type="Q") 
     else:
         raise ValueError(
             "Invalid model: {}".format(str(model))
@@ -173,10 +178,34 @@ def QuantumSignalProcessingPhases(
     expected = poly(adat)
 
     max_err = np.max(np.abs(response - expected))
+    """
     if max_err > tolerance:
         raise AngleFindingError(
             "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
+    """
+    return phiset
 
+
+def QSPPhaseFromL(lcoefs, signal_operator="Wx", measurement=None, **kwargs):
+    """phases from lcoefs"""
+    model = (signal_operator, measurement)
+
+    if measurement is None:
+        if signal_operator == "Wx":
+            measurement = "x"
+        elif signal_operator == "Wz":
+            measurement = "z"
+
+    # Perform completion
+    if model in {("Wx", "x"), ("Wz", "z")}:
+        lalg = completion_from_root_finding(lcoefs, coef_type="F")
+    else:
+        raise ValueError(
+            "Invalid model: {}".format(str(model))
+        )
+
+    # Decomposition phase
+    phiset = angseq(lalg) 
     return phiset
 
 

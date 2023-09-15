@@ -327,6 +327,65 @@ class PolyTaylorSeries(PolyGenerator):
 # -----------------------------------------------------------------------------
 
 
+class PolyExtraction(PolyTaylorSeries):
+    def help(self):
+        return "approximation to the extraction function"
+
+    def generate(
+            self,
+            degree=7):
+        '''
+        Approximation to the extraction function
+        '''
+        degree = int(degree)
+
+        def extraction(x):
+            return 1 / np.sqrt(1 - x ** 2)
+
+        # Generates the coefficients
+        pcoefs = np.array([0 if k % 2 == 1 else scipy.special.binom(-0.5, (k/2)) * (-1) ** (k/2) for k in range(degree + 1)])
+        # force odd coefficients to be zero, since the polynomial must be odd
+        pcoefs[1::2] = 0
+        return TargetPolynomial(pcoefs, target=lambda x: extraction(x))
+
+
+
+class PolyNullification(PolyTaylorSeries):
+    def help(self):
+        return "approximation to the nullification function"
+
+    def generate(
+            self,
+            degree=7):
+        '''
+        Approximation to the nullification function
+        '''
+        degree = int(degree)
+
+        def nullification(x):
+            return 1
+
+        # Generates the coefficients
+        pcoefs = np.array([1 if k == 0 else (-1 if k == degree else 0) for k in range(degree + 1)])
+        return TargetPolynomial(pcoefs, target=lambda x: nullification(x)) 
+
+
+
+class PolyInvChebyshev(PolyTaylorSeries):
+
+    def help(self):
+        return "approximation to the right-inverse of T_{2^n}(x) ; given delta"
+    
+    def generate(
+        self,
+        n=1,
+        degree=7,
+        delta=2
+        ):
+        pass
+
+
+
 class PolySign(PolyTaylorSeries):
 
     def help(self):

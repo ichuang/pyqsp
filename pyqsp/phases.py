@@ -5,6 +5,11 @@ Known QSP phases for specific responses, in the Wx convention
 '''
 
 import numpy as np
+from .poly import PolyExtraction
+from .completion import poly2cheb
+from scipy.interpolate import approximate_taylor_polynomial
+from .angle_sequence import QuantumSignalProcessingPhases, QSPPhaseFromL
+import copy
 
 
 class PhaseGenerator:
@@ -27,6 +32,9 @@ class PhaseGenerator:
         return list of floats specifying the QSP phase angles
         '''
         return [0, 0]
+    
+
+######################### Single-variable protocols #####################
 
 
 class FPSearch(PhaseGenerator):
@@ -100,6 +108,79 @@ class erf_step(PhaseGenerator):
         elif n == 23:
             return phi_n23_erf
         raise Exception("[pyqsp.phases.erf_step] n must be 7 or 23")
+
+
+##################### Multi-variate protocols #################################
+
+
+class ExtractionSequence(PhaseGenerator):
+    """
+    Extraction M-QSP protocol
+    """
+    def generate(self, n):
+        """Phase angles"""
+        Q = PolyExtraction().generate(degree=n)
+        phi = QuantumSignalProcessingPhases(Q, poly_type="Q", measurement="z")
+        return phi
+
+
+###### SQRT SEQUENCE #######
+
+# Generates the polynomials corresponding to inverse Chebyshev polynomials
+def B(x):
+    # The half-angle function
+    return np.sqrt(0.5 + 0.5 * np.sqrt((1 + x)/2))
+
+def C(x):
+    # The other half-angle function
+    return 0.5 * (1 / np.sqrt(1 + x)) * (1 / np.sqrt(1 + np.sqrt((1 + x)/2)))
+
+def generate_BC(n, delta):
+    # Generates the Taylor approximations
+    B_coeffs, C_coeffs = approximate_taylor_polynomial(B, 0, n, 1 - delta), approximate_taylor_polynomial(C, 0, n-1, 1 - delta)
+    return np.polynomial.Polynomial(B_coeffs.coeffs[::-1]), np.polynomial.Polynomial(C_coeffs.coeffs[::-1])
+
+BB, CC = lambda x : B(B(x)), lambda x : C(C(x))
+
+def generate_BBCC(n, delta):
+    # Generates the Taylor approximations
+    B_coeffs, C_coeffs = approximate_taylor_polynomial(BB, 0, n, 1 - delta), approximate_taylor_polynomial(CC, 0, n-1, 1 - delta)
+    return np.polynomial.Polynomial(B_coeffs.coeffs[::-1]), np.polynomial.Polynomial(C_coeffs.coeffs[::-1])
+
+###################################
+
+class SqrtSequence(PhaseGenerator):
+    """
+    Sqrt M-QSP sequence
+    """
+    def generate(self, n, delta):
+        
+        B_poly, C_poly = generate_BC(n, delta)
+        X_norm = np.linspace(-1, 1, 500)
+        Y_norm = (B_poly(X_norm) ** 2) + (1 - X_norm ** 2) * (C_poly(X_norm) ** 2)
+        B_cheb, C_cheb = poly2cheb(B_poly.coef, kind="T") / max(abs(Y_norm)), poly2cheb(C_poly.coef, kind="U") / max(abs(Y_norm))
+
+        L_coeffs = list(reversed(list((B_cheb[1:] - C_cheb)/2))) + [B_cheb[0]] + list((B_cheb[1:] + C_cheb)/2)
+        phi = QSPPhaseFromL(np.array(L_coeffs), signal_operator="Wz", measurement="z")
+
+        return phi
+
+
+class FourthRootSequence(PhaseGenerator):
+    """
+    Fourth-root M-QSP sequence
+    """
+    def generate(self, n, delta):
+        BB_poly, CC_poly = generate_BBCC(n, delta)
+        X_norm = np.linspace(-1, 1, 500)
+        Y_norm = (BB_poly(X_norm) ** 2) + (1 - X_norm ** 2) * (CC_poly(X_norm) ** 2)
+        B_cheb, C_cheb = poly2cheb(BB_poly.coef, kind="T") / max(abs(Y_norm)), poly2cheb(CC_poly.coef, kind="U") / max(abs(Y_norm))
+
+        L_coeffs = list(reversed(list((B_cheb[1:] - C_cheb)/2))) + [B_cheb[0]] + list((B_cheb[1:] + C_cheb)/2)
+        phi = QSPPhaseFromL(np.array(L_coeffs), signal_operator="Wz", measurement="z")
+
+        return phi
+
 
 # -----------------------------------------------------------------------------
 
