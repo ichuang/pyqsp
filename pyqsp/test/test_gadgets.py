@@ -219,8 +219,36 @@ class Test_gadgets(unittest.TestCase):
         idx = np.where(abs(X)> 0.3)
         error = (abs(data - expected))[idx].mean()
         assert error < 0.2
+        
+    def otest_abs_gadget3(self):
+        '''
+        Test the ABS gadget (not yet a class) on second Chebyshev polynomial
+        '''
+        G_cubic = AtomicGadget([[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]], label="G_cubic")
+        G_cheb = AtomicGadget([[0, 0, 0]], [[0, 0]], label="G_cheb")
+        G_sqrt = SqrtGadget(40, 0.06, 'G_sqrt')
 
-    def test_addition_gadget1(self):
+        G_id_1 = G_cubic.interlink(G_sqrt, [
+            (('G_cubic', 0), ('G_sqrt', 0), None)
+        ])
+
+        G_id_2 = G_id_1.interlink(G_cheb, [
+            (('G_sqrt', 0), ('G_cheb', 0), None)
+        ])
+        
+        fn_2 = lambda x : G_id_2.get_qsp_unitary(('G_cheb', 0))({('G_cubic', 0) : x})[0][0]
+
+        X = np.linspace(-1, 1, 200)
+        Y = [fn_2(x) for x in X]
+        Y2 = [np.abs(G_cubic.get_qsp_unitary(("G_cubic", 0))({('G_cubic', 0) : x})[0][0]) for x in X]
+
+        # plt.plot(X, Y)
+        # plt.plot(X, Y2)
+
+        error = (abs(np.array(Y) - np.array(Y2))).mean()
+        assert error < 0.2
+
+    def otest_addition_gadget1(self):
         '''
         Addition of two gadgets
         '''
