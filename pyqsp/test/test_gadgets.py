@@ -220,3 +220,40 @@ class Test_gadgets(unittest.TestCase):
         error = (abs(data - expected))[idx].mean()
         assert error < 0.2
 
+    def test_addition_gadget1(self):
+        '''
+        Addition of two gadgets
+        '''
+        # Defines two atomic gadget
+
+        Xi_1 = [np.array([0, np.pi/3, -np.pi/3, 0])]
+        S_1 = [[0, 1, 0]]
+        G = AtomicGadget(Xi_1, S_1, label="G")
+        
+        Xi_2 = np.array([[np.pi/5, np.pi/6, np.pi/6, -np.pi/4]])
+        S_2 = [[1, 0, 1]]
+        G_tilde = AtomicGadget(Xi_2, S_2, label="G_tilde")
+        
+        # Performs an interlink of the G gadget with the extraction gadget. Note that deg is the 
+        # degree of the polynomial used in the correction. If it were instead "None" no correction
+        # would be applied
+        deg = 20
+        
+        G_interlink = G.interlink(G_tilde, [
+            (('G', 0), ('G_tilde', 0), deg)
+               ])
+        AdditionGadget("G_add").get_qsp_unitary(("G_add", 0))({("G_add", 0): 0.3, ("G_add", 1):0.1})
+        # Tests the addition gadget
+        
+        fn = lambda x, y : AdditionGadget("G_add").get_qsp_unitary(("G_add", 0))({("G_add", 0): x, ("G_add", 1):y})[0][0]
+        X = np.linspace(-1, 1, 200)
+        Y = X
+        Z = [[fn(x, y) for x in X ] for y in Y]
+        
+        # Fourth Chebyshev polynomial
+        T_4 = lambda x : 8 * (x ** 4) - 8 * (x ** 2) + 1
+        T4_composite = lambda x, y: 0.5 * (T_4(x) + T_4(y))
+        Z2 = ([[T4_composite(x, y) for x in X] for y in Y])
+        
+        err = abs(np.array(Z)-np.array(Z2)).mean()
+        assert err < 1.0e-8
