@@ -1,5 +1,6 @@
 import unittest
-from pyqsp.gadgets2 import *
+# from pyqsp.gadgets2 import *
+from gadget_assemblage import *
 
 """
 Note these tests can be run with 'python -m unittest tests.test_gadget_assemblage' from outside the folder tests
@@ -149,6 +150,18 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         self.assertEqual(set(i_dict_0.keys()), set(i_dict_1.keys()))
         self.assertEqual(set(o_dict_0.keys()), set(o_dict_1.keys()))
 
+        # Assert maximum depth of circuit.
+        max_depth = assemblage.assemblage_max_depth()
+        self.assertEqual(max_depth, 2)
+
+        # Look at depths for each leg, and check correct.
+        leg_depth_dict = assemblage.assemblage_leg_depth()
+        self.assertEqual(set(leg_depth_dict.keys()), set([(0, 3), (2, 3), (4, 3), (5, 3)]))
+        self.assertEqual(leg_depth_dict[(5, 3)], 1)
+        self.assertEqual(leg_depth_dict[(2, 3)], 1)
+        self.assertEqual(leg_depth_dict[(4, 3)], 1)
+        self.assertEqual(leg_depth_dict[(0, 3)], 2)
+
     def test_gadget_parallel_wrapping(self):
         g0 = Gadget(1, 2, "g0")
         g1 = Gadget(1, 2, "g1")
@@ -244,6 +257,89 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         i_legs_0, o_legs_0, i_dict_0, o_dict_0 = b2.get_terminal_legs()
         self.assertEqual(len(i_legs_0), 4)
         self.assertEqual(len(o_legs_0), 1)
+
+    def test_parallel_series_gadget_depth(self):
+        g0 = Gadget(2, 2, "g0")
+        g1 = Gadget(2, 2, "g1")
+        g2 = Gadget(2, 2, "g2")
+        g3 = Gadget(2, 2, "g3")
+        # Link gadgets in parallel
+        a0 = wrap_parallel_gadgets([g0, g1, g2, g3])
+        # Assert depth of parallel gadgets.
+        max_depth = a0.assemblage_max_depth()
+        self.assertEqual(max_depth, 1)
+
+        # Wrap gadgets to link in series.
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+        a2 = g2.wrap_gadget()
+        a3 = g3.wrap_gadget()
+        # Link gadgets in series.
+        a4 = a0.link_assemblage(a1, [(("g0", 0),("g1", 0)), (("g0", 1),("g1", 1))])
+        a5 = a4.link_assemblage(a2, [(("g1", 0),("g2", 0)), (("g1", 1),("g2", 1))])
+        a6 = a5.link_assemblage(a3, [(("g2", 0),("g3", 0)), (("g2", 1),("g3", 1))])
+        # Assert depth of serial gadgets.
+        max_depth = a6.assemblage_max_depth()
+        self.assertEqual(max_depth, 4)
+
+        # Link gadgets in mixed series/parallel.
+        a4 = a0.link_assemblage(a1, [(("g0", 0),("g1", 0)), (("g0", 1),("g1", 1))])
+        a5 = a4.link_assemblage(a2, [])
+        a6 = a5.link_assemblage(a3, [(("g2", 0),("g3", 0)), (("g2", 1),("g3", 1))])
+        # Assert depth of mixed serial/parallel gadgets.
+        max_depth = a6.assemblage_max_depth()
+        self.assertEqual(max_depth, 2)
+
+    def test_sum_gadget_depth(self):
+        # Four parallel sqrt gadgets.
+        g0 = Gadget(1, 1, "g0")
+        g1 = Gadget(1, 1, "g1")
+        g2 = Gadget(1, 1, "g2")
+        g3 = Gadget(1, 1, "g3")
+
+        # Four parallel sqrt gadgets.
+        h0 = Gadget(1, 1, "h0")
+        h1 = Gadget(1, 1, "h1")
+        h2 = Gadget(1, 1, "h2")
+        h3 = Gadget(1, 1, "h3")
+
+        # Two sum/difference sqrt gadgets.
+        f0 = Gadget(2, 1, "f0")
+        f1 = Gadget(2, 1, "f1")
+
+        # One product gadget.
+        k0 = Gadget(2, 1, "k0")
+
+        # Generate banks of parallel gadgets.
+        a0 = wrap_parallel_gadgets([g0, g1, g2, g3])
+        a1 = wrap_parallel_gadgets([h0, h1, h2, h3])
+        a2 = wrap_parallel_gadgets([f0, f1])
+        a3 = k0.wrap_gadget()
+
+        # Link banks of parallel gadgets.
+        b0 = a0.link_assemblage(a1, [
+                                    (("g0", 0), ("h0", 0)), 
+                                    (("g1", 0), ("h1", 0)), 
+                                    (("g2", 0), ("h2", 0)), 
+                                    (("g3", 0), ("h3", 0))])
+        b1 = b0.link_assemblage(a2, [
+                                    (("h0", 0), ("f0", 0)), 
+                                    (("h1", 0), ("f0", 1)),
+                                    (("h2", 0), ("f1", 0)),
+                                    (("h3", 0), ("f1", 1))])
+        b2 = b1.link_assemblage(a3, [
+                                    (("f0", 0), ("k0", 0)),
+                                    (("f1", 0), ("k0", 1))])
+
+        # Assert proper total depth.
+        max_depth = b2.assemblage_max_depth()
+        self.assertEqual(max_depth, 4)
+
+    def test_atomic_gadget_string_form(self):
+        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        # Produce easily readable string form of an atomic gadget.
+        string_form = str(g0)
+        self.assertEqual(string_form, "g0 leg 0:\n[Z: 1.000][SIG: 0][Z: 2.000][SIG: 1][Z: 3.000]\ng0 leg 1:\n[Z: 4.000][SIG: 1][Z: 5.000][SIG: 0][Z: 6.000]\n")
 
 if __name__ == '__main__':
     unittest.main()
