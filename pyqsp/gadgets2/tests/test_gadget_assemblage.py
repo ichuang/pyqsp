@@ -341,5 +341,14 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         string_form = str(g0)
         self.assertEqual(string_form, "g0 leg 0:\n[Z: 1.000][SIG: 0][Z: 2.000][SIG: 1][Z: 3.000]\ng0 leg 1:\n[Z: 4.000][SIG: 1][Z: 5.000][SIG: 0][Z: 6.000]\n")
 
+    def test_atomic_gadget_get_sequence(self):
+        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        g1 = AtomicGadget(2, 2, "g1", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        
+        a0 = g0.wrap_atomic_gadget()
+
+        print(a0.get_assemblage_sequence(1, 1, 0))
+        
+
 if __name__ == '__main__':
     unittest.main()

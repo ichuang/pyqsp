@@ -12,7 +12,6 @@ class Gadget:
     Returns an GadgetAssemblage object containing only this gadget. Note this overwrites map_to_grid.
     """
     def wrap_gadget(self):
-        pass
         height = max(self.a, self.b)
         full_legs = [(k, 0) for k in range(height)] + [(k, 1) for k in range(height)]
         i0_map = {leg:(leg[0], 0) for leg in full_legs}
@@ -51,13 +50,28 @@ class AtomicGadget(Gadget):
             seq = []
             for k in range(len(self.S[j])):
                 phase = ZGate(self.Xi[j][k])
-                signal = SignalGate(str(self.S[j][k]))
+                signal = SignalGate(self.S[j][k])
                 seq.append(phase)
                 seq.append(signal)
             final_phase = phase = ZGate(self.Xi[j][-1])
             seq.append(final_phase)
             seq_list.append(seq)
         return seq_list
+
+    def wrap_atomic_gadget(self):
+        height = max(self.a, self.b)
+        full_legs = [(k, 0) for k in range(height)] + [(k, 1) for k in range(height)]
+        i0_map = {leg:(leg[0], 0) for leg in full_legs}
+        i1_map = {leg:(leg[0], 1) for leg in full_legs}
+        i0 = Interlink(height, "i0_%s"%self.label, i0_map)
+        i1 = Interlink(height, "i1_%s"%self.label, i1_map)
+        g0_map = {leg:leg for leg in self.legs}
+        g0 = AtomicGadget(self.a, self.b, self.label, self.Xi, self.S, g0_map)
+        # Instantiate gadget objects
+        g_list = [g0]
+        i_list = [i0, i1]
+        wrapped_assemblage = GadgetAssemblage(g_list, i_list)
+        return wrapped_assemblage
 
     # Returns 2**b size unitary for isolated gadget; i.e., ignoring target and control values inside sequence objects.
     def get_gadget_unitary(self):
@@ -120,11 +134,12 @@ class ZGate(SequenceObject):
 class SignalGate(SequenceObject):
     
     def __init__(self, label):
+        # This label should be an integer; check this.
         self.label = label
         super().__init__()
 
     def __str__(self):
-        string = "[SIG: %s]" % self.label
+        string = "[SIG: %d]" % self.label
         return string
 
 class SwapGate(SequenceObject):
@@ -173,8 +188,97 @@ class GadgetAssemblage:
     """
     Function returns a flat description of the circuit used to achieve a specified assemblage of purely atomic gadgets.
     """
-    def get_assemblage_sequence(self):
-        pass
+    def get_assemblage_sequence(self, global_grid_y, global_grid_x, depth):
+
+        # First we check that all gadgets are atomic gadgets (NOT IMPLEMENTED).
+        # Then we check that we're in the global grid keyset (NOT IMPLEMENTED).
+        # Then we check that global grid loc doesn't map to something trivial (NOT IMPLEMENTED).
+        # The above checks are not crucial, but will help users debug.
+        # Then we continue with the structure of the original get_sequence method from Jack's code.
+
+        last_gadget_output = set()
+
+        # We create a set of output legs for the final gadget.
+        for y in range(len(self.global_grid)):
+            if self.gadget_dict[(y, global_grid_x)][0][0] != "WIRE":
+                last_gadget_output.add((y, global_grid_x))
+            else:
+                continue
+
+        # We check if we are at the last gadget's output legs or not.
+        if (global_grid_y, global_grid_x) in last_gadget_output:
+            # Retrieve last gadget object by its name.
+            last_gadget = self.gadget_set[self.gadget_dict[(global_grid_y, global_grid_x)][0][0]]
+            # Get the local y of the leg through which the gadget was encountered!
+            last_gadget_leg = self.gadget_dict[(global_grid_y, global_grid_x)][0][2][0]
+            # Get the sequence for the last gadget (assuming atomic for now). This is indexed by output leg
+            external_seq = last_gadget.get_gadget_sequence()[last_gadget_leg]
+            # Instantiate an empty sequence.
+            seq = []
+
+            # Loop over sequence.
+            for j in range(len(external_seq)):
+                # If it is an oracle, we find out which one.
+                if isinstance(external_seq[j], SignalGate):
+                    
+                    # We need to find which signal leg this is
+                    input_leg_index = external_seq[j].label
+                    
+                    # UNFIXED: Input y should be the global y coordinate of the input leg of the last gadget corresponding to the oracle at external_seq[j].
+                    input_y = last_gadget.map_to_grid[(input_leg_index, 0)][0] # CURRENTLY NOT INSTANTIATED
+                    # Input x is just the global x coordinate of the last gadget.
+                    input_x = last_gadget.map_to_grid[(0, 0)][1]
+
+                    # Find out where that particular input leg of the last gadget maps backwards to
+                    next_collision = self.origin_guide[(input_y, input_x)]
+
+                    # Check if particular input leg maps backwards to gadget.
+                    if next_collision[0] != "WIRE":
+                        # Get the gadget the wire collides with
+                        collision_gadget = self.gadget_set[next_collision[0]]
+                        # Get the global grid position of the collision location
+                        c_y, c_x = collision_gadget.map_to_grid[(next_collision[1], 1)]
+
+                        # UNFIXED: this should determine if a given output leg needs to be corrected or not, but the index here (global grid based) may not be the correct one.
+                        corr = None
+
+                        # Make the recursive call at this position with increased depth.
+                        internal_seq = self.get_assemblage_sequence(c_y, c_x, depth + 1)
+                        # Finally, tack on the internal sequence
+                        seq.extend(internal_seq)
+                    # If input legs map back to overall input leg instead.
+                    else:
+                        # NOTE: In this case it seems like we want to just insert a standard oracle; but is this the right one? We probably want to insert one as indexed by the global grid.
+                        seq.append(external_seq[j])
+                else:
+                    # If not a signal, just insert the relevant phase.
+                    seq.append(external_seq[j])
+
+        # If the queried position does not encounter last gadget, but something further back.
+        else:
+            # Find the thing it runs into.
+            next_collision = self.origin_guide[(global_grid_y, global_grid_x)]
+            # If that thing is not an overall input wire.
+            if next_collision[0] != "WIRE":
+                # Get the gadget the wire collides with
+                collision_gadget = self.gadget_set[next_collision[0]]
+                # Get the global grid position of the collision location
+                c_y, c_x = collision_gadget.map_to_grid[(next_collision[1], 1)]
+                # Call the function with new position
+                seq = self.get_assemblage_sequence(c_y, c_x, depth)
+            # If the thing is an overall input wire.
+            else:
+                # UNFIXED: This means the position doesn't encounter the last gadget, and instead leads to an input wire for the entire assemblage. In other words, we should just append a bare oracle call here at the right location.
+
+                # It's possible from our definitions that this branch is never activated, but I am not sure.
+                pass
+
+        # Finally, wrap the output sequence if correction indicated.
+        # if correction:
+        #     # seq = corrected_sequence(seq, depth, correction)
+        #     return seq
+        # else:
+        return seq
 
     """
     Function returns a unitary, called on a specified series of inputs corresponding to input legs of assemblage, describing the action of the assemblage.
