@@ -1,5 +1,5 @@
 import unittest
-from gadgets import *
+from pyqsp.gadgets2 import *
 
 """
 Note these tests can be run with 'python -m unittest tests.test_gadget_assemblage' from outside the folder tests
