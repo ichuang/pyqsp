@@ -27,6 +27,20 @@ class TestGadgetSeq2circ(unittest.TestCase):
         circ = seq2circ(seq)
         assert circ is not None
 
+    def test_seq2circ2(self):
+        th1 = 0.5
+        th2 = 0.9
+        seq = [ XGate(th1), ZGate(th2) ]
+        circ = seq2circ(seq)
+        U = circ.get_unitary()
+        print(U.dim)
+        assert U.dim==(2,2)
+        assert U is not None
+        qasm = circ.circ.qasm()
+        print(f"qasm: ", qasm)
+        assert "rx(0.5) q[0]" in qasm
+        assert "rz(0.9) q[0]" in qasm
+
 if __name__ == '__main__':
     unittest.main()
         

@@ -1,4 +1,7 @@
+import qiskit
+import qiskit_aer
 import qiskit.circuit.library as qcl
+
 from qiskit import QuantumCircuit
 from pyqsp.gadgets2.sequences import *
 
@@ -36,6 +39,23 @@ class SequenceQuantumCircuit:
             print(f"['pyqsp.gadgets.seq2circ.QuantumCircuit'] Added gate {gate} at sequence number {self.seqnum}")
         self.seqnum += 1
         
+    def get_unitary(self, decimals=3):
+        '''
+        Return unitary transform matrix performed by this circuit
+        '''
+        if 0:
+            backend = qiskit.Aer.get_backend("unitary_simulator")
+            job = qiskit.execute(self.circ, backend)
+            result = job.result()
+        else:
+            backend = qiskit_aer.Aer.get_backend('aer_simulator')
+            circ2 = self.circ.copy()	# copy circuit and add save_unitary instruction to end
+            circ2.save_unitary()
+            result = backend.run(circ2).result()            
+        U = result.get_unitary(self.circ, decimals=decimals)
+        if self.verbose:
+            print(U)
+        return U
 
 # mapping between sequence objects and qiskit circuit library elements
 SequenceMap = {
@@ -48,7 +68,7 @@ SequenceMap = {
 
 def seq2circ(sequence, signal_value=0):
     '''
-    Return an instance of QuantumCircuit corresponding to the provided sequence.
+    Return an instance of SequenceQuantumCircuit corresponding to the provided sequence.
 
     sequence: (list) list of SequenceObject's, each of which is to be transformed into a gate
     signal_value: (floar) value to use for signal, if it appears in the sequence
