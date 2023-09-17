@@ -33,7 +33,8 @@
 
 ## Remaining tasks
 - [x] Function on `GadgetAssemblage` object returning maximum integer depth.
-- Writing up `get_gadget_sequence` for `AtomicGadget`
-- Writing up `get_assemblage_sequence` for `GadgetAssemblage`
-- Writing up various circuit primitive classes for sequences, with nice print statements for easy viewing. X rotation; Z rotation; Y rotation. Oracle unitary. SWAP. Each has an additional option for a list of control ancilla indices.
-- Writing something simple to generate extraction sequences (flat); this method is outside all classes, but returns a list of circuit primitives (see above).
+- [x] Writing up `get_gadget_sequence` for `AtomicGadget`
+- [x] Writing up `get_assemblage_sequence` for `GadgetAssemblage`
+- [ ] Determine if an careful x shift is needed anywhere for correction, as in Jack's code.
+- [ ] Writing a check-function for atomic assemblage definition; right now any signals are allowed, which can throw errors if one doesn't define the oracles properly.
+- [ ] Currently the swap functions (unused) do not preserve atomic gadgets; this can be done using the same method that `link_assemblage` uses. 

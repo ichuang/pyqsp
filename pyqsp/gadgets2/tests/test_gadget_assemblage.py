@@ -334,21 +334,54 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # Assert proper total depth.
         max_depth = b2.assemblage_max_depth()
         self.assertEqual(max_depth, 4)
+    
+    def test_trivial_atomic_gadget_assemblage_full_sequence(self):
+        g0 = AtomicGadget(1, 1, "g0", [[0, 0]], [[0]])
 
-    def test_atomic_gadget_string_form(self):
-        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
-        # Produce easily readable string form of an atomic gadget.
-        string_form = str(g0)
-        self.assertEqual(string_form, "g0 leg 0:\n[Z: 1.000][SIG: 0][Z: 2.000][SIG: 1][Z: 3.000]\ng0 leg 1:\n[Z: 4.000][SIG: 1][Z: 5.000][SIG: 0][Z: 6.000]\n")
-
-    def test_atomic_gadget_get_sequence(self):
-        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
-        g1 = AtomicGadget(2, 2, "g1", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
-        
+        g1 = AtomicGadget(1, 1, "g1", [[0.5, -0.5]], [[0]])
+        # Generate assemblages of atomic gadgets.
         a0 = g0.wrap_atomic_gadget()
+        a1 = g1.wrap_atomic_gadget()
+        a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
 
-        print(a0.get_assemblage_sequence(1, 1, 0))
-        
+        leg_depth_dict = a2.assemblage_leg_depth()
+        self.assertEqual(set(leg_depth_dict.keys()), set([(1, 2)]))
+        self.assertEqual(leg_depth_dict[(1, 2)], 2)
+
+        full_seq = a2.sequence
+        seq_0_str = "".join(list(map(lambda x: str(x), full_seq[0])))
+        # Note: this test will fail after the true correction phases are inserted; right now these phases are assumed to be (0.1, -0.1) for simplicity, and are defined in get_correction_phases() in gadget_assemblage.py.
+
+        self.assertEqual(seq_0_str, "[Z: 0.500, t=0, c=None][SWAP: 0-1, t=None, c=None][X: 1.571, t=0, c=[1]][Z: 0.100, t=0, c=[1]][Z: 0.000, t=0, c=[1]][SIG: 0, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: -0.100, t=0, c=[1]][SWAP: 0-1, t=None, c=None][Z: 0.000, t=0, c=None][SIG: 0, t=None, c=None][Z: 0.000, t=0, c=None][SWAP: 0-1, t=None, c=None][Z: 0.100, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: 1.571, t=0, c=[1]][SIG: 0, t=0, c=[1]][Z: 1.571, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: -0.100, t=0, c=[1]][X: -1.571, t=0, c=[1]][SWAP: 0-1, t=None, c=None][Z: -0.500, t=0, c=None]")
+
+        g2 = AtomicGadget(1, 1, "g2", [[0.5, -0.5]], [[0]])
+        a3 = g2.wrap_atomic_gadget()
+        a4 = a2.link_assemblage(a3, [(("g1", 0), ("g2", 0))])
+
+        full_seq = a4.sequence
+        seq_0_str = "".join(list(map(lambda x: str(x), full_seq[0])))
+
+        self.assertEqual(len(full_seq), 1)
+
+
+    def test_atomic_gadget_assemblage_full_sequence(self):
+        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        g1 = AtomicGadget(2, 2, "g1", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
+        # Generate assemblages of atomic gadgets.
+        a0 = g0.wrap_atomic_gadget()
+        a1 = g1.wrap_atomic_gadget()
+        a2 = a0.link_assemblage(a1, [(("g0", 0),("g1", 0))])
+
+        leg_depth_dict = a2.assemblage_leg_depth()
+        self.assertEqual(set(leg_depth_dict.keys()), set([(1, 2), (2, 2), (3, 2)]))
+        self.assertEqual(leg_depth_dict[(1, 2)], 1)
+        self.assertEqual(leg_depth_dict[(2, 2)], 2)
+        self.assertEqual(leg_depth_dict[(3, 2)], 2)
+
+        full_seq = a2.sequence
+        self.assertEqual(len(full_seq), 3)
+
+        # Currently this test lacks relevant assertions.
 
 if __name__ == '__main__':
     unittest.main()
