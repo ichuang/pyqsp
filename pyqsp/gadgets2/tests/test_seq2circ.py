@@ -23,7 +23,9 @@ class TestGadgetSeq2circ(unittest.TestCase):
         print(f"seq = {seq}")
         for idx, so in enumerate(seq):
             print(f"  {idx:02d}: {so}")
-        
+
+        circ = seq2circ(seq)
+        assert circ is not None
 
 if __name__ == '__main__':
     unittest.main()
