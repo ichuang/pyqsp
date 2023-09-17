@@ -41,6 +41,21 @@ class TestGadgetSeq2circ(unittest.TestCase):
         assert "rx(0.5) q[0]" in qasm
         assert "rz(0.9) q[0]" in qasm
 
+    def test_seq2circ3(self):
+        '''
+        Exercise get_assemblage_sequence
+        '''
+        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        g1 = AtomicGadget(2, 2, "g1", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        
+        a0 = g0.wrap_atomic_gadget()
+
+        circ = a0.get_assemblage_circuit(1, 1, 0)
+        print(circ)
+        print(f"circuit size is {circ.circ.size()}")
+        assert circ is not None
+        assert circ.circ.size()==5
+
 if __name__ == '__main__':
     unittest.main()
         

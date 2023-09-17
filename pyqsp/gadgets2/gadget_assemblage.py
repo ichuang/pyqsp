@@ -1,5 +1,6 @@
 import copy
 from .sequences import *
+from .seq2circ import seq2circ
 
 class Gadget:
 
@@ -215,10 +216,21 @@ class GadgetAssemblage:
         # else:
         return seq
 
+    def get_assemblage_circuit(self, global_grid_y, global_grid_x, depth):
+        '''
+        Return SequenceQuantumCircuit for this gadget assemblage
+
+        Not sure why global_grid_y, global_grid_x, depth are required, but they are needed
+        as arguments to get_assemblage_sequence
+        '''
+        return seq2circ(self.get_assemblage_sequence(global_grid_y, global_grid_x, depth))
+
     """
     Function returns a unitary, called on a specified series of inputs corresponding to input legs of assemblage, describing the action of the assemblage.
     """
     def get_assemblage_unitary(self):
+        # presumably this could compute circ = self.get_assemblage_circuit
+        # then circ.get_unitary()
         pass
 
     """
