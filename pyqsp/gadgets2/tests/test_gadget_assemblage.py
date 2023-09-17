@@ -1,6 +1,6 @@
 import unittest
-# from pyqsp.gadgets2 import *
-from gadget_assemblage import *
+from pyqsp.gadgets2 import *
+# from gadget_assemblage import *
 
 """
 Note these tests can be run with 'python -m unittest tests.test_gadget_assemblage' from outside the folder tests
