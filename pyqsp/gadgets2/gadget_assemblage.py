@@ -185,7 +185,45 @@ def get_inverse_sequence(sequence):
 
 
 class GadgetAssemblage:
+    """
+    A class for storing a series of gadgets and structures indicating how they are interlinked.
 
+    ...
+
+    Attributes
+    ----------
+    gadgets : list of Gadget objects
+        Gadgets are ordered in the list the way they appear in the assemblage, with earlier gadgets not causally dependent on later ones. Size of gadgets is integer n >= 1.
+    interlinks : list of Interlink objects
+        Interlinks has size (n + 1), and are ordered as they are interspersed between Gadget objects in gadgets.
+    global_grid : list of list of (int, int)
+        Coordinate system with respect to which features of gadgets and interlinks are aligned. First dimension is of length sum of max(a, b) for each Gagdet in gadgets. Second dimension is of length (n + 1).
+    gadget_set : dict of str to Gadget objects
+        Dictionary mapping Gadget object label from any Gadget in gadgets to said Gadget object.
+    gadget_dict : dict of global_grid elements to structured information
+        Dictionary from tuples in global_grid to a special data structure of the form [L, R], where L, R give information about left and right neighbors of that global grid point. If no wire passes through global grid point, [L, R] is [None, None]. W.l.o.g, L has the form, if L indicates a wire ("WIRE", neighbor_global_coord, neighbor_attribute), where neighbor_global_coord is a tuple in global_grid to which the current tuple leads going left, and neighbor_attribute is either "TERMINAL" or "INTERNAL" depending if on the left neighbor is the beginning of the gadget (global_grid coordinate zero is zero) or not. If L indicates a Gadget, has the form (gadget_label, neighbor_global_coord, neighbor_local_coord), where gadget_label is the label of the Gadget to the left, and the remaining coordinates are from the global_grid, and the local coordinates of the Gadget to which the current tuple maps left.
+    input_legs : list of int
+        Sorted list of global y coordinates of overall input legs of assemblage.
+    output_legs : list of int
+        Sorted list of global y coordinates of overall output legs of assemblage.
+    input_dict : dict from local Gadget attributes to int
+        Dictionary keyed by tuples (gadget_name, local_y_coord, local_x_coord) to corresponding global y coordinate of overall input leg.
+    output_dict : dict from local Gadget attributes to int
+        Dictionary keyed by tuples (gadget_name, local_y_coord, local_x_coord) to corresponding global y coordinate of overall output leg.
+    shape : (int, int)
+        Quick tuple of form (len(input_legs), len(output_legs)).
+    origin_guide : dict from global_grid elements to structured information
+        Dictionary keyed by global_grid tuples to tuples indicating the first object in the assemblage one encounters when tracing backwards from that tuple along wires in the assemblage. If the tuple leads to an overall input, value has form ("WIRE", global_y), where global_y is global y position of overall input. Otherwise, value has form (gadget_label, local_y), where gadget_label is the name of the first Gadget object encountered in traversal. Note local_y use in the gadget case.
+    depth : int 
+        Maximum, over output legs of assemblage, of number of Gadget objects one would have to pass through traversing backwards from said leg to any overall input leg.
+    is_atomic_assemblage: bool
+        Boolean which is True if all Gadget objects in gadgets are also AtomicGadget objects, and False otherwise.
+    sequence: list of list of SequenceObject objects
+        List of length shape[1] containing lists of SequenceObject indicating the form of the circuit implied by the assemblage, in terms of the shape[0] possible oracle objects, represented by SignalGate objects inside each list.
+
+    Methods
+    -------
+    """
     def __init__(self, gadgets, interlinks):
         self.gadgets = gadgets
         self.interlinks = interlinks
@@ -1936,10 +1974,10 @@ class GadgetAssemblage:
                         else:
                             if loc[0][0] != "WIRE":
                                 # Terminate.
-                                leg_origin_guide[(y, x)] = (loc[0][0], loc[0][2][0]) # (g, y)
+                                leg_origin_guide[(y, x)] = (loc[0][0], loc[0][2][0]) # (g, local_y)
                                 has_terminated = True
                             elif loc[0][2] == "TERMINAL":
-                                leg_origin_guide[(y, x)] = (loc[0][0], loc[0][1][0]) # ('WIRE', y)
+                                leg_origin_guide[(y, x)] = (loc[0][0], loc[0][1][0]) # ('WIRE', global_y)
                                 # Terminate.
                                 has_terminated = True
                             else:
