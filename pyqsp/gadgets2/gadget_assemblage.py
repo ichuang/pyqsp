@@ -3,17 +3,43 @@ import numpy as np
 from .sequences import *
 
 class Gadget:
+    """
+    A class for containing a base-level gadget; i.e., this gadget, while not necessarily atomic, is not treated as containing any sub-gadgets.
 
+    ...
+
+    Attributes
+    ----------
+    a : int 
+        The number of input legs of the gadget; checked that a > 0.
+    b : int
+        The number of output legs of the gadget; checked that b > 0.
+    label : str
+        The name of the gadget; checked to be unique when placed in a GadgetAssemblage object.
+    legs : list of (int, int)
+        A list of tuples of the form (y_coord, x_coord), where all input legs have x_coord = 0 and all output legs have x_coord = 1. For input legs y_coord goes between 0 and (a - 1) inclusive, while for output legs y_coord goes between 0 and (b - 1) inclusive.
+    map_to_grid : dictionay with keys (int, int) and values (int, int), optional
+        A dictionary mapping all elements in self.legs to (int, int) locations on a global_grid as specified in GadgetAssemblage. This map is often automatically instantiated when linking GadgetAssemblage objects.
+
+    Methods
+    -------
+    wrap_gadget(self) : 
+        Returns a GadgetAssemblage object containing only self, with mapt_to_grid and additional required Interlink objects automatically instantiated.
+    """
     def __init__(self, a, b, label, map_to_grid=dict()):
         self.a, self.b = a, b
         self.label = label
         self.legs = [(k, 0) for k in range(a)] + [(k, 1) for k in range(b)]
         self.map_to_grid = map_to_grid
 
-    """
-    Returns an GadgetAssemblage object containing only this gadget. Note this overwrites map_to_grid.
-    """
     def wrap_gadget(self):
+        """
+        Args:
+            self : A validly instantiated Gadget object.
+
+        Returns:
+            wrapped_assemblage: A GadgetAssemblage object containing self and two trivial Interlink objects, with properly instantiated map_to_grid attributes.
+        """
         height = max(self.a, self.b)
         full_legs = [(k, 0) for k in range(height)] + [(k, 1) for k in range(height)]
         i0_map = {leg:(leg[0], 0) for leg in full_legs}
@@ -29,7 +55,25 @@ class Gadget:
         return wrapped_assemblage
 
 class Interlink:
+    """
+    A class storing permutations to be inserted between Gadget objects inside a GadgetAssemblage.
 
+    Attributes
+    ----------
+    a : int 
+        An integer a > 0 indicating the number of contiguous input and output legs on which the interlink acts.
+    label : str 
+        The name of the interlink; checked to be unique when placed in a GadgetAssemblage object.
+    legs : list of (int, int)
+        A list of tuples of the form (y_coord, x_coord), where all input legs have x_coord = 0 and all output legs have x_coord = 1. For both input legs and output legs y_coord goes between 0 and (a - 1) inclusive.
+    map_to_grid : dictionary with keys (int, int) and values (int, int), optional
+        A dictionary mapping all elements in self.legs to (int, int) locations on a global_grid as specified in GadgetAssemblage. This map is often automatically instantiated when linking GadgetAssemblage objects.
+
+    Methods
+    -------
+    None.
+
+    """
     def __init__(self, a, label, map_to_grid=dict()):
         self.a = a
         self.label = label
@@ -43,6 +87,10 @@ class AtomicGadget(Gadget):
         self.S = S
         super().__init__(a, b, label, map_to_grid)
         # TODO: add checks on the form of Xi and S.
+
+    """
+    We can insert another __init__ that allows for atypical specification of a gadget; this can be useful for the square root protocol and others, where the output is still a rotation about an axis in the XY plane of the Bloch sphere, but otherwise is not antisymmetric in the usual sense.
+    """
 
     # Returns flat list of sequence objects defining gadget.
     def get_gadget_sequence(self):
@@ -233,7 +281,9 @@ class GadgetAssemblage:
     is_atomic_assemblage: bool
         Boolean which is True if all Gadget objects in gadgets are also AtomicGadget objects, and False otherwise.
     sequence: list of list of SequenceObject objects
-        List of length shape[1] containing lists of SequenceObject indicating the form of the circuit implied by the assemblage, in terms of the shape[0] possible oracle objects, represented by SignalGate objects inside each list.
+        List of length shape[1] containing lists of SequenceObject indicating the form of the circuit implied by the assemblage, in terms of the shape[0] possible oracle objects, represented by SignalGate objects inside each list. Only specified if is_atomic_assemblage is True. Otherwise is None.
+    required_ancillae : int
+        Indicates the number of additional ancillae qubits (i.e., in addition to self.shape[1] qubits) to implement the assemblage if is_atomic_assemblage is True. Otherwise is None.
 
     Methods
     -------
@@ -289,9 +339,9 @@ class GadgetAssemblage:
             # If all gadgets are atomic, generate full sequence.
             self.is_atomic_assemblage = all(list(map(lambda x: isinstance(x, AtomicGadget), self.gadgets)))
             if self.is_atomic_assemblage:
-                self.sequence = self.full_assemblage_sequence()
+                self.sequence, self.required_ancillae = self.full_assemblage_sequence()
             else:
-                self.sequence = None
+                self.sequence, self.required_ancillae = (None, None)
         else:
             raise NameError('Gadget instantiation failed.')
 
@@ -311,9 +361,13 @@ class GadgetAssemblage:
         # Generate dictionary mapping legs to their max depth.
         leg_depth_dict = self.assemblage_leg_depth()
         # Generate running sum of max depth for each leg, offset by overall (a, b) assemblage b.
+        # TODO: note inclusion of -1 to properly instantiate ancillae
         assemblage_length = len(self.global_grid[0]) - 1
-        ancilla_running_sum = [len(out_indices) + sum([leg_depth_dict[(out_indices[j], assemblage_length)] for j in range(k)]) for k in range(1, len(out_indices))]
+        ancilla_running_sum = [len(out_indices) - k + sum([leg_depth_dict[(out_indices[j], assemblage_length)] for j in range(k)]) for k in range(1, len(out_indices))]
+
         ancilla_running_sum = [len(out_indices)] + ancilla_running_sum
+
+        required_ancillae = ancilla_running_sum[-1] + leg_depth_dict[(out_indices[-1], assemblage_length)] - 1 - self.shape[1]
 
         # Instantiate empty sequence list.
         full_seq = []
@@ -325,7 +379,7 @@ class GadgetAssemblage:
             seq = self.get_assemblage_sequence(out_indices[k], len(self.global_grid[0])-1, 0, target, ancilla_start)
             # Append to the full list, in order.
             full_seq.append(seq)
-        return full_seq
+        return (full_seq, required_ancillae)
 
     """
     Function returns a flat description of the circuit used to achieve a specified assemblage of purely atomic gadgets.

@@ -350,9 +350,12 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         full_seq = a2.sequence
         seq_0_str = "".join(list(map(lambda x: str(x), full_seq[0])))
+
+        # Assert number of required ancillae
+        required_ancillae = a2.required_ancillae
+        self.assertEqual(required_ancillae, 1)
         
-        # Note: this assertion will fail after the true correction phases are inserted; right now these phases are assumed to be (0.1, -0.1) for simplicity, and are defined in get_correction_phases() in gadget_assemblage.py.
-        # self.assertEqual(seq_0_str, "[Z: 0.500, t=0, c=None][SWAP: 0-1, t=None, c=None][X: 1.571, t=0, c=[1]][Z: 0.100, t=0, c=[1]][Z: 0.000, t=0, c=[1]][SIG: 0, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: -0.100, t=0, c=[1]][SWAP: 0-1, t=None, c=None][Z: 0.000, t=0, c=None][SIG: 0, t=None, c=None][Z: 0.000, t=0, c=None][SWAP: 0-1, t=None, c=None][Z: 0.100, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: 1.571, t=0, c=[1]][SIG: 0, t=0, c=[1]][Z: 1.571, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: -0.100, t=0, c=[1]][X: -1.571, t=0, c=[1]][SWAP: 0-1, t=None, c=None][Z: -0.500, t=0, c=None]")
+        # We can add further assertions here once total sequence has been inserted.
 
         g2 = AtomicGadget(1, 1, "g2", [[0.5, -0.5]], [[0]])
         a3 = g2.wrap_atomic_gadget()
@@ -426,6 +429,10 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         for k in range(len(full_seq)):
             for j in range(len(full_seq[k])):
                 self.assertEqual(full_seq[k][j].target, k)
+
+        # Assert number of required ancillae
+        required_ancillae = a4.required_ancillae
+        self.assertEqual(required_ancillae, 5)
 
 if __name__ == '__main__':
     unittest.main()
