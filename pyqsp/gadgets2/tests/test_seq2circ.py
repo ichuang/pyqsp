@@ -18,8 +18,8 @@ class TestGadgetSeq2circ(unittest.TestCase):
 
         g1 = AtomicGadget(1, 1, "g1", [[0.5, -0.5]], [[0]])
         # Generate assemblages of atomic gadgets.
-        a0 = g0.wrap_atomic_gadget()
-        a1 = g1.wrap_atomic_gadget()
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
         a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
         seq = a2.sequence[0]
 
