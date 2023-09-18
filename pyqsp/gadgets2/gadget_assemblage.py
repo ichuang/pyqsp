@@ -127,7 +127,30 @@ class AtomicGadget(Gadget):
         self.Xi = Xi
         self.S = S
         super().__init__(a, b, label, map_to_grid)
-        # TODO: add checks on the form of Xi and S.
+
+        len_xi = len(self.Xi)
+        len_s = len(self.S)
+        
+        # Check that both Xi and S have length b 
+        if (len_xi != b) or (len_s != b):
+            raise NameError("AtomicGadget %s has Xi or S not of length %s" % ( label, str(b)))
+        else:
+            pass
+
+        # Check that all related QSP specifications are valid
+        for k in range(len_xi):
+            if len(self.Xi[k]) != (len(self.S[k]) + 1):
+                raise NameError("AtomicGadget %s has len(Xi[%s]) and len(S[%s] + 1) not equal." % (label, str(k), str(k)))
+            else:
+                continue
+
+        # Check that all oracle symbols are valid
+        for k in range(len_s):
+            for j in range(len(self.S[k])):
+                if (self.S[k][j] < 0) or (self.S[k][j] >= a):
+                    raise NameError("AtomicGadget %s has invalid integer %s (not between 0 and %s) in S[%s]." % (label, str(self.S[k][j]), str(a-1), str(k)))
+                else:
+                    continue
 
     def get_gadget_sequence(self):
         seq_list = []
@@ -155,7 +178,6 @@ class AtomicGadget(Gadget):
                 current_str = current_str + str(seq[j][k])
             current_str = current_str + "\n"
         return current_str
-
 
 #######################################
 # Test correction sequence for program call

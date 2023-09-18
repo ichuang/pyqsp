@@ -434,5 +434,16 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         required_ancillae = a4.required_ancillae
         self.assertEqual(required_ancillae, 5)
 
+    def test_atomic_gadget_init_errors(self):
+        with self.assertRaises(NameError):
+            # Improper length of Xi[0] versus S[0].
+            g0 = AtomicGadget(2, 2, "g0", [[1, 2],[4, 5, 6]], [[0, 1],[1, 0]])
+        with self.assertRaises(NameError):
+            # Improper length of Xi and S versus b.
+            g0 = AtomicGadget(2, 1, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        with self.assertRaises(NameError):
+            # Improper length of Xi and S versus a.
+            g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 2],[1, 0]])
+
 if __name__ == '__main__':
     unittest.main()
