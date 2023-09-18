@@ -350,8 +350,8 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         full_seq = a2.sequence
         seq_0_str = "".join(list(map(lambda x: str(x), full_seq[0])))
-        # Note: this test will fail after the true correction phases are inserted; right now these phases are assumed to be (0.1, -0.1) for simplicity, and are defined in get_correction_phases() in gadget_assemblage.py.
-
+        
+        # Note: this assertion will fail after the true correction phases are inserted; right now these phases are assumed to be (0.1, -0.1) for simplicity, and are defined in get_correction_phases() in gadget_assemblage.py.
         self.assertEqual(seq_0_str, "[Z: 0.500, t=0, c=None][SWAP: 0-1, t=None, c=None][X: 1.571, t=0, c=[1]][Z: 0.100, t=0, c=[1]][Z: 0.000, t=0, c=[1]][SIG: 0, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: -0.100, t=0, c=[1]][SWAP: 0-1, t=None, c=None][Z: 0.000, t=0, c=None][SIG: 0, t=None, c=None][Z: 0.000, t=0, c=None][SWAP: 0-1, t=None, c=None][Z: 0.100, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: 1.571, t=0, c=[1]][SIG: 0, t=0, c=[1]][Z: 1.571, t=0, c=[1]][Z: 0.000, t=0, c=[1]][Z: -0.100, t=0, c=[1]][X: -1.571, t=0, c=[1]][SWAP: 0-1, t=None, c=None][Z: -0.500, t=0, c=None]")
 
         g2 = AtomicGadget(1, 1, "g2", [[0.5, -0.5]], [[0]])
@@ -381,7 +381,10 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         full_seq = a2.sequence
         self.assertEqual(len(full_seq), 3)
 
-        # Currently this test lacks relevant assertions.
+        # Note: these assertions will fail when correction phases are changed.
+        self.assertEqual(len(full_seq[0]), 5)
+        self.assertEqual(len(full_seq[1]), 33)
+        self.assertEqual(len(full_seq[2]), 33)
 
 if __name__ == '__main__':
     unittest.main()

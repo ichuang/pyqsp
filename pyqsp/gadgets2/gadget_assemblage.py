@@ -181,8 +181,22 @@ def get_inverse_sequence(sequence):
         else:
             raise NameError("A non-SequenceObject, %s, was encountered." % str(elem))
     return new_seq
-#######################################
 
+"""
+An external function which takes a list of gadgets and returns a gadget assemblage in which they are implemented in parallel (i.e., without linking).
+"""
+def wrap_parallel_gadgets(gadgets):
+    assemblage_list = []
+    for g in gadgets:
+        assemblage_list.append(g.wrap_gadget())
+    current_assemblage = assemblage_list[0]
+    
+    # Successively trivially link assemblages together.
+    for k in range(1, len(assemblage_list)):
+        current_assemblage = current_assemblage.link_assemblage(assemblage_list[k], [])
+    return current_assemblage
+
+#######################################
 
 class GadgetAssemblage:
     """
@@ -223,6 +237,35 @@ class GadgetAssemblage:
 
     Methods
     -------
+    ### Currently under edits ###
+    full_assemblage_sequence(self):
+    get_assemblage_sequence(self, global_grid_y, global_grid_x, depth, target, ancilla_start):
+    get_assemblage_unitary(self):
+    assemblage_max_depth(self):
+    max_depth(self):
+    is_valid_instantiation(self):
+    get_ghost_legs(self):
+    check_interlink_ghost_legs(self):
+    instantiate_global_grid(self):
+    def print_assemblage(self):
+    combine_paths(self, paths):
+    get_terminal_legs(self):
+    get_gadget(self, x, y, lr):
+    reverse_interlink(self, interlink):
+    gen_gadget_dict_wires(self):
+    gen_gadget_dict_gadgets(self):
+    get_component_ends(self, gadgets):
+    is_valid_component(self, gadgets):
+    swap_gadgets(self, g0, g1):
+    swap_adjacent_gadgets(self, gadget_0, gadget_1):
+    is_replaceable(self, gadgets):
+    agglomerate_component(self, gadgets):
+    contract(self, gadgets):
+    expand(self, gadgets, gadget_assemblage):
+    get_leg_guide(self):
+    is_valid_linkage(self, o_legs, i_legs, linkage):
+    link_assemblage(self, assemblage, linkage):
+    gen_leg_origin_guide(self):
     """
     def __init__(self, gadgets, interlinks):
         self.gadgets = gadgets
@@ -1756,14 +1799,6 @@ class GadgetAssemblage:
         pass
 
     """
-    Used to allow shorthand notation for linear specification of gadgets; not so obvious this can be done super cleanly, but you'd like people to be able to talk about local leg to local leg connections, and then the code above can check things.
-
-    This actually shouldn't be a method of the assemblage class, just something that tries to build the right instantiation objects.
-    """
-    def build_maps(self, gadgets, interlinks):
-        pass
-
-    """
     Function to give simple list of tuples indicating the the local index and name of the input and output legs of assemblage; everything is indexed by the first leg it encounters.
     """
     def get_leg_guide(self):
@@ -1988,22 +2023,8 @@ class GadgetAssemblage:
                                 else:
                                     loc = self.gadget_dict[prev_loc]
                                 # Continue on.
-
         return leg_origin_guide
 
-"""
-An external function which takes a list of gadgets and returns a gadget assemblage in which they are implemented in parallel (i.e., without linking).
-"""
-def wrap_parallel_gadgets(gadgets):
-    assemblage_list = []
-    for g in gadgets:
-        assemblage_list.append(g.wrap_gadget())
-    current_assemblage = assemblage_list[0]
-    
-    # Successively trivially link assemblages together.
-    for k in range(1, len(assemblage_list)):
-        current_assemblage = current_assemblage.link_assemblage(assemblage_list[k], [])
-    return current_assemblage
 
 def main():
     pass
