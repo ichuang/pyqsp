@@ -63,7 +63,7 @@ SequenceMap = {
     YGate: {'gate': qcl.RYGate, 'nqubits': 1, 'arg': "angle"},
     ZGate: {'gate': qcl.RZGate, 'nqubits': 1, 'arg': "angle"},
     SignalGate: {'gate': qcl.RXGate, 'nqubits': 1, 'arg': "signal"},
-    SwapGate: {'gate': qcl.SwapGate, 'nqubits': 2, 'arg': "angle"},
+    SwapGate: {'gate': qcl.SwapGate, 'nqubits': 2, 'arg': None, 'qubits': ['index_0', 'index_1']},
 }
 
 def seq2circ(sequence, signal_value=0):
@@ -95,19 +95,32 @@ def seq2circ(sequence, signal_value=0):
         nqubits = ginfo['nqubits']
         target = qubit_indices[seq.target or 0]		# note remapping of qubit indices
         arg = ginfo['arg']
+        argv = None					# swap gate has no argument, for example
+        qubits = ginfo.get('qubits')			# optional spec of which qubits to act upon, e.g. for SWAP
         if arg=='signal':
             argv = signal_value				# use signal_value argument to seq2qcirc call
         elif arg:
             argv = getattr(seq, arg)
         try:
-            gate = ginfo['gate'](argv)
+            if argv is not None:
+                gate = ginfo['gate'](argv)
+            else:
+                gate = ginfo['gate']()
         except Exception as err:
             print(f"[pyqsp.gadgets.seq2circ] Error! Could not create gate for {seq}, gate={gate}, argv={argv}, err={err}")
             raise
         if nqubits==1:
             qcirc.add_gate(gate, [target] )
         elif nqubits==2:
-            control = qubit_indices[seq.controls[0]]
-            qcirc.add_gate(gate, [control, target] )
+            if qubits:
+                try:
+                    qubit_list = [getattr(seq, q) for q in qubits]
+                except Exception as err:
+                    print(f"[pyqsp.gadgets.seq2circ] Error! Could not create gate for {seq}, gate={gate}, argv={argv}, failed to get qubits {qubits}, err={err}")
+                    raise
+            else:
+                control = qubit_indices[seq.controls[0]]
+                qubit_list = [control, target] 
+            qcirc.add_gate(gate, qubit_list)
 
     return qcirc

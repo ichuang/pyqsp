@@ -14,12 +14,15 @@ class TestGadgetSeq2circ(unittest.TestCase):
         self.a0 = self.g0.wrap_gadget()
 
     def test_seq2circ1(self):
-        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
-        g1 = AtomicGadget(2, 2, "g1", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
-        
-        a0 = g0.wrap_atomic_gadget()
+        g0 = AtomicGadget(1, 1, "g0", [[0, 0]], [[0]])
 
-        seq = a0.get_assemblage_sequence(1, 1, 0)
+        g1 = AtomicGadget(1, 1, "g1", [[0.5, -0.5]], [[0]])
+        # Generate assemblages of atomic gadgets.
+        a0 = g0.wrap_atomic_gadget()
+        a1 = g1.wrap_atomic_gadget()
+        a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
+        seq = a2.sequence[0]
+
         print(f"seq = {seq}")
         for idx, so in enumerate(seq):
             print(f"  {idx:02d}: {so}")
