@@ -60,3 +60,9 @@ class ExtractionSequence(PhaseGenerator):
         Q = PolyExtraction().generate(degree=n)
         phi = QuantumSignalProcessingPhases(Q, poly_type="Q", measurement="z")
         return phi
+
+#################################################
+#################################################
+"""
+Remaining items to consider include the square root sequence, which is also in phases.py, and its related versions for inverse chebyshev.
+"""

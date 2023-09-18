@@ -2,6 +2,12 @@ import copy
 import numpy as np
 from .sequences import *
 
+"""
+When we actually retrieve the proper phases for get_correction_phases(), we will require the below package imports, and use a function quite similar to ExtractionSequence as defined in correction_protocol.py
+"""
+# from pyqsp import qsp_models
+# from .phases import ExtractionSequence
+
 class Gadget:
     """
     A class for containing a base-level gadget; i.e., this gadget, while not necessarily atomic, is not treated as containing any sub-gadgets.
@@ -47,8 +53,14 @@ class Gadget:
         i0 = Interlink(height, "i0_%s"%self.label, i0_map)
         i1 = Interlink(height, "i1_%s"%self.label, i1_map)
         g0_map = {leg:leg for leg in self.legs}
-        g0 = Gadget(self.a, self.b, self.label, g0_map)
-        # Instantiate one gadget and two interlinks.
+
+        # Check if is AtomicGadget or not, and preserve sub-type.
+        if isinstance(self, AtomicGadget):
+            g0 = AtomicGadget(self.a, self.b, self.label, self.Xi, self.S, g0_map)
+        else:
+            g0 = Gadget(self.a, self.b, self.label, g0_map)
+
+        # Instantiate one Gadget and two interlinks.
         g_list = [g0]
         i_list = [i0, i1]
         wrapped_assemblage = GadgetAssemblage(g_list, i_list)
@@ -81,6 +93,35 @@ class Interlink:
         self.map_to_grid = map_to_grid
 
 class AtomicGadget(Gadget):
+    """
+    A class for an atomic gadget; i.e., one that can be written in the form of (possibly multiple parallel) M-QSP protocols.
+
+    ...
+
+    Attributes
+    ----------
+    a : int 
+        The number of input legs of the gadget; checked that a > 0.
+    b : int
+        The number of output legs of the gadget; checked that b > 0.
+    label : str
+        The name of the gadget; checked to be unique when placed in a GadgetAssemblage object.
+    legs : list of (int, int)
+        A list of tuples of the form (y_coord, x_coord), where all input legs have x_coord = 0 and all output legs have x_coord = 1. For input legs y_coord goes between 0 and (a - 1) inclusive, while for output legs y_coord goes between 0 and (b - 1) inclusive.
+    map_to_grid : dictionay with keys (int, int) and values (int, int), optional
+        A dictionary mapping all elements in self.legs to (int, int) locations on a global_grid as specified in GadgetAssemblage. This map is often automatically instantiated when linking GadgetAssemblage objects.
+    Xi : list of lists of floats
+        A list of self.b phase lists for M-QSP protocols, each of possibly different lengths. Note the len(S[k]) = len(Xi[k]) + 1 for all k between 0 and (self.b - 1) inclusive.
+    S : list of lists of ints
+        A list of self.b lists of integers between 0 and (self.a - 1) inclusive, indicating which of the self.a possible oracle unitaries is to be inserted at that position in the self.b-th circuit. Note the len(S[k]) = len(Xi[k]) + 1 for all k between 0 and (self.b - 1) inclusive.
+
+    Methods
+    -------
+    get_gadget_sequence(self) :
+        Returns flat list of SequenceObject objects which determine the circuit of the AtomicGadget object when read left to right.
+    get_gadget_unitary(self) :
+        Currently not implemented.
+    """
 
     def __init__(self, a, b, label, Xi, S, map_to_grid=dict()):
         self.Xi = Xi
@@ -88,11 +129,6 @@ class AtomicGadget(Gadget):
         super().__init__(a, b, label, map_to_grid)
         # TODO: add checks on the form of Xi and S.
 
-    """
-    We can insert another __init__ that allows for atypical specification of a gadget; this can be useful for the square root protocol and others, where the output is still a rotation about an axis in the XY plane of the Bloch sphere, but otherwise is not antisymmetric in the usual sense.
-    """
-
-    # Returns flat list of sequence objects defining gadget.
     def get_gadget_sequence(self):
         seq_list = []
         for j in range(self.b):
@@ -107,22 +143,6 @@ class AtomicGadget(Gadget):
             seq_list.append(seq)
         return seq_list
 
-    def wrap_atomic_gadget(self):
-        height = max(self.a, self.b)
-        full_legs = [(k, 0) for k in range(height)] + [(k, 1) for k in range(height)]
-        i0_map = {leg:(leg[0], 0) for leg in full_legs}
-        i1_map = {leg:(leg[0], 1) for leg in full_legs}
-        i0 = Interlink(height, "i0_%s"%self.label, i0_map)
-        i1 = Interlink(height, "i1_%s"%self.label, i1_map)
-        g0_map = {leg:leg for leg in self.legs}
-        g0 = AtomicGadget(self.a, self.b, self.label, self.Xi, self.S, g0_map)
-        # Instantiate gadget objects
-        g_list = [g0]
-        i_list = [i0, i1]
-        wrapped_assemblage = GadgetAssemblage(g_list, i_list)
-        return wrapped_assemblage
-
-    # Returns 2**b size unitary for gadget ignoring target and controls.
     def get_gadget_unitary(self):
         pass 
 
@@ -361,12 +381,13 @@ class GadgetAssemblage:
         # Generate dictionary mapping legs to their max depth.
         leg_depth_dict = self.assemblage_leg_depth()
         # Generate running sum of max depth for each leg, offset by overall (a, b) assemblage b.
-        # TODO: note inclusion of -1 to properly instantiate ancillae
+        # TODO: note inclusion of -k to properly instantiate ancillae
         assemblage_length = len(self.global_grid[0]) - 1
         ancilla_running_sum = [len(out_indices) - k + sum([leg_depth_dict[(out_indices[j], assemblage_length)] for j in range(k)]) for k in range(1, len(out_indices))]
 
         ancilla_running_sum = [len(out_indices)] + ancilla_running_sum
 
+        # Required ancillae can be taken from last element of running list, plus the final leg's depth - 1, minus the second element of the shape of the overall assemblage.
         required_ancillae = ancilla_running_sum[-1] + leg_depth_dict[(out_indices[-1], assemblage_length)] - 1 - self.shape[1]
 
         # Instantiate empty sequence list.

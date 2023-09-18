@@ -340,8 +340,8 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         g1 = AtomicGadget(1, 1, "g1", [[0.5, -0.5]], [[0]])
         # Generate assemblages of atomic gadgets.
-        a0 = g0.wrap_atomic_gadget()
-        a1 = g1.wrap_atomic_gadget()
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
         a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
 
         leg_depth_dict = a2.assemblage_leg_depth()
@@ -358,7 +358,7 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # We can add further assertions here once total sequence has been inserted.
 
         g2 = AtomicGadget(1, 1, "g2", [[0.5, -0.5]], [[0]])
-        a3 = g2.wrap_atomic_gadget()
+        a3 = g2.wrap_gadget()
         a4 = a2.link_assemblage(a3, [(("g1", 0), ("g2", 0))])
 
         full_seq = a4.sequence
@@ -372,9 +372,9 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         g1 = AtomicGadget(2, 2, "g1", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
         g2 = AtomicGadget(2, 2, "g2", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
         # Generate assemblages of atomic gadgets.
-        a0 = g0.wrap_atomic_gadget()
-        a1 = g1.wrap_atomic_gadget()
-        a2 = g2.wrap_atomic_gadget()
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+        a2 = g2.wrap_gadget()
         
         a3 = a0.link_assemblage(a1, [(("g0", 0),("g1", 0))])
 
