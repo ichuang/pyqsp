@@ -44,7 +44,7 @@ class TestGadgetSeq2circ(unittest.TestCase):
         assert "rx(0.5) q[0]" in qasm
         assert "rz(0.9) q[0]" in qasm
 
-    def otest_seq2circ3(self):
+    def otest_get_assemblage_circuit(self):
         '''
         Exercise get_assemblage_circuit
         '''
