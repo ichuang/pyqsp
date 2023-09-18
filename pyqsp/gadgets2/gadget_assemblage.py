@@ -163,8 +163,8 @@ def get_inverse_sequence(sequence):
             index_1 = elem.index_1
             target = elem.target 
             controls = elem.controls
-            # Note a SWAP gate has no target
-            new_elem = SwapGate(index_0, index_1, target=None, controls=controls)
+            # Note a SWAP gate has no true target, but we pass it along.
+            new_elem = SwapGate(index_0, index_1, target=target, controls=controls)
             new_seq.append(new_elem)
         elif isinstance(elem, SignalGate):
             # For signals, we assume they are x rotations, and can be inverted with Z conjugation.
@@ -390,8 +390,9 @@ class GadgetAssemblage:
                         # We create SWAP gates around inner protocol to place phase correctly.
                         index_0 = target
                         index_1 = ancilla_start + depth
-                        swap_0 = SwapGate(index_0, index_1)
-                        swap_1 = SwapGate(index_0, index_1)
+                        # Note we initialize target for SWAPS, even though they have an ill defined target.
+                        swap_0 = SwapGate(index_0, index_1, target=target)
+                        swap_1 = SwapGate(index_0, index_1, target=target)
                         # Finally, we sandwich internal sequence with the controlled z rotations, suitably swapped around.
                         new_seq = [swap_0] + control_z_corr + [swap_0] + internal_seq + [swap_1] + inverse_control_z_corr + [swap_1]
 
@@ -404,10 +405,10 @@ class GadgetAssemblage:
                     else:
                         elem = external_seq[j]
                         old_label = elem.label
-                        old_target = elem.target
                         old_controls = elem.controls
-                        # Produce new object.
-                        new_elem = SignalGate(old_label, target=old_target, controls=old_controls)
+                        new_target = target
+                        # Produce new object, with new target.
+                        new_elem = SignalGate(old_label, target=new_target, controls=old_controls)
                         seq.append(new_elem)
                 else:
                     elem = external_seq[j]
@@ -456,7 +457,7 @@ class GadgetAssemblage:
                         else:
                             new_controls = [] + old_controls
                         # Note a swap gate has no target
-                        new_elem = SwapGate(old_index_0, old_index_1, target=None, controls=new_controls)
+                        new_elem = SwapGate(old_index_0, old_index_1, target=new_target, controls=new_controls)
                     else:
                         raise NameError("A non-SequenceObject, %s, was encountered." % str(elem))
                     seq.append(new_elem)
