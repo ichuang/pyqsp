@@ -66,3 +66,9 @@ class ExtractionSequence(PhaseGenerator):
 """
 Remaining items to consider include the square root sequence, which is also in phases.py, and its related versions for inverse chebyshev.
 """
+
+"""
+The path to getting these phases is relatively simple; in the body of gadget_assemblage.py (or whichever series of files we end up breaking things into), we need to import ExtractionSequence from phases.py as well as qsp_models from pyqsp; these are already included, commented out.
+
+Then calling phi = ExtractionSequence().generate(deg) within get_correction_phases() immediately gives us a list of angles, to be turned into the proper protocol.
+"""

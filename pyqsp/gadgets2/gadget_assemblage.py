@@ -5,9 +5,11 @@ from .seq2circ import seq2circ
 
 """
 When we actually retrieve the proper phases for get_correction_phases(), we will require the below package imports, and use a function quite similar to ExtractionSequence as defined in correction_protocol.py
+
+TODO: Note these imports may break when moving around files
 """
-# from pyqsp import qsp_models
-# from .phases import ExtractionSequence
+from pyqsp import qsp_models
+from ..phases import ExtractionSequence
 
 class Gadget:
     """
@@ -180,7 +182,7 @@ class AtomicGadget(Gadget):
             current_str = current_str + "\n"
         return current_str
 
-def get_correction_phases():
+def get_correction_phases(degree=4):
     """
     Takes no arguments and returns a list of SequenceObject objects which, if they were run as a unitary, would implement the broadband NOT protocol of Guang Hao Low's thesis: http://hdl.handle.net/1721.1/115025.
 
@@ -191,11 +193,23 @@ def get_correction_phases():
         seq : list of SequenceObject objects
 
     """
-    p0 = ZGate(0.1)
-    sig = SignalGate(0)
-    p1 = ZGate(-0.1)
-    seq = [p0, sig, p1]
-    return seq
+
+    # Get QSP correction protocol phases for a fixed degree.
+    phi = ExtractionSequence().generate(degree)
+    # Initialize proper correction protocol
+    correction_protocol = []
+    correction_protocol.append(ZGate(phi[0]))
+    for k in range(1, len(phi)):
+        correction_protocol.append(SignalGate(0))
+        correction_protocol.append(ZGate(phi[k]))
+    return correction_protocol
+
+    # NOTE: Dummy correction protocol for short circuits. Uncomment for testing.
+    # p0 = ZGate(0)
+    # sig = SignalGate(0)
+    # p1 = ZGate(0)
+    # seq = [p0, sig, p1]
+    # return seq
 
 def get_twice_z_correction(sequence):
     """
@@ -658,9 +672,9 @@ class GadgetAssemblage:
             return total_string
 
     def get_assemblage_circuit(self):
-        '''
+        """
         Return SequenceQuantumCircuit instance for this assemblage
-        '''
+        """
         full_seq = self.sequence
         sqcirc = seq2circ(full_seq)
         return sqcirc
