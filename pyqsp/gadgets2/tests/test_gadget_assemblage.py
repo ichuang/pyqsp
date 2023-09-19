@@ -445,5 +445,47 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
             # Improper length of Xi and S versus a.
             g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 2],[1, 0]])
 
+    def test_loop_atomic_gadget(self):
+        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        g1 = AtomicGadget(2, 2, "g1", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
+        g2 = AtomicGadget(2, 2, "g2", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
+        # Generate assemblages of atomic gadgets.
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+        a2 = g2.wrap_gadget()
+        
+        # Note connection here between first and third gadget, skipping second.
+        a3 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
+        a4 = a3.link_assemblage(a2, [(("g1", 0), ("g2", 0)), (("g0", 1), ("g2", 1))])
+        full_seq = a4.sequence
+
+        # Repeat same test as before for register and ancilla disjointness.
+        total_targets = [[full_seq[k][j].target for j in range(len(full_seq[k]))] for k in range(len(full_seq))]
+        total_target_set = list(map(lambda x : set(x), total_targets))
+
+        total_controls = [[[] if full_seq[k][j].controls == None else full_seq[k][j].controls for j in range(len(full_seq[k]))] for k in range(len(full_seq))]
+        total_controls_flat = list(map(lambda x: sum(x, []), total_controls))
+        total_controls_set = list(map(lambda x : set(x), total_controls_flat))
+
+        total_target_set_length = sum(list(map(lambda x: len(x), total_target_set)))
+        total_controls_set_length = sum(list(map(lambda x: len(x), total_controls_set)))
+
+        target_union_length = len(list(set().union(*total_target_set)))
+        controls_union_length = len(list(set().union(*total_controls_set)))
+
+        # Assert that target and controls are disjoint among themselves.
+        self.assertEqual(total_target_set_length, target_union_length)
+        self.assertEqual(total_controls_set_length, controls_union_length)
+
+        # Join target and controls sets and take length.
+        target_control_union_length = len(list((set().union(*total_target_set)).union(set().union(*total_controls_set))))
+        
+        # Assert that targets and controls are disjoint among each other.
+        self.assertEqual(total_target_set_length + total_controls_set_length, target_control_union_length)
+
+        for k in range(len(full_seq)):
+            for j in range(len(full_seq[k])):
+                self.assertEqual(full_seq[k][j].target, k)
+
 if __name__ == '__main__':
     unittest.main()

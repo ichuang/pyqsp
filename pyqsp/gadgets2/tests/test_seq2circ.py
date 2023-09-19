@@ -51,7 +51,7 @@ class TestGadgetSeq2circ(unittest.TestCase):
         g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
         g1 = AtomicGadget(2, 2, "g1", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
         
-        a0 = g0.wrap_atomic_gadget()
+        a0 = g0.wrap_gadget()
 
         circ = a0.get_assemblage_circuit(1, 1, 0)
         print(circ)

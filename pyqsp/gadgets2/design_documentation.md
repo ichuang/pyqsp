@@ -35,9 +35,8 @@
 - [x] Function on `GadgetAssemblage` object returning maximum integer depth.
 - [x] Writing up `get_gadget_sequence` for `AtomicGadget`
 - [x] Writing up `get_assemblage_sequence` for `GadgetAssemblage`
-- [ ] Determine if an careful x shift is needed anywhere for correction, as in Jack's code.
-- [ ] Writing a check-function for atomic assemblage definition; right now any signals are allowed, which can throw errors if one doesn't define the oracles properly.
+- [x] Writing a check-function for atomic assemblage definition; right now any signals are allowed, which can throw errors if one doesn't define the oracles properly.
 - [ ] Currently the swap functions (unused) do not preserve atomic gadgets; this can be done using the same method that `link_assemblage` uses. 
-- [ ] Adding a new argument for `get_correction_phases` to specify polynomial degree; eventually this could be a property assigned to each atomic gadget for its output legs, but for our purposes it is best to make it a uniform value, and the code makes it easy to change.
+- [ ] Adding a new argument for `get_correction_phases` to specify polynomial degree; eventually this could be a property assigned to each atomic gadget for its output legs individually, but for our purposes it is best to make it a uniform value, and the code makes it easy to change.
 - [ ] It's possible for one to desire that a given wire is shifted; that is, the approximate X rotation has its value modified by a known amount. This can be a property of an input or output leg of a gadget, or it can be treated as an uncorrected (1,1) gadget and tacked on in various places. For the moment we will ignore it, but it's helpful to include in certain examples.
-- [ ] `wrap_gadget` can be modified to handle both standard an atomic gadgets, rather than using two methods with `wrap_atomic_gadget`.
+- [x] `wrap_gadget` can be modified to handle both standard an atomic gadgets, rather than using two methods with `wrap_atomic_gadget`.
