@@ -36,10 +36,19 @@ class SequenceQuantumCircuit:
             print(f"['pyqsp.gadgets.seq2circ.QuantumCircuit'] Creating sequence quantum circuit on {self.nqubits} qubits with indices {qubit_indices_main}:{qubit_indices_ancillae}")
         return
 
+    GATE_COLORS = {
+        'signal_0': ('#60A160', '#EEEE12'),
+        'signal_1': ('#80B110', '#DEEE12'),
+        'signal_2': ('#20A1A0', '#CEEE12'),
+        'signal_3': ('#80A1F0', '#BEEE12'),
+    }
+
     def draw(self, *args, **kwargs):
         '''
         Draw circuit - using qiskit
         '''
+        if 'style' not in kwargs:
+            kwargs['style'] = {'displaycolor': self.GATE_COLORS}
         return self.circ.draw(*args, **kwargs)
 
     def size(self, *args, **kwargs):
@@ -120,7 +129,7 @@ SequenceMap = {
     XGate: {'gate': qcl.RXGate, 'nqubits': 1, 'arg': "angle"},
     YGate: {'gate': qcl.RYGate, 'nqubits': 1, 'arg': "angle"},
     ZGate: {'gate': qcl.RZGate, 'nqubits': 1, 'arg': "angle"},
-    SignalGate: {'gate': qcl.RXGate, 'nqubits': 1, 'arg': "signal"},
+    SignalGate: {'gate': qcl.RXGate, 'nqubits': 1, 'arg': "signal", 'color_index': "label", 'color_class': "signal"},
     SwapGate: {'gate': qcl.SwapGate, 'nqubits': 2, 'arg': None, 'qubits': ['index_0', 'index_1']},
 }
 
@@ -223,11 +232,15 @@ def seq2circ(sequence, signal_value=0):
             argv = signal_value				# use signal_value argument to seq2qcirc call
         elif arg:
             argv = getattr(seq, arg)
+        kwargs = {}
+        if 'color_class' in ginfo:
+            color_index = getattr(seq, ginfo.get('color_index', 'label'), 0)
+            kwargs['label'] = f"{ginfo['color_class']}_{color_index}"
         try:
             if argv is not None:
-                gate = ginfo['gate'](argv)
+                gate = ginfo['gate'](argv, **kwargs)
             else:
-                gate = ginfo['gate']()
+                gate = ginfo['gate'](**kwargs)
         except Exception as err:
             print(f"[pyqsp.gadgets.seq2circ] Error! Could not create gate for {seq}, gate={gate}, argv={argv}, err={err}")
             raise
