@@ -39,6 +39,13 @@ class TestGadgetSeq2circ(unittest.TestCase):
         assert "rx(0.5) main[0]" in qasm
         assert "rz(0.9) main[0]" in qasm
 
+    def test_get_unitary3(self):
+        seq = [ XGate(0.5, controls=[1], target=0) ]
+        sqcirc2 = seq2circ(seq)
+        umat = sqcirc2.get_unitary()
+        assert umat is not None
+        assert umat.dim==(4,4)
+
     def test_get_assemblage_circuit(self):
         '''
         Exercise get_assemblage_circuit

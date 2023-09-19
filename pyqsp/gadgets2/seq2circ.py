@@ -3,6 +3,7 @@ import qiskit_aer
 import qiskit.circuit.library as qcl
 
 from qiskit import QuantumCircuit
+from qiskit.circuit import Parameter	# used for signal parameters
 from pyqsp.gadgets2.sequences import *
 
 class SequenceQuantumCircuit:
@@ -26,11 +27,13 @@ class SequenceQuantumCircuit:
         self.qubit_indices_ancillae = qubit_indices_ancillae
         self.verbose = verbose
         self.seqnum = 0
+        self.signal_parameters = {}	# dict with {signal_label: qiskit_parameter, ...}
 
         # construct qiskit quantum circuit with separate main and ancillae registers
         self.q_main = qiskit.QuantumRegister(self.nqubits_main, name='main')
         self.q_ancillae = qiskit.QuantumRegister(self.nqubits_ancillae, name='ancillae')
         self.circ = QuantumCircuit(self.q_main, self.q_ancillae)
+        self.bound_circ = None									# circuit with bound parameters
 
         if self.verbose:
             print(f"['pyqsp.gadgets.seq2circ.QuantumCircuit'] Creating sequence quantum circuit on {self.nqubits} qubits with indices {qubit_indices_main}:{qubit_indices_ancillae}")
@@ -42,6 +45,36 @@ class SequenceQuantumCircuit:
         'signal_2': ('#20A1A0', '#CEEE12'),
         'signal_3': ('#80A1F0', '#BEEE12'),
     }
+
+    def get_parameter(self, signal_label):
+        '''
+        Return qiskit circuit parameter corresponding to the specified signal label.
+        Creates the parameter if it doesn't already exist
+
+        signal_label: (int) identifier for the signal; starts at 0 by convention
+        '''
+        if signal_label not in self.signal_parameters:
+            self.signal_parameters[signal_label] = Parameter(chr(0x3b8) + str(signal_label))	# unicode 0x3b8 = theta
+        return self.signal_parameters[signal_label]
+
+    def bind_parameters(self, values):
+        '''
+        Set signal parameters to the specified values.
+        This should be done before evaluating the circuit, or getting its unitary.
+
+        values: either ordered list of floats, for signal_0, signal_1, ...
+                or dict with { 0: float, 1: float, ... }
+        '''
+        if isinstance(values, list):
+            vdict = {self.signal_parameters[x]: values[x]  for x in sorted(self.signal_parameters.keys())}
+        elif isinstance(values, dict):
+            vdict = {self.signal_parameters[x]: values[x]  for x in self.signal_parameters if x in values}
+        try:
+            self.bound_circ = self.circ.bind_parameters(vdict)
+            if self.verbose:
+                print(f"[pyqsp.gadgets.seq2circ.QuantumCircuit] bound parameters with vdict={vdict}")
+        except Exception as err:
+            raise Exception(f"[pyqsp.gadgets.seq2circ.QuantumCircuit] failed to bind parameters with values={values} and vdict={vdict}, err={err}")
 
     def draw(self, *args, **kwargs):
         '''
@@ -108,18 +141,23 @@ class SequenceQuantumCircuit:
         '''
         Return unitary transform matrix performed by this circuit
         '''
-        if 0:
+        if self.bound_circ is not None:
+            circ2 = self.bound_circ.copy()
+        else:
+            circ2 = self.circ.copy()
+
+        if 1:
             # deprecated
             backend = qiskit.Aer.get_backend("unitary_simulator")
-            job = qiskit.execute(self.circ, backend)
+            job = qiskit.execute(circ2, backend)
             result = job.result()
         else:
             # good as of Fall 2023
+            # BUT controlled-Rx failing with qiskit_aer.aererror.AerError: 'unknown instruction: crx'
             backend = qiskit_aer.Aer.get_backend('aer_simulator')
-            circ2 = self.circ.copy()	# copy circuit and add save_unitary instruction to end
-            circ2.save_unitary()
+            circ2.save_unitary()		# add save_unitary instruction to copied circuit
             result = backend.run(circ2).result()            
-        U = result.get_unitary(self.circ, decimals=decimals)
+        U = result.get_unitary(circ2, decimals=decimals)
         if self.verbose:
             print(U)
         return U
@@ -229,7 +267,8 @@ def seq2circ(sequence, signal_value=0):
         argv = None					# swap gate has no argument, for example
         qubits = ginfo.get('qubits')			# optional spec of which qubits to act upon, e.g. for SWAP
         if arg=='signal':
-            argv = signal_value				# use signal_value argument to seq2qcirc call
+            # argv = signal_value			# OLD: use signal_value argument to seq2qcirc call
+            argv = qcirc.get_parameter(seq.label)	# NEW: use qiskit Parameter for signal
         elif arg:
             argv = getattr(seq, arg)
         kwargs = {}

@@ -665,11 +665,21 @@ class GadgetAssemblage:
         sqcirc = seq2circ(full_seq)
         return sqcirc
         
-    def get_assemblage_unitary(self):
+    def get_assemblage_unitary(self, signal_values, decimals=3):
         """
         Returns a unitary, called on a specified series of inputs corresponding to input legs of assemblage, matching the action of the assemblage.
+
+        signal_values: either ordered list of floats, for signal_0, signal_1, ...
+                       or dict with { 0: float, 1: float, ... }
+        
+        decimals: (int) passed to qiskit's get_unitary(), presumably to determine precision of the unitary
         """
-        raise NotImplementedError("Method get_assemblage_unitary(self) remains to be implemented.")
+        sqcirc = self.get_assemblage_circuit()
+        if not len(signal_values)==len(sqcirc.signal_parameters):
+            raise Exception(f"[GadgetAssemblage] get_assemblage_unitary must be called with signal_values having length matching the number of signals (which is {len(sqcirc.signal_parameters)}, but signal_values has length {len(signal_values)}")
+        sqcirc.bind_parameters(signal_values)
+        unitary = sqcirc.get_unitary(decimals=decimals)
+        return unitary
 
     def assemblage_max_depth(self):
         """
