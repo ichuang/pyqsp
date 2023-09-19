@@ -1918,7 +1918,7 @@ class GadgetAssemblage:
         return True
 
     def link_assemblage(self, assemblage, linkage):
-         """
+        """
         This method should allow us to link things nicely, following an understanding of which legs can be linked; checks the terminal legs of each, checks for ghost legs, and then simply assembles to gadgets. Also need to fill in missing blocks elsewhere for all the relevant maps.
         """
         legs_0 = self.get_terminal_legs()
