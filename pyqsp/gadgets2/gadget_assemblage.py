@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 from .sequences import *
+from .seq2circ import seq2circ
 
 """
 When we actually retrieve the proper phases for get_correction_phases(), we will require the below package imports, and use a function quite similar to ExtractionSequence as defined in correction_protocol.py
@@ -633,6 +634,14 @@ class GadgetAssemblage:
             name_list = list(map(lambda x: x.label, self.gadgets))
             return "-".join(name_list)
 
+    def get_assemblage_circuit(self):
+        '''
+        Return SequenceQuantumCircuit instance for this assemblage
+        '''
+        full_seq = self.sequence
+        sqcirc = seq2circ(full_seq)
+        return sqcirc
+        
     """
     Function returns a unitary, called on a specified series of inputs corresponding to input legs of assemblage, describing the action of the assemblage.
     """

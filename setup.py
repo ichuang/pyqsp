@@ -38,6 +38,7 @@ setup(
                       'scipy',
                       'qiskit',
                       'qiskit_aer',
+                      'pylatexenc',
                       ],
     package_dir={'pyqsp': 'pyqsp'},
     test_suite="pyqsp.test",

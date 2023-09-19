@@ -1,10 +1,5 @@
 import unittest
 from pyqsp.gadgets2 import *
-# from gadget_assemblage import *
-
-"""
-Note these tests can be run with 'python -m unittest tests.test_gadget_assemblage' from outside the folder tests
-"""
 
 class TestGadgetSeq2circ(unittest.TestCase):
 
@@ -44,7 +39,7 @@ class TestGadgetSeq2circ(unittest.TestCase):
         assert "rx(0.5) main[0]" in qasm
         assert "rz(0.9) main[0]" in qasm
 
-    def otest_get_assemblage_circuit(self):
+    def test_get_assemblage_circuit(self):
         '''
         Exercise get_assemblage_circuit
         '''
@@ -53,11 +48,11 @@ class TestGadgetSeq2circ(unittest.TestCase):
         
         a0 = g0.wrap_gadget()
 
-        circ = a0.get_assemblage_circuit(1, 1, 0)
-        print(circ)
-        print(f"circuit size is {circ.circ.size()}")
-        assert circ is not None
-        assert circ.circ.size()==5
+        sqcirc = a0.get_assemblage_circuit()
+        print(sqcirc)
+        print(f"circuit size is {sqcirc.size()}")
+        assert sqcirc is not None
+        assert sqcirc.size()==10
 
     def test_sequence_circuit_size1(self):
         '''
@@ -74,6 +69,24 @@ class TestGadgetSeq2circ(unittest.TestCase):
         print(f"[test_sequence_circuit_size2] seq={sequence} csinfo={csinfo}")
         assert csinfo['nqubits_main'] == 1
         assert csinfo['nqubits_ancillae'] == 2
+
+    def test_circuit_from_assemblage_full_sequence1(self):
+        g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
+        g1 = AtomicGadget(2, 2, "g1", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
+        g2 = AtomicGadget(2, 2, "g2", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
+        # Generate assemblages of atomic gadgets.
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+        a2 = g2.wrap_gadget()
+        
+        a3 = a0.link_assemblage(a1, [(("g0", 0),("g1", 0))])
+        full_seq = a3.sequence
+        sqcirc = seq2circ(full_seq)
+        assert sqcirc is not None
+        assert sqcirc.nqubits==a3.required_ancillae + len(full_seq)
+        ngates = sqcirc.circ.size()
+        print("Created circuit with {circ.nqubits} qubits and {ngates} gates")
+        sqcirc.draw(output='mpl', filename="test_circuit_from_assemblage_full_sequence1.png")
 
 if __name__ == '__main__':
     unittest.main()

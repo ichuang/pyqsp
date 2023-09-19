@@ -8,6 +8,8 @@ from pyqsp.gadgets2.sequences import *
 class SequenceQuantumCircuit:
     '''
     Represent a quantum circuit for pyqsp
+
+    TODO: use qiskit circuit parameters to allow changing of circuit parameter values after circuit creation
     '''
     def __init__(self, nqubits_main, nqubits_ancillae, qubit_indices_main, qubit_indices_ancillae, verbose=True):
         '''
@@ -33,6 +35,18 @@ class SequenceQuantumCircuit:
         if self.verbose:
             print(f"['pyqsp.gadgets.seq2circ.QuantumCircuit'] Creating sequence quantum circuit on {self.nqubits} qubits with indices {qubit_indices_main}:{qubit_indices_ancillae}")
         return
+
+    def draw(self, *args, **kwargs):
+        '''
+        Draw circuit - using qiskit
+        '''
+        return self.circ.draw(*args, **kwargs)
+
+    def size(self, *args, **kwargs):
+        '''
+        return circuit size - using qiskit
+        '''
+        return self.circ.size()
 
     def circuit_qubit_index_to_register(self, idx):
         '''
@@ -186,7 +200,10 @@ def seq2circ(sequence, signal_value=0):
 
     qcirc = SequenceQuantumCircuit(nqubits_main, nqubits_ancillae, qubit_indices_main, qubit_indices_ancillae)
     
-    for seq in sequence:
+    def add_gate_for_seq_obj(seq):
+        '''
+        seq = SequenceObject instance
+        '''
         ginfo = SequenceMap.get(seq.__class__)
         if not ginfo:
             raise Exception(f"[pyqsp.gadgets.seq2circ] Error! Sequence element {seq} ({seq.__class__.__name__}) has no known corresponding quantum circuit gate element!")
@@ -234,5 +251,15 @@ def seq2circ(sequence, signal_value=0):
             else:
                 targets = [target]
             qcirc.add_gate(gate, controls, targets)
+
+    if sequence and isinstance (sequence[0], list):
+        # full assemblage
+        for seqlist in sequence:
+            for seq in seqlist:
+                add_gate_for_seq_obj(seq)
+    else:
+        # single sequence
+        for seq in sequence:
+            add_gate_for_seq_obj(seq)
 
     return qcirc
