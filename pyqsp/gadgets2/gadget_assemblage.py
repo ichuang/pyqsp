@@ -179,36 +179,62 @@ class AtomicGadget(Gadget):
             current_str = current_str + "\n"
         return current_str
 
-#######################################
-# Test correction sequence for program call
 def get_correction_phases():
+    """
+    Takes no arguments and returns a list of SequenceObject objects which, if they were run as a unitary, would implement the broadband NOT protocol of Guang Hao Low's thesis: http://hdl.handle.net/1721.1/115025.
+
+    Params:
+        None.
+
+    Returns:
+        seq : list of SequenceObject objects
+
+    """
     p0 = ZGate(0.1)
     sig = SignalGate(0)
     p1 = ZGate(-0.1)
-    return [p0, sig, p1]
+    seq = [p0, sig, p1]
+    return seq
 
-"""
-Takes a sequence and returns the nesting of that sequence in the correction phases given by get_correction_phases(); the protocol also prepends an X gate, meaning the resulting protocol is approximately a Z rotation (twice the desired one) for most arguments.
-"""
 def get_twice_z_correction(sequence):
+    """
+    Takes a list of SequenceObject objects and returns a new list of SequenceObject objects which, when run, results in approximately twice the Z-rotation conjugating the unitary resulting from running the original sequence. The correction phases are determined in get_correction_phases.
+
+    Params:
+        sequence : list of SequenceObject objects
+
+    Returns:
+        new_seq : list of SequenceObject objects
+    """
     correction_protocol = get_correction_phases()
-    seq = []
-    # Prepend an x rotation by the right amount. Note that there is no target or control specified; this is handled in the controllization of get_controlled_sequence().
+    new_seq = []
+    # Prepend an X gate. Note that there is no target or control specified; this is handled in get_controlled_sequence().
     x_gate = XGate(angle=np.pi/2)
-    seq.append(x_gate)
+    new_seq.append(x_gate)
     # Insert sequence as the oracle of correction protocol.
     # TODO: check if this needs to be a copy.
     for elem in correction_protocol:
         if isinstance(elem, SignalGate):
-            seq.extend(sequence)
+            new_seq.extend(sequence)
         else:
-            seq.append(elem)
-    return seq
+            new_seq.append(elem)
+    return new_seq
 
 def get_controlled_sequence(sequence, target, controls):
+    """
+    Takes a list of SequenceObject objects, a target index, and a list of control indices, and returns a new list of SequenceObject objects with that target, and those controls appended to the correspond objects' old controls.
+
+    Params:
+        sequence : list of SequenceObject objects
+        target : int
+        controls : list of ints
+
+    Returns:
+        new_seq : list of SequenceObject objects
+    """
     new_seq = []
     for elem in sequence:
-        # TODO: Check that this copy is not doing something suspect.
+        # TODO: check that this copy is not suspect.
         copy_elem = copy.deepcopy(elem)
         # Target is fixed by the output leg.
         copy_elem.target = target
@@ -221,10 +247,16 @@ def get_controlled_sequence(sequence, target, controls):
         new_seq.append(copy_elem)
     return new_seq
 
-"""
-Takes a list of sequence objects and returns a list which, if run, is the inverse of the original sequence. Inverts all single qubit gates, conjugates signal gates by Z gates, and reverses list order.
-"""
 def get_inverse_sequence(sequence):
+    """
+    Takes a list of SequenceObject objects and returns a list of SequenceObjects that, if run, results in the inverse circuit.
+
+    Params:
+        sequence : list of SequenceObject objects
+
+    Returns:
+        new_seq : list of SequenceObject objects
+    """
     new_seq = []
     for k in range(len(sequence)):
         # Traverse backward through the list.
@@ -1770,8 +1802,16 @@ class GadgetAssemblage:
         # Index gadgets
         g_index = comp_ends_0[0]
 
-        new_g0 = Gadget(gadget_0.a, gadget_0.b, gadget_0.label, new_g0_map)
-        new_g1 = Gadget(gadget_1.a, gadget_1.b, gadget_1.label, new_g1_map)
+        # Finally, instantiate Gadget objects, checking if atomic first.
+        if isinstance(gadget_0, AtomicGadget):
+            new_g0 = AtomicGadget(gadget_0.a, gadget_0.b, gadget_0.label, gadget_0.Xi, gadget_0.S, new_g0_map)
+        else:
+            new_g0 = Gadget(gadget_0.a, gadget_0.b, gadget_0.label, new_g0_map)
+
+        if isinstance(gadget_1, AtomicGadget):
+            new_g1 = AtomicGadget(gadget_1.a, gadget_1.b, gadget_1.label, gadget_1.Xi, gadget_1.S, new_g1_map)
+        else:
+            new_g1 = Gadget(gadget_1.a, gadget_1.b, gadget_1.label, new_g1_map)
 
         new_i0 = Interlink(self.interlinks[i0_index].a, self.interlinks[i0_index].label, i0_shift_map)
         new_i1 = Interlink(self.interlinks[i1_index].a, self.interlinks[i1_index].label, new_i1_map)
