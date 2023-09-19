@@ -1505,10 +1505,10 @@ class GadgetAssemblage:
             else:
                 return (is_valid, None)
 
-    """
-    Performs the same as swap_adjacent_gadgets(), but allows one to call gadgets by name.
-    """
     def swap_gadgets(self, g0, g1):
+        """
+        Performs the same as swap_adjacent_gadgets(), but allows one to call gadgets by string name.
+        """
         
         if not (g0 in self.gadget_set) or not (g1 in self.gadget_set):
             raise NameError("Gadget %s or %s does not exist" % (g0, g1))
@@ -1517,10 +1517,10 @@ class GadgetAssemblage:
             gadget_1 = self.gadget_set[g1]
             return self.swap_adjacent_gadgets(gadget_0, gadget_1)
 
-    """
-    This method updates the local maps of two adjacent gadgets which are not part of the same component; it should be able to do this without a call to the gadget_dict; if not, then it should update everything including the dict; we can verify by plotting.
-    """
     def swap_adjacent_gadgets(self, gadget_0, gadget_1):
+        """
+        This method updates the local maps of two adjacent gadgets which are not part of the same component; it should be able to do this without a call to the gadget_dict; if not, then it should update everything including the dict; we can verify by plotting.
+        """
         # we can check g0 and g1 as a paired component if we want to be really sure.
         is_valid_0 = self.is_valid_component([gadget_0])
         is_valid_1 = self.is_valid_component([gadget_1])
@@ -1608,21 +1608,6 @@ class GadgetAssemblage:
                 else:
                     new_i0_map[elem] = first_interlink_map[elem]
 
-        # print("CHANGES FOR LINK 0")
-        # for elem in change_list_0.keys():
-        #     print(elem, end=" to ")
-        #     print(change_list_0[elem])
-
-        # print("ORIGINAL LINK 0")
-        # for elem in first_interlink_map.keys():
-        #     print(elem, end=" to ")
-        #     print(first_interlink_map[elem])
-
-        # print("FIRST CHANGE LINK 0")
-        # for elem in new_i0_map.keys():
-        #     print(elem, end=" to ")
-        #     print(new_i0_map[elem])
-
         g0_output_legs = is_valid_0[2] # ghost leg including?
         change_list_1 = dict() # contains keys of first interlink to change
         for elem in (g0_output_legs + ghost_legs_f_2):
@@ -1639,10 +1624,6 @@ class GadgetAssemblage:
 
             if collision_pre_image != pre_image: # BUG: should this be true equality, or set membership?
                 collision_image = last_interlink.map_to_grid[(pre_image, 1)][0]
-                # print("COLLISION")
-                # print(collision_pre_image)
-                # print(collision_image)
-                # print(pre_image)
                 change_list_1[(collision_pre_image, 1)] = (collision_image, i2_index) 
 
         # Update changes found. BUG: WHY CANT WE JUST ALTER second row?
@@ -1658,22 +1639,6 @@ class GadgetAssemblage:
                     new_i2_map[elem] = change_list_1[elem] # BUG IF DROPPED LEGS (check instantiation of check_list)
                 else:
                     new_i2_map[elem] = last_interlink_map[elem] # BUG IF DROPPED LEGS (check instantiation of check_list)
-
-        # print("CHANGE LIST FOR LINK 2")
-        # for elem in change_list_1.keys():
-        #     print(elem, end=" to ")
-        #     print(change_list_1[elem])
-
-        # print("ORIGINAL LINK 2")
-        # for elem in last_interlink_map.keys():
-        #     print(elem, end=" to ")
-        #     print(last_interlink_map[elem])
-
-        # print("FIRST CHANGE FOR LINK 2")
-        # for elem in new_i2_map.keys():
-        #     print(elem, end=" to ")
-        #     print(new_i2_map[elem])
-
 
         """
         *
@@ -1711,26 +1676,6 @@ class GadgetAssemblage:
                     else:
                         continue
 
-        """
-        Something here is causing a loss of the transposition expected on the final row; if we can understand this, then we may understand more about the leg issue (though this is probably from the way that get-terminal legs works)
-        """
-
-        # print("SHIFT 0 LEGS")
-        # print(g0_in)
-        # print(g1_in)
-        # print(all_pre_images_0)
-
-        # print("LINK 0 BEFORE shifting")
-        # for elem in new_i0_map.keys():
-        #     print(elem, end=" to ")
-        #     print(new_i0_map[elem])
-
-        # print("LINK 0 after shifting")
-        # for elem in i0_shift_map.keys():
-        #     print(elem, end=" to ")
-        #     print(i0_shift_map[elem])
-
-
         temp_i2_interlink = Interlink(self.interlinks[i2_index].a, self.interlinks[i2_index].label, new_i2_map)
         temp_reverse_map_2 = self.reverse_interlink(temp_i2_interlink)
         g0_out = is_valid_0[2] + ghost_legs_f_2
@@ -1752,50 +1697,18 @@ class GadgetAssemblage:
                     shift = max(gadget_1.a, gadget_1.b)
                     pre_image = temp_reverse_map_2[(elem[0], 1)][0]
                     i2_shift_map[(pre_image + shift, 1)] = (elem[0], i2_index)
-                    # print("TOOK")
-                    # print((pre_image + shift, 1))
-                    # print((elem[0], i2_index))
-                    # if not ((pre_image + shift) in all_pre_images):
-                    #     # Correction
-                    #     print("NEED CORRECTION g0")
-                    #     pass
                 elif elem[0] in (g1_out): # note ghost legs already included
                     shift = max(gadget_0.a, gadget_0.b)
                     pre_image = temp_reverse_map_2[(elem[0], 1)][0]
                     # i2_shift_map[elem] = (new_i2_map[elem][0] - shift, new_i2_map[elem][1])
                     i2_shift_map[(pre_image - shift, 1)] = (elem[0], i2_index)
-                    # print("TOOK")
-                    # print((pre_image - shift, 1))
-                    # print((elem[0], i2_index))
-                    # if not ((pre_image - shift) in all_pre_images):
-                    #     # Correction
-                    #     print("NEED CORRECTION g1")
-                    #     pass
                 else:
-                    # print("LEFT OVER")
-                    # print(elem)
                     pre_image = temp_reverse_map_2[(elem[0], 1)][0]
                     if not(pre_image in all_pre_images_2):
                         i2_shift_map[(pre_image, 1)] = new_i2_map[(pre_image, 1)]
                     else:
                         continue
                     # i2_shift_map[elem] = new_i2_map[elem]
-
-        # print("LEGS OUT OF LAST INTERLINK")
-        # print(g0_out)
-        # print(g1_out)
-        # print(all_pre_images_2)
-
-        # print("LINK 2 BEFORE SHIFTING")
-        # for elem in new_i2_map.keys():
-        #     print(elem, end=" to ")
-        #     print(new_i2_map[elem])
-
-        # print("LINK 2 AFTER SHIFTING")
-        # for elem in i2_shift_map.keys():
-        #     print(elem, end=" to ")
-        #     print(i2_shift_map[elem])
-
 
         """
         *
@@ -1834,11 +1747,6 @@ class GadgetAssemblage:
         So you look at the legs you're set to change, take the complement, and then look forward through the original middle interlink. to where things map. Then look back through original first interlink, and see where it now maps. Then look through last interlink to see where it maps. Then see where these have been newly mapped to by shifting; and then connect up the remaining wires.
         """
 
-        # We know that 2 and 3 map to 0 and 1
-        # So we need to figure out the pre-image of 2 and 3 according to the new i0
-        # pre-images are 2 and 3; after changing link 0 these go to 5 and 6
-        # the after images of 0, 1 are, after shifting link 2, are 5, 6 as expected. So we want 5, 6 for the top of the interlink
-
         # Reversed shift maps
         temp_shift_i2 = Interlink(self.interlinks[i2_index].a, self.interlinks[i2_index].label, i2_shift_map)
         temp_shift_i2_map = self.reverse_interlink(temp_shift_i2)
@@ -1857,30 +1765,6 @@ class GadgetAssemblage:
                 # print(now_maps_0)
                 # print(now_maps_2)
                 new_i1_map[(now_maps_0, 1)] = (now_maps_2, i1_index)
-
-        # print("MIDDLE LEGS")
-        # print(g0_legs)
-        # print(g1_legs)
-
-        # print("MIDDLE INTERLINK BEFORE")
-        # for elem in middle_interlink.map_to_grid.keys():
-        #     print(elem, end=" to ")
-        #     print(middle_interlink.map_to_grid[elem])
-
-        # print("MIDDLE INTERLINK AFTER")
-        # for elem in new_i1_map.keys():
-        #     print(elem, end=" to ")
-        #     print(new_i1_map[elem])
-
-        # print("GADGET MAPS 0")
-        # for elem in new_g0_map.keys():
-        #     print(elem, end=" to ")
-        #     print(new_g0_map[elem])
-
-        # print("GADGET MAPS 1")
-        # for elem in new_g1_map.keys():
-        #     print(elem, end=" to ")
-        #     print(new_g1_map[elem])
 
         """
         *
@@ -1911,19 +1795,12 @@ class GadgetAssemblage:
         new_gadgets = self.gadgets[0:g_index] + [new_g1, new_g0] + self.gadgets[g_index + 2:]
         new_interlinks = self.interlinks[0:i0_index] + [new_i0, new_i1, new_i2] + self.interlinks[i0_index + 3:]
 
-        # for elem in new_gadgets:
-        #     print(elem.label)
-
-        # for elem in new_interlinks:
-        #     print(elem.label)
-
-
         """
         *
         *
         * Fifth step: straigtening ghost legs to maintain desired property.
         *
-        * NOTE: currently we have a limited set of these; we seem to be able to ignore re-indexing because the middle interlink becomes trivial for input and output legs, but it would be good to verify this with more checks in the future!
+        * 
         """
 
         # Correct the right-leading ghost legs: note same index, as between the gadgets we have a flat expression
@@ -1974,26 +1851,6 @@ class GadgetAssemblage:
                 else:
                     continue
 
-        # print("NEW INTERLINK GHOST 0")
-        # for elem in new_interlinks[0].map_to_grid.keys():
-        #     print(elem, end=" to ")
-        #     print(new_interlinks[0].map_to_grid[elem])
-
-        # print("NEW INTERLINK GHOST 1")
-        # for elem in new_interlinks[1].map_to_grid.keys():
-        #     print(elem, end=" to ")
-        #     print(new_interlinks[1].map_to_grid[elem])
-
-        # print("NEW INTERLINK GHOST 2")
-        # for elem in new_interlinks[2].map_to_grid.keys():
-        #     print(elem, end=" to ")
-        #     print(new_interlinks[2].map_to_grid[elem])
-
-        # print("NEW INTERLINK GHOST 3")
-        # for elem in new_interlinks[3].map_to_grid.keys():
-        #     print(elem, end=" to ")
-        #     print(new_interlinks[3].map_to_grid[elem])
-
         """
         *
         *
@@ -2006,40 +1863,37 @@ class GadgetAssemblage:
 
         return new_assemblage
 
-    """
-    Function which examines a selection of gadgets, and determines if they can all be swapped to be adjacent, and thus replaced by another gadget of a definite size. This involves trying to successively swap any non-consecutive gadgets through the collection. If possible, returns the swapped gadget, as well as a dictionary of its output legs.
-    """
     def is_replaceable(self, gadgets):
-        pass
+        """
+        Function which examines a selection of gadgets, and determines if they can all be swapped to be adjacent, and thus replaced by another gadget of a definite size. This involves trying to successively swap any non-consecutive gadgets through the collection. If possible, returns the swapped gadget, as well as a dictionary of its output legs.
+        """
+        raise NotImplementedError("Method is_replaceable(self, gadgets) remains to be implemented.")
     
-    """
-    This method works by sucessively swapping non-connected gadgets until a desired component is agglomerated.
-    """
     def agglomerate_component(self, gadgets):
-        pass
+        raise NotImplementedError("Method agglomerate_component(self, gadgets) remains to be implemented.")
         """
         Given a valid component, and a map of the terminal legs, produces a new gadget and corresponding dict with the same form; this should be done in two steps. The only case is the three gadget one; we can do all of these updates and then refresh the dict (gadgets and wires) and check validity. Everything happens within the map_to_grid of gadgets and interlinks. Gadgets shift uniformly (along with coords) and the interlinks are made to follow.
         """
 
     def contract(self, gadgets):
-        pass
+        raise NotImplementedError("Method contract(self, gadgets) remains to be implemented.")
 
     def expand(self, gadgets, gadget_assemblage):
-        pass
+        raise NotImplementedError("Method expand(self, gadgets) remains to be implemented.")
 
-    """
-    Function to give simple list of tuples indicating the the local index and name of the input and output legs of assemblage; everything is indexed by the first leg it encounters.
-    """
     def get_leg_guide(self):
+        """
+        Function to give simple list of tuples indicating the the local index and name of the input and output legs of assemblage; everything is indexed by the first leg it encounters.
+        """
         legs = self.get_terminal_legs()
         input_legs = list(map(lambda x: (x[0], x[1]), legs[2]))
         output_legs = list(map(lambda x: (x[0], x[1]), legs[3]))
         return (input_legs, output_legs)
 
-    """
-    Checks if the 
-    """
     def is_valid_linkage(self, o_legs, i_legs, linkage):
+        """
+        Checks if a specified list of paired input and output legs for two assemblages satisfies that pairs are disjoint and contained in relevant cartesian product.
+        """
         potential_o_legs = list(map(lambda x: x[0], linkage))
         potential_i_legs = list(map(lambda x: x[1], linkage))
 
@@ -2063,16 +1917,12 @@ class GadgetAssemblage:
                 raise NameError("Leg %s not output by first assemblage." % str((potential_o_legs[k][0], potential_o_legs[k][1])))
         return True
 
-    """
-    This method should allow us to link things nicely, following an understanding of which legs can be linked; checks the terminal legs of each, checks for ghost legs, and then simply assembles to gadgets. Also need to fill in missing blocks elsewhere for all the relevant maps.
-    """
     def link_assemblage(self, assemblage, linkage):
+         """
+        This method should allow us to link things nicely, following an understanding of which legs can be linked; checks the terminal legs of each, checks for ghost legs, and then simply assembles to gadgets. Also need to fill in missing blocks elsewhere for all the relevant maps.
+        """
         legs_0 = self.get_terminal_legs()
         legs_1 = assemblage.get_terminal_legs()
-
-        """
-        Eventually we need to check that the linkage is valid; we need that the set of keys for the two dictionaries below are exactly those elements in the linkage object.
-        """
 
         # Format of terminal legs(sorted(input_legs), sorted(output_legs), input_leg_dict, output_leg_dict)
         # Legs are labelled by gadget name and local leg.
@@ -2081,17 +1931,6 @@ class GadgetAssemblage:
         
         output_legs_0 = legs_0[3]
         input_legs_1 = legs_1[2]
-
-        # print("OUTPUT LEGS of A0")
-        # for elem in output_legs_0:
-        #     print(elem)
-        #     print(output_legs_0[elem])
-
-        # Note that these will be uniformly shifted up; but when we are referencing them, they stay as they are.
-        # print("INPUT LEGS of A1")
-        # for elem in input_legs_1:
-        #     print(elem)
-        #     print(input_legs_1[elem])
 
         """
         SOMETHING TO ADD: we need to determine if a valid pairing has been specified; this means that the set of inputs and outputs have to be distinct, belong to the right sets, and have no duplicates. Beyond this, everything is permitted.
@@ -2108,8 +1947,6 @@ class GadgetAssemblage:
             a0_leg = output_legs_0[key_0]
             a1_leg = input_legs_1[key_1] + len(self.global_grid)
             linkage_guide.append((a0_leg, a1_leg))
-
-        # print(linkage_guide)
 
         new_gadgets = []
         new_interlinks = []
@@ -2218,10 +2055,10 @@ class GadgetAssemblage:
         new_assemblage = GadgetAssemblage(new_gadgets, new_interlinks)
         return new_assemblage
 
-    """
-    Returns a special dictionary that indicates, for every position on the global grid, the first object (and local leg position) that that wire runs in to going left, in the form (g, local_y) for running into gadgets and ('WIRE', global_y) for running into an input leg.
-    """
     def gen_leg_origin_guide(self):
+        """
+        Returns a special dictionary that indicates, for every position on the global grid, the first object (and local leg position) that that wire runs in to going left, in the form (g, local_y) for running into gadgets and ('WIRE', global_y) for running into an input leg.
+        """
         # Specify an empty dictionary which is dynamically updated.
         leg_origin_guide = dict()
 
@@ -2253,10 +2090,3 @@ class GadgetAssemblage:
                                     loc = self.gadget_dict[prev_loc]
                                 # Continue on.
         return leg_origin_guide
-
-
-def main():
-    pass
-
-if __name__ == "__main__":
-    main()
