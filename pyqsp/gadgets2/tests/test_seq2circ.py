@@ -35,14 +35,14 @@ class TestGadgetSeq2circ(unittest.TestCase):
         th2 = 0.9
         seq = [ XGate(th1), ZGate(th2) ]
         circ = seq2circ(seq)
+        qasm = circ.circ.qasm()
+        print(f"qasm: ", qasm)
         U = circ.get_unitary()
         print(U.dim)
         assert U.dim==(2,2)
         assert U is not None
-        qasm = circ.circ.qasm()
-        print(f"qasm: ", qasm)
-        assert "rx(0.5) q[0]" in qasm
-        assert "rz(0.9) q[0]" in qasm
+        assert "rx(0.5) main[0]" in qasm
+        assert "rz(0.9) main[0]" in qasm
 
     def otest_get_assemblage_circuit(self):
         '''
@@ -58,6 +58,22 @@ class TestGadgetSeq2circ(unittest.TestCase):
         print(f"circuit size is {circ.circ.size()}")
         assert circ is not None
         assert circ.circ.size()==5
+
+    def test_sequence_circuit_size1(self):
+        '''
+        Test computation of sequence circuit size
+        '''
+        sequence = [ XGate(0.1, target=0, controls=None) ]
+        csinfo = sequence_circuit_size(sequence)
+        assert csinfo['nqubits_main'] == 1
+        assert csinfo['nqubits_ancillae'] == 0
+
+    def test_sequence_circuit_size2(self):
+        sequence = [ XGate(0.1, target=0, controls=[1, 2]) ]
+        csinfo = sequence_circuit_size(sequence)
+        print(f"[test_sequence_circuit_size2] seq={sequence} csinfo={csinfo}")
+        assert csinfo['nqubits_main'] == 1
+        assert csinfo['nqubits_ancillae'] == 2
 
 if __name__ == '__main__':
     unittest.main()
