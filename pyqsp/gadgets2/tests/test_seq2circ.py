@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 from pyqsp.gadgets2 import *
 
 class TestGadgetSeq2circ(unittest.TestCase):
@@ -94,6 +95,18 @@ class TestGadgetSeq2circ(unittest.TestCase):
         ngates = sqcirc.circ.size()
         print("Created circuit with {circ.nqubits} qubits and {ngates} gates")
         sqcirc.draw(output='mpl', filename="test_circuit_from_assemblage_full_sequence1.png")
+
+    def test_parameters1(self):
+        '''
+        Test the setting of parameters for signal operators.
+        '''
+        seq = [ SignalGate(0, target=0) ]
+        sqcirc = seq2circ(seq)
+        for th in np.linspace(-4, 4, 10):
+            sqcirc.bind_parameters([th])
+            umat = sqcirc.get_unitary()
+            assert umat.dim==(2,2)
+            assert abs(umat.data[1,0]-(-1j*np.sin(th/2))) < 1.0e-3
 
 if __name__ == '__main__':
     unittest.main()
