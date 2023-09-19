@@ -6,7 +6,7 @@ This file contains notes on the steps needed to retrieve the QSP phases for the 
 #################################################
 
 """
-This is currently contained in poly.py in the main repo.
+Both of these are currently contained in poly.py in the main repo.
 """
 class PolyExtraction(PolyTaylorSeries):
     def help(self):

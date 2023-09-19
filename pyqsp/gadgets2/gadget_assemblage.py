@@ -420,10 +420,16 @@ class GadgetAssemblage:
         else:
             raise NameError('Gadget instantiation failed.')
 
-    """
-    Returns a list, of length b for (a, b) assemblage, of all sequences constituting the assemblage.
-    """
     def full_assemblage_sequence(self):
+        """
+        Returns a list of length self.shape[1] containing lists of SequenceObject objects describing the circuit implementing the assemblage, if it contains only AtomicGadget objects. The circuit depends on up to self.shape[0] oracle unitaries.
+
+        Params:
+            self : GadgetAssemblage
+
+        Returns:
+            (full_seq, required_ancillae) : (list of list of SequenceObject objects, int)
+        """
         is_atomic = list(map(lambda x: isinstance(x, AtomicGadget), self.gadgets))
         if not all(is_atomic):
             raise NameError("Not all sub-gadgets are atomic; cannot build sequence.")
@@ -436,7 +442,7 @@ class GadgetAssemblage:
         # Generate dictionary mapping legs to their max depth.
         leg_depth_dict = self.assemblage_leg_depth()
         # Generate running sum of max depth for each leg, offset by overall (a, b) assemblage b.
-        # TODO: note inclusion of -k to properly instantiate ancillae
+        # N.b.; note inclusion of -k to properly instantiate ancillae
         assemblage_length = len(self.global_grid[0]) - 1
         ancilla_running_sum = [len(out_indices) - k + sum([leg_depth_dict[(out_indices[j], assemblage_length)] for j in range(k)]) for k in range(1, len(out_indices))]
 
@@ -457,12 +463,26 @@ class GadgetAssemblage:
             full_seq.append(seq)
         return (full_seq, required_ancillae)
 
-    """
-    Function returns a flat description of the circuit used to achieve a specified assemblage of purely atomic gadgets.
-
-    TODO: this should also take a target and start_ancilla argument, passed through from the beginning, based on the output leg. These are unchanging, and can be used by the computation to correctly instantiate ancillae.
-    """
     def get_assemblage_sequence(self, global_grid_y, global_grid_x, depth, target, ancilla_start):
+        """
+        For a position in self.global_grid, if that position is on a wire in the assemblage, returns a list of SequenceObject objects representing the circuit implementing that wire. Assumes that all Gadget objects in the inverse light-cone of that wire are AtomicGadget objects.
+
+        Params:
+            self : GadgetAssemblage
+            global_grid_y : int
+                The global y coordinate of some wire in self.global_grid; if this method is called on a wire, it will stay on a wire, and otherwise will throw a ValueError.
+            global_grid_x : int
+                The global x coordinate of some wire in self.global_grid; if this method is called on a wire, it will stay on a wire, and otherwise will throw a ValueError.
+            depth : int
+                The number of gadgets passed through, starting from a terminal leg of the overall assemblage, on the way to the current (global_grid_y, global_grid_x); when this method is called by full_assemblage_sequence, depth is initialized at zero.
+            target : int
+                The index of a qubit in the main register on which each single-qubit component of each SequenceObject acts; this is a zero-indexed integer between 0 and (self.shape[1] - 1).
+            ancillae_start : int
+                The index from which any allocated ancillae during the recursive call of get_assemblage_sequence are instantiated, inclusive. These indices are computed when calling full_assemblage_sequence, and are disjoint from all possible target indices.
+
+        Returns:
+            seq : list of SequenceObject objects
+        """
 
         last_gadget_output = set()
 
@@ -512,7 +532,7 @@ class GadgetAssemblage:
                         # Make recursive call with increased depth.
                         internal_seq = self.get_assemblage_sequence(true_y, c_x, depth + 1, target, ancilla_start)
 
-                        # We gather data to introduce correction. The target is fixed by an output leg, and where the control is added depends on the depth.
+                        # The target is fixed by output leg, and controls depends on depth and ancilla_start.
                         controls = [ancilla_start + depth]
                         twice_z_corr = get_twice_z_correction(internal_seq)
                         control_z_corr = get_controlled_sequence(twice_z_corr, target, controls)
@@ -523,14 +543,10 @@ class GadgetAssemblage:
                         # Note we initialize target for SWAPS, even though they have an ill defined target.
                         swap_0 = SwapGate(index_0, index_1, target=target)
                         swap_1 = SwapGate(index_0, index_1, target=target)
-                        # Finally, we sandwich internal sequence with the controlled z rotations, suitably swapped around.
+                        # Finally, we sandwich internal sequence with the controlled Z rotations, suitably swapped around.
                         new_seq = [swap_0] + control_z_corr + [swap_0] + internal_seq + [swap_1] + inverse_control_z_corr + [swap_1]
-
                         # Finally, append this corrected protocol to the main sequence.
                         seq.extend(new_seq)
-
-                        # Finally, tack on the internal sequence; NOTE THIS IS NOT CORRECTED; THAT WOULD BE NEW_SEQ.
-                        # seq.extend(internal_seq)
                     # If input legs map back to overall input leg instead.
                     else:
                         elem = external_seq[j]
@@ -612,15 +628,21 @@ class GadgetAssemblage:
         # We can decide if the final seq should be corrected or not. Currently it is given bare; plotting the 00 matrix element gives the same result.
         return seq
 
-    """
-    A string representation of a gadget; if all gadgets are atomic, gives the circuit form of each leg. If any are not, gives a dash-separated string of gadget labels in order.
-    """
     def __str__(self):
+        """
+        Provides a str form of a GadgetAssemblage, with two cases depending on whether all gadgets are atomic or not.
+
+        Params:
+            self : GadgetAssemblage
+
+        Returns:
+            total_string : str
+                If not all gadgets are atomic, returns a string with gadget labels separated by dashes, in the order they appear in the GadgetAssemblage, e.g., "g0-g1-g2". If all gadgets are atomic, returns newline separated lists of SequenceObject objects.
+        """
         if self.is_atomic_assemblage:
             out_indices = self.output_legs
             out_indices = sorted(out_indices)
             total_string = ""
-            # 
             sequence = self.sequence
             for k in range(len(out_indices)):
                 current_str = "leg %d\n" % out_indices[k]
@@ -632,7 +654,8 @@ class GadgetAssemblage:
             return total_string
         else:
             name_list = list(map(lambda x: x.label, self.gadgets))
-            return "-".join(name_list)
+            total_string = "-".join(name_list)
+            return total_string
 
     def get_assemblage_circuit(self):
         '''
@@ -642,24 +665,24 @@ class GadgetAssemblage:
         sqcirc = seq2circ(full_seq)
         return sqcirc
         
-    """
-    Function returns a unitary, called on a specified series of inputs corresponding to input legs of assemblage, describing the action of the assemblage.
-    """
     def get_assemblage_unitary(self):
-        pass
+        """
+        Returns a unitary, called on a specified series of inputs corresponding to input legs of assemblage, matching the action of the assemblage.
+        """
+        raise NotImplementedError("Method get_assemblage_unitary(self) remains to be implemented.")
 
-    """
-    Returns the maximum number of gadgets one might have to pass through traversing from a terminal leg to an initial leg.
-    """
     def assemblage_max_depth(self):
+        """
+        Returns an int: the maximum number of gadgets one might have to pass through traversing from a terminal leg of this GadgetAssemblage to any initial leg. E.g., for any wrapped gadget, this depth is 1.
+        """
         i_legs, o_legs, i_dict, o_dict = self.get_terminal_legs()
         grid_positions = [(leg, len(self.global_grid[0]) - 1) for leg in o_legs]
         return self.max_depth(grid_positions, 0)
 
-    """
-    Returns max depth for each output leg of gadget as a dictionary.
-    """
     def assemblage_leg_depth(self):
+        """
+        Returns an int: the maximum number of gadgets one might have to pass through traversing from each possible terminal leg of this GadgetAssemblage to any initial leg. This is a length self.shape[1] list of ints, each bounded above by assemblage_max_depth.
+        """
         i_legs, o_legs, i_dict, o_dict = self.get_terminal_legs()
         grid_positions = [(leg, len(self.global_grid[0]) - 1) for leg in o_legs]
         leg_depth_dict = dict()
@@ -667,10 +690,19 @@ class GadgetAssemblage:
             leg_depth = self.max_depth([elem], 0)
             leg_depth_dict[elem] = leg_depth
         return leg_depth_dict
-    """
-    Recursive helper function called by assemblage_max_depth().
-    """
+    
     def max_depth(self, grid_positions, depth):
+        """
+        Recursive helper function called by assemblage_max_depth(), taking a list of positions on the global_grid, and recursively computing their maximum depth.
+
+        Params: 
+            self : GadgetAssemblage
+            grid_positions : list of (int, int)
+                Grid positions are locations on self.global_grid. This method traces along all wires leading from these locations, recursively keeping track of depth.
+
+        Returns:
+            max_depth : int
+        """
         total_depths = []
         # For all output legs, find where they map backwards to.
         for grid_pos in grid_positions:
@@ -685,6 +717,9 @@ class GadgetAssemblage:
                 # Find the gadget being collided into.
                 collision_gadget = self.gadget_set[next_collision[0]]
                 input_legs = [(k, 0) for k in range(collision_gadget.a)]
+                """
+                TODO: if we change input_legs to instead be those input legs which are called by the particular grid_pos according to said Gadget's S[grid_pos], then we can save ancillae in the worst case.
+                """
                 new_positions = [collision_gadget.map_to_grid[leg] for leg in input_legs]
                 # Take the maximum of the returned depths.
                 new_depths = [self.max_depth(new_positions, depth + 1)]
@@ -692,10 +727,18 @@ class GadgetAssemblage:
         # Return a total max of all collected depths.
         return max(total_depths)
 
-    """
-    Given a series of Gadget and Interlink objects, determines if they can, up to the rules specified, be validly recognized as a gadget assemblage. This means that the gadgets' global coordinates are sequential in x, non-overlapping but contiguous in y, and that these global coordinates are increasing with the index in the list.
-    """
     def is_valid_instantiation(self):
+        """
+        The main function which checks that a GadgetAssemblage object has been defined with constituent objects (Gadget and Interlink objects) which validly specify a causal network. This means that the gadgets' global coordinates are sequential in x, non-overlapping but contiguous in y, and that these global coordinates are increasing with the index in the list. Gadget and Interlink names are checked to be unique, all sizes are checked, and valid permutations are checked. 
+
+        Params:
+            self : GadgetAssemblage
+
+        Returns:
+            is_valid : bool
+                If True, the GadgetAssemblage can proceed with being assembled in __init__; if False, a corresponding descriptive error will be thrown.
+        """
+
         gadgets = self.gadgets
         interlinks = self.interlinks
 
@@ -847,6 +890,16 @@ class GadgetAssemblage:
             return True
 
     def get_ghost_legs(self):
+        """
+        Positions on self.global_grid which do not contain wires interacting with gadgets still contain 'ghost wires' which skirt around these gadgets, and connect one end of the global grid to the other. Internal logic defined later keeps these wires straight until they contact a space where a gadget leg could be. This method returns data regarding these legs.
+
+        Params:
+            self : GadgetAssemblage
+
+        Returns:
+            (ghost_legs, ghost_legs_f_map, ghost_legs_r_map) : list of ints, list of list of ints, list of list of ints.
+                ghost_legs is a list of all global_y for which a ghost_leg ever appears at global_y. The other two lists are of length self.shape[1] and contain, at position global_x, those global_y of ghost legs which have existed from the beginning (end) tracing forward (backward) through the global_grid.
+        """
         ghost_legs_f = [[] for k in range(len(self.global_grid[0]))]
         ghost_legs_r = [[] for k in range(len(self.global_grid[0]))]
 
@@ -869,7 +922,7 @@ class GadgetAssemblage:
             else:
                 pass
             
-            # Keep tally of previous ghost legs as well; not starts loading at 1
+            # Keep tally of previous ghost legs; note starts loading at 1
             replace_item = ghost_legs_f[k+1] + current_tally + ghost_legs_f[k]
             ghost_legs_f[k+1] = replace_item.copy()
 
@@ -899,7 +952,9 @@ class GadgetAssemblage:
         return (ghost_legs, ghost_legs_f_map, ghost_legs_r_map)
 
     def check_interlink_ghost_legs(self):
-
+        """
+        Returns (bool, list of bools) for whether all Interlink objects in self keep ghost legs straight. The first bool is an overall check, while the second length len(self.interlinks) list of bools is the result of the check for each Interlink in self.interlinks.
+        """
         ghost_legs = self.get_ghost_legs()[0]
         interlinks = self.interlinks
         is_valid = True 
@@ -916,18 +971,19 @@ class GadgetAssemblage:
         return (is_valid, check_list)
 
     def instantiate_global_grid(self):
+        """
+        Generates and returns a list of lists of (int, int) to become the GadgetAssemblage's global_grid, with respect to which all Gadget and Interlink objects, through their map_to_grid attribute, are positioned.
+        """
         grid_len_0 = sum([max(g.a, g.b) for g in self.gadgets])
         grid_len_1 = len(self.gadgets) + 1
         global_grid = [[(j, k) for k in range(grid_len_1)] for j in range(grid_len_0)]
         return global_grid
 
-    """
-    A quick way to print a gadget using gadget_dict to a tikz-expressible form; currently contiguous lines are not automatically combined, which may yield a less pleasing plot.
-    """
-    def print_assemblage(self):
-        # At each point, draw a wire to the relevant end points.
+    def print_assemblage(self, in_color=True):
+        """
+        Returns a string representing self in a Tikz-expressible form; currently wires are colored from among a finite set by default. Setting in_color to False produces black and white diagrams.
+        """
         print_str = ""
-
         paths = []
         for y in range(len(self.global_grid)):
             for x in range(len(self.global_grid[0])):
@@ -989,7 +1045,10 @@ class GadgetAssemblage:
             color = color_list[(13*index)%len(color_list)]
             index = index + 1
             print_str = print_str + ("\\draw[line width=0.18cm, color=white] %s;\n" % (str_path))
-            print_str = print_str + ("\\draw[color=%s] %s;\n" % (color, str_path))
+            if in_color:
+                print_str = print_str + ("\\draw[color=%s] %s;\n" % (color, str_path))
+            else:
+                print_str = print_str + ("\\draw %s;\n" % (color, str_path))
                     
         for g in self.gadgets:
             size = max(g.a, g.b)
@@ -1017,10 +1076,19 @@ class GadgetAssemblage:
 
         return print_str
 
-    """
-    A pleasant helper function for combining lists with identical endpoints; this is used in print_assemblage, to simplify the form of the resulting diagram, and allow for easier tex styling.
-    """
     def combine_paths(self, paths):
+        """
+        A helper function for combining lines defined by lists of 2D coordinates with identical endpoints; this is used in print_assemblage, to simplify the form of the resulting diagram and allow for easier styling.
+
+        Params:
+            self : GadgetAssemblage
+            paths : list of (float, float)
+                Lists of floats are assumed to not form closed loops when plotted in 2D space; if they do, this method will fail.
+
+        Returns: 
+            local_paths : list of (float, float)
+                Plotted in 2D, these lines are identical to those in paths, but where intersecting, have been turned into one line.
+        """
         
         # This algorithm assumes that paths cannot form loops
         local_paths = paths.copy()
@@ -1048,10 +1116,18 @@ class GadgetAssemblage:
                 break
         return local_paths
 
-    """
-    TODO: we need to do a reverse pass in this method; in the case of, for instance, a 2, 1 gadget, the current method would think that both output legs are terminal, because we can't get there from an input leg. But we see this if we go from the end. Anything that eventually reaches a gadget is a terminal leg.
-    """
     def get_terminal_legs(self):
+        """
+        Returns data related to the overall input and output legs of a GadgetAssemblage object.
+
+        Params:
+            self : GadgetAssemblage
+
+        Returns: 
+            (input_legs, output_legs, input_leg_dict, output_leg_dict) : list of ints, list of ints, dict from structured data to elements of input_legs, dict from structured data to elements of output_legs
+                Lists input_legs and output_legs have length self.shape[0] and self.shape[1] respetively, and contain distinct integers which are global_y coordinates of input legs and output legs respectively on the global grid. For output legs, these coordinates are taken after going through self.interlinks[-1]. For input legs, these are taken WITHOUT going backwards through self.interlinks[0].
+                Structured data for input_leg_dict output_leg_dict has the form (gadget_label, gadget_leg_local_y, gadget_leg_local_x). That is, a flat tuple of a gadget's label, and one of its local leg coordinates, will, if said leg leads directly to an input or output leg, return the corresponding global_grid y index of said input or output leg.
+        """
         input_legs = []
         output_legs = []
 
@@ -1106,6 +1182,9 @@ class GadgetAssemblage:
         return (sorted(input_legs), sorted(output_legs), input_leg_dict, output_leg_dict)
 
     def get_gadget(self, x, y, lr):
+        """
+        A method to query a location on the global_grid, and look left (lr = 0) or right (lr = 1) for the presence of a gadget at the preceeding (lr = 0) or following (lr = 1) x_coord, following wires.
+        """
 
         # Check right (lr = 1) or left (lr = 0) for gadget name, if it exists.
         linked_gadgets = self.gadget_dict[(y, x)]
@@ -1114,10 +1193,10 @@ class GadgetAssemblage:
         else:
             return []
 
-    """
-    Returns an interlink map-to-grid object applying the inverse permutation of the one supplied in the argument, with respect to the same global grid points.
-    """
     def reverse_interlink(self, interlink):
+        """
+        Returns an interlink map-to-grid object applying the inverse permutation of the one supplied with respect to the same global_grid points.
+        """
         reverse_map_to_grid = dict()
         list_in = []
         list_out = []
@@ -1132,10 +1211,10 @@ class GadgetAssemblage:
 
         return reverse_map_to_grid
 
-    """
-    Note extended terminal coordinates, and specific names for wires (WIRE), which should be protected in the instantiation method.
-    """
     def gen_gadget_dict_wires(self):
+        """
+        Given a valid list of gadgets and interlinks, and a successful run of gen_gadget_dict_gadgets, instantiates representation of wires in self.gadget_dict.
+        """
         
         input_legs, output_legs, i_dict, o_dict = self.get_terminal_legs()
         global_input_legs = list(map(lambda x: (x, 0), input_legs))
@@ -1260,10 +1339,10 @@ class GadgetAssemblage:
             # Remove duplicates in new_check, and fill queue for next iteration.
             current_check = list(set(new_check))
 
-    """
-    Given a valid series of gadgets and interlinks, modifies a _blank_ gadget_dict such that grid points which connect to a gadget leg (through an interlink to the left, or through nothing to the right) are marked with a tuple element (gadget_name, global_coord, local_coord) at dictionary key global_coord. Each global coord maps to a tuple of possibly two such elements, representing the left and right neighbors of global_coord. Wire notation is handled by gen_gadget_dict_wires, to be run only after gen_gadget_dict_gadgets.
-    """
     def gen_gadget_dict_gadgets(self):
+        """
+        Given a valid series of gadgets and interlinks, modifies a BLANK gadget_dict such that grid points which connect to a gadget leg (through an interlink to the left, or through nothing to the right) are marked with a tuple element (gadget_name, global_coord, local_coord) at dictionary key global_coord. Each global coord maps to a tuple of possibly two such elements, representing the left and right neighbors of global_coord. Wire notation is handled by gen_gadget_dict_wires, to be run only AFTER gen_gadget_dict_gadgets.
+        """
         gadget_dict = dict()
         for j in range(len(self.global_grid)):
             for k in range(len(self.global_grid[0])):
@@ -1301,6 +1380,9 @@ class GadgetAssemblage:
         return gadget_dict
 
     def get_component_ends(self, gadgets):
+        """
+        A small helper method which, given a list of Gadget objects (gadgets), finds the maximum and minimum global_x coordinates these gadgets couple to, and returns (min_index, max_index) of form (int, int).
+        """
         min_index = min([g.map_to_grid[(0,0)][1] for g in gadgets])
         max_index = max([g.map_to_grid[(0,1)][1] for g in gadgets])
         return (min_index, max_index)

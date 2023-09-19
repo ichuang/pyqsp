@@ -448,7 +448,7 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
     def test_loop_atomic_gadget(self):
         g0 = AtomicGadget(2, 2, "g0", [[1, 2, 3],[4, 5, 6]], [[0, 1],[1, 0]])
         g1 = AtomicGadget(2, 2, "g1", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
-        g2 = AtomicGadget(2, 2, "g2", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 0]])
+        g2 = AtomicGadget(2, 2, "g2", [[7, 8, 9],[10, 11, 12]], [[0, 1],[1, 1]])
         # Generate assemblages of atomic gadgets.
         a0 = g0.wrap_gadget()
         a1 = g1.wrap_gadget()
@@ -483,9 +483,14 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # Assert that targets and controls are disjoint among each other.
         self.assertEqual(total_target_set_length + total_controls_set_length, target_control_union_length)
 
+        # Assert that target is influenced only by output leg.
         for k in range(len(full_seq)):
             for j in range(len(full_seq[k])):
                 self.assertEqual(full_seq[k][j].target, k)
+
+        # Note that required_ancillae is the same whether or not the second output leg of the last gadget calls the index-zero oracle; checking this property is a little more involved.
+        required_ancillae = a4.required_ancillae
+        self.assertEqual(required_ancillae, 5)
 
 if __name__ == '__main__':
     unittest.main()

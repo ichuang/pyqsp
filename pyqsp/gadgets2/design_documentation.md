@@ -1,9 +1,9 @@
 # Overview of design choices
 
 ## File structure
-- `gadget_assemblage.py` contains the `GadgetAssemblage` class by itself, and imports the more basic objects of `Gadget` and `AtomicGadget`.
-- `gadget_components.py` contains the basic objects of `Gadget` and `AtomicGadget`.
-- Tests are located in the `tests` directory. Tests can be run with `python -m unittest test.test_gadget_assemblage`.
+- [x] `gadget_assemblage.py` contains the `GadgetAssemblage` class by itself, and imports the more basic objects of `Gadget` and `AtomicGadget`.
+- [ ] `gadget_components.py` contains the basic objects of `Gadget` and `AtomicGadget`.
+- [x] Tests are located in the `tests` directory. Tests can be run with `python -m unittest test.test_gadget_assemblage`.
 
 ## Enumerated classes
 - The `Gadget` class is a superclass of `AtomicGadget` only; the former contains only size information and derived properties, while the latter contains phase and oracle information, as well as a variety of methods for viewing internal structure, and so on.
@@ -23,9 +23,9 @@
 
 ## On handling multiple controls
 - Correction of a gadget involves extraction first, i.e., using a gadget to generate an approximate Z rotation; this Z rotation is then controllized and combined with the original gadget sequence to produce a corrected output
-- `Can the controllization process at a given depth be handled by simply adding all controls to a given sequence element up to that specified depth?`
+- `Can the controllization process at a given depth be handled by simply adding all controls to a given sequence element up to that specified depth?` Answer: yes, and this has been implemented.
 - The resulting circuit will look, at each step, to an outside observer, like a Z conjugated X rotation; when correcting, we run extraction and then controllize the whole thing; for our purposes, this means adding a control on top of any controls already in existence. The SWAPS at the far ends will take care of moving the accrued half phase to the right qubit.
-- `Does this mean we have to pass arguments inside get_sequence() for ancillae tracking, or can we derive everything from the depth? It seems like the depth during traversal tells us everything we need to know.`
+- `Does this mean we have to pass arguments inside get_sequence() for ancillae tracking, or can we derive everything from the depth? It seems like the depth during traversal tells us everything we need to know.` Everything can be derived from depth, and is handled in the course of the recursive call automatically.
 
 ## Interaction with quantum circuit packages
 - The first step is to create an unambiguous description of the quantum circuit for a gadget; compiling this to an actual unitary will be done separately (and hopefully simply).
@@ -36,7 +36,8 @@
 - [x] Writing up `get_gadget_sequence` for `AtomicGadget`
 - [x] Writing up `get_assemblage_sequence` for `GadgetAssemblage`
 - [x] Writing a check-function for atomic assemblage definition; right now any signals are allowed, which can throw errors if one doesn't define the oracles properly.
-- [ ] Currently the swap functions (unused) do not preserve atomic gadgets; this can be done using the same method that `link_assemblage` uses. 
+- [x] Currently the swap functions (unused) do not preserve atomic gadgets; this can be done using the same method that `link_assemblage` uses. 
 - [ ] Adding a new argument for `get_correction_phases` to specify polynomial degree; eventually this could be a property assigned to each atomic gadget for its output legs individually, but for our purposes it is best to make it a uniform value, and the code makes it easy to change.
 - [ ] It's possible for one to desire that a given wire is shifted; that is, the approximate X rotation has its value modified by a known amount. This can be a property of an input or output leg of a gadget, or it can be treated as an uncorrected (1,1) gadget and tacked on in various places. For the moment we will ignore it, but it's helpful to include in certain examples.
 - [x] `wrap_gadget` can be modified to handle both standard an atomic gadgets, rather than using two methods with `wrap_atomic_gadget`.
+- [ ] Right now the code is being overly conservative with ancilla allocation; depending on `S` for a given `AtomicGadget`, certain paths backwards through the gadget may not be taken at all, limiting the maximum depth seen by that leg; moreover, if `S` is a single variable sequence, correction can be deferred to the following gadget in general. Each of these can be simply accomodated by changing how `max_depth` runs, but we have a design choice as to how to handle possible deferral of correction. `NOTE: THIS CAN BE FIXED IN ONE LINE, MARKED IN CODE TO CHANGE AFTER CONFERRING ON STANDARD.`
