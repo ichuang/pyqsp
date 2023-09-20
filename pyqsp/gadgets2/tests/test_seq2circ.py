@@ -108,6 +108,23 @@ class TestGadgetSeq2circ(unittest.TestCase):
             assert umat.dim==(2,2)
             assert abs(umat.data[1,0]-(-1j*np.sin(th/2))) < 1.0e-3
 
+    def test_response_function1(self):
+        '''
+        test response function method of SeqeuenceQuantumCircuit
+        '''
+        # try a pi/4 gadget
+        ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/2, -np.pi/2, 0]], [[0, 0, 0]])
+        seq = ag.get_gadget_sequence()
+        qc = seq2circ(seq, verbose=False)
+        print(f"U = ", qc.get_unitary(values=[0]).data)
+        # qc.draw('mpl')
+        X, Y = qc.one_dim_response_function(npts=100)
+        # plt.plot(X[:,0], Y)
+        assert abs(X[0,0] - (-1)) < 1.0e-3
+        assert abs(X[-1,0] - (1)) < 1.0e-3
+        assert abs(Y[0] - (-1)) < 1.0e-3
+        assert abs(Y[-1] - (1)) < 1.0e-3
+
 if __name__ == '__main__':
     unittest.main()
         

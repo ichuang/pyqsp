@@ -1,6 +1,7 @@
 import qiskit
 import qiskit_aer
 import qiskit.circuit.library as qcl
+import numpy as np
 
 from qiskit import QuantumCircuit
 from qiskit.circuit import Parameter	# used for signal parameters
@@ -65,16 +66,50 @@ class SequenceQuantumCircuit:
         values: either ordered list of floats, for signal_0, signal_1, ...
                 or dict with { 0: float, 1: float, ... }
         '''
-        if isinstance(values, list):
+        if isinstance(values, list) or isinstance(values, np.ndarray):
             vdict = {self.signal_parameters[x]: values[x]  for x in sorted(self.signal_parameters.keys())}
         elif isinstance(values, dict):
             vdict = {self.signal_parameters[x]: values[x]  for x in self.signal_parameters if x in values}
+        else:
+            raise Exception(f"[pyqsp.gadgets.seq2circ.QuantumCircuit] bind_parameters called withn type(values)={type(values)} unknown - should be list, np.array, or dict")
         try:
             self.bound_circ = self.circ.bind_parameters(vdict)
             if self.verbose:
                 print(f"[pyqsp.gadgets.seq2circ.QuantumCircuit] bound parameters with vdict={vdict}")
         except Exception as err:
             raise Exception(f"[pyqsp.gadgets.seq2circ.QuantumCircuit] failed to bind parameters with values={values} and vdict={vdict}, err={err}")
+
+    def one_dim_response_function(self, start_values=None, end_values=None, uindex=None, npts=200):
+        '''
+        Compute one-dimensional response function for the circuit, returning two one-dimensional
+        numpy arrays X, Y each of which has npts points.  The response is computed along a vector
+        starting from start_values and ending at end_values.  By default, these are [-1] and [+1]
+        (with zeros appended for higher dimensional inputs).  The response is given by the 
+        matrix element U[uindex], where uindex defaults to (0,0) if not specified.
+
+        start_values: (list) starting value for inputs, defaults to [-1, 0...]
+        end_values: (list) ending value for inputs, defaults to [+1, 0...]
+        uindex: (tuple) two-dimensional index for the element of the unitary to take as the response output;
+                defaults to (0,0)
+        npts: (int) number of points to sample uniformly along the vector from start to end
+        '''
+        dim_inputs = len(self.signal_parameters)
+        start_values = np.array(start_values or [-1] + [0]*(dim_inputs-1))
+        end_values = np.array(end_values or [1] + [0]*(dim_inputs-1))
+        vec = end_values - start_values
+        xs = np.linspace(0, 1, npts)
+        uindex = uindex or (0,0)
+        X = []
+        Y = []
+        for xv in xs:
+            xp = start_values + xv * vec
+            xpacos = 2*np.arccos(xp)
+            umat = self.get_unitary(values=xpacos).data
+            Y.append(umat[uindex])
+            X.append(xp)
+        X = np.array(X)
+        Y = np.array(Y)
+        return X, Y
 
     def draw(self, *args, **kwargs):
         '''
@@ -137,10 +172,20 @@ class SequenceQuantumCircuit:
             print(f"[pyqsp.gadgets.seq2circ.QuantumCircuit] Added gate {gate} on register qubits {register_qubits} at sequence number {self.seqnum}")
         self.seqnum += 1
         
-    def get_unitary(self, decimals=3):
+    def get_unitary(self, values=None, decimals=3):
         '''
-        Return unitary transform matrix performed by this circuit
+        Return unitary transform matrix performed by this circuit.
+        if values is not None then first use those to bind parameters.
+
+        values: either ordered list of floats, for signal_0, signal_1, ...
+                or dict with { 0: float, 1: float, ... }
         '''
+        if values is not None:
+            self.bind_parameters(values)
+
+        if self.signal_parameters and (self.bound_circ is None):
+            raise Exception(f"[pyqsp.gadgets.seq2circ] Error! Cannot get unitary for circuit without providing values for the {len(self.signal_parameters)} signal parameters")
+
         if self.bound_circ is not None:
             circ2 = self.bound_circ.copy()
         else:
@@ -230,13 +275,13 @@ def sequence_circuit_size(sequence):
             'assemblage2circuit_qubit': assemblage2circuit_qubit,
             }
 
-def seq2circ(sequence, signal_value=0):
+def seq2circ(sequence, verbose=False):
     '''
     Return an instance of SequenceQuantumCircuit corresponding to the provided sequence.
 
     sequence: (list) list of SequenceObject's, each of which is to be transformed into a gate
               or list of lists of SequenceObjects, for a full assemblage
-    signal_value: (floar) value to use for signal, if it appears in the sequence
+    verbose: (bool) output debugging messages if True (passed on to SequenceQuantumCircuit
     '''
     csinfo = sequence_circuit_size(sequence)
     nqubits_main = csinfo['nqubits_main']
@@ -245,7 +290,7 @@ def seq2circ(sequence, signal_value=0):
     qubit_indices_ancillae = csinfo['qubit_indices_ancillae']
     assemblage2circuit_qubit = csinfo['assemblage2circuit_qubit']
 
-    qcirc = SequenceQuantumCircuit(nqubits_main, nqubits_ancillae, qubit_indices_main, qubit_indices_ancillae)
+    qcirc = SequenceQuantumCircuit(nqubits_main, nqubits_ancillae, qubit_indices_main, qubit_indices_ancillae, verbose=verbose)
     
     def add_gate_for_seq_obj(seq):
         '''
