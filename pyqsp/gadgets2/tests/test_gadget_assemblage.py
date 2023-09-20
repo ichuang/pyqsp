@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 from pyqsp.gadgets2 import *
 # from gadget_assemblage import *
 
@@ -395,7 +396,6 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # Assert targets are consistent across rows of sequence.
         for k in range(len(full_seq)):
             for j in range(len(full_seq[k])):
-                # print(str(full_seq[k][j].target) + ":" + str(full_seq[k][j].controls), end=" ")
                 self.assertEqual(full_seq[k][j].target, k)
 
         # Generate depth 3 protocol.
@@ -491,6 +491,36 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # Note that required_ancillae is the same whether or not the second output leg of the last gadget calls the index-zero oracle; checking this property is a little more involved.
         required_ancillae = a4.required_ancillae
         self.assertEqual(required_ancillae, 5)
+
+    def test_simple_1_1_gadget_composition(self):
+        # Generate two (1, 1) atomic gadgets.
+        g0 = AtomicGadget(1, 1, "g0", [[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
+        g1 = AtomicGadget(1, 1, "g1", [[0, np.pi/3, -np.pi/3, 0]], [[0, 0, 0]])
+        # Wrap atomic gadgets.
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+        # Link wrapped atomic gadgets
+        a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
+        full_seq = a2.sequence
+
+        # NOTE: this gadget technically needs no correction, as everything is single variable. As such, it should directly compose pi/3 and pi/4 protocols, even without correction.
+
+    def test_simple_2_1_gadget_composition(self):
+        # Generate (1, 1) atomic gadgets.
+        g0 = AtomicGadget(1, 1, "g0", [[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
+        g1 = AtomicGadget(1, 1, "g1", [[0, np.pi/3, -np.pi/3, 0]], [[0, 0, 0]])
+        # This last (2, 1) gadget does a simple form of multiplication
+        g2 = AtomicGadget(2, 1, "g2", [[0, np.pi/4, -np.pi/4, 0]], [[0, 1, 0]])
+        # Wrap atomic gadgets.
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+        a2 = g2.wrap_gadget()
+        # Link wrapped atomic gadgets
+        a3 = a0.link_assemblage(a2, [(("g0", 0), ("g2", 0))])
+        a4 = a1.link_assemblage(a3, [(("g1", 0), ("g2", 1))])
+        full_seq = a4.sequence
+
+        # NOTE: this gadget needs correction in general, as we want to multiply the pi/4 and pi/3 protocols properly, according to the (2, 1) pi/4 gadget, which normally yields T_2(x_0)*x_1.
 
 if __name__ == '__main__':
     unittest.main()

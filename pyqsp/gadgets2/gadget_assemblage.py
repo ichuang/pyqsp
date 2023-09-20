@@ -204,7 +204,7 @@ def get_correction_phases(degree=4):
         correction_protocol.append(ZGate(phi[k]))
     return correction_protocol
 
-    # NOTE: Dummy correction protocol for short circuits. Uncomment for testing.
+    # NOTE: Dummy 'no-correction' protocol. Uncomment for testing.
     # p0 = ZGate(0)
     # sig = SignalGate(0)
     # p1 = ZGate(0)
