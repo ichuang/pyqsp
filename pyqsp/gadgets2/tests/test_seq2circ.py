@@ -27,8 +27,8 @@ class TestGadgetSeq2circ(unittest.TestCase):
         assert circ is not None
 
     def test_seq2circ2(self):
-        th1 = 0.5
-        th2 = 0.9
+        th1 = 0.5 / 2		# see TEMPORARY doubling in seq2circ.py
+        th2 = 0.9 / 2		# see TEMPORARY doubling in seq2circ.py
         seq = [ XGate(th1), ZGate(th2) ]
         circ = seq2circ(seq)
         qasm = circ.circ.qasm()
@@ -113,7 +113,8 @@ class TestGadgetSeq2circ(unittest.TestCase):
         test response function method of SeqeuenceQuantumCircuit
         '''
         # try a pi/4 gadget
-        ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/2, -np.pi/2, 0]], [[0, 0, 0]])
+        # ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/2, -np.pi/2, 0]], [[0, 0, 0]])
+        ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])	# see TEMPORARY doubling in seq2circ.py
         seq = ag.get_gadget_sequence()
         qc = seq2circ(seq, verbose=False)
         print(f"U = ", qc.get_unitary(values=[0]).data)
