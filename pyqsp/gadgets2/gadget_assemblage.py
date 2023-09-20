@@ -73,6 +73,8 @@ class Interlink:
     """
     A class storing permutations to be inserted between Gadget objects inside a GadgetAssemblage.
 
+    ...
+
     Attributes
     ----------
     a : int 
@@ -164,7 +166,7 @@ class AtomicGadget(Gadget):
                 signal = SignalGate(self.S[j][k])
                 seq.append(phase)
                 seq.append(signal)
-            final_phase = phase = ZGate(self.Xi[j][-1])
+            final_phase = ZGate(self.Xi[j][-1])
             seq.append(final_phase)
             seq_list.append(seq)
         return seq_list
@@ -218,10 +220,10 @@ def get_correction_phases(degree=4):
     phi = ExtractionSequence().generate(degree)
     # Initialize proper correction protocol
     correction_protocol = []
-    correction_protocol.append(ZGate(phi[0]))
+    correction_protocol.append(ZGate(phi[0])) # If multiplied by 2, what Qiskit wants
     for k in range(1, len(phi)):
         correction_protocol.append(SignalGate(0))
-        correction_protocol.append(ZGate(phi[k]))
+        correction_protocol.append(ZGate(phi[k])) # If multiplied by 2, what Qiskit wants
     return correction_protocol
 
     # NOTE: Dummy 'no-correction' protocol. Uncomment for testing.
@@ -244,13 +246,14 @@ def get_twice_z_correction(sequence):
     correction_protocol = get_correction_phases()
     new_seq = []
     # Prepend an X gate. Note that there is no target or control specified; this is handled in get_controlled_sequence().
-    x_gate = XGate(angle=np.pi/2)
+    x_gate = XGate(angle=np.pi/2) # if changed to np.pi, gives what Qiskit wants
     new_seq.append(x_gate)
     # Insert sequence as the oracle of correction protocol.
     # TODO: check if this needs to be a copy.
     for elem in correction_protocol:
         if isinstance(elem, SignalGate):
-            new_seq.extend(sequence)
+            # Note necessity of deep copying
+            new_seq.extend(copy.deepcopy(sequence))
         else:
             new_seq.append(elem)
     return new_seq

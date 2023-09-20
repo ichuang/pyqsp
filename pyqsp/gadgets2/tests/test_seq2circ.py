@@ -2,6 +2,9 @@ import unittest
 import numpy as np
 from pyqsp.gadgets2 import *
 
+# Temporary matplotlib import
+from matplotlib import pyplot as plt
+
 class TestGadgetSeq2circ(unittest.TestCase):
 
     def setUp(self):
@@ -133,6 +136,48 @@ class TestGadgetSeq2circ(unittest.TestCase):
         ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/2, -np.pi/2, 0]], [[0, 0, 0]])
         umat = ag.get_gadget_unitary(signal_values=[0.2])
         assert umat.data.shape==(2,2)
+
+    def test_z_correction(self):
+        '''
+        test response function method of SeqeuenceQuantumCircuit
+        '''
+        # try a pi/4 gadget
+        ag = AtomicGadget(1,1,"QSP",[[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
+        seq = ag.get_gadget_sequence()
+       
+        # Manually get first leg and correct it.
+        leg_0 = seq[0]
+        seq_corrected = get_twice_z_correction(leg_0)
+        
+        # Manually double angle.
+        for elem in seq_corrected:
+            if isinstance(elem, XGate):
+                elem.angle = 2*elem.angle
+            elif isinstance(elem, YGate):
+                elem.angle = 2*elem.angle
+            elif isinstance(elem, ZGate):
+                elem.angle = 2*elem.angle
+            else:
+                continue
+
+        # Manually set target.
+        for elem in seq_corrected:
+            elem.target = 0
+        
+        qc = seq2circ(seq_corrected, verbose=False)
+        print(f"U = ", qc.get_unitary(values=[0]).data)
+        # qc.draw('mpl')
+        X, Y = qc.one_dim_response_function(npts=100)
+
+        # Chart the absolute value (near one) and phase.
+        Y_abs = list(map(lambda x : np.abs(x), Y))
+        Y_ang = list(map(lambda x : np.angle(x), Y))
+
+        plt.close()
+        plt.figure()
+        plt.plot(X[:,0], Y_abs)
+        plt.plot(X[:,0], Y_ang)
+        plt.show()
 
 if __name__ == '__main__':
     unittest.main()
