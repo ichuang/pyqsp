@@ -151,15 +151,15 @@ class TestGadgetSeq2circ(unittest.TestCase):
         seq_corrected = get_twice_z_correction(leg_0)
         
         # Manually double angle.
-        for elem in seq_corrected:
-            if isinstance(elem, XGate):
-                elem.angle = 2*elem.angle
-            elif isinstance(elem, YGate):
-                elem.angle = 2*elem.angle
-            elif isinstance(elem, ZGate):
-                elem.angle = 2*elem.angle
-            else:
-                continue
+        # for elem in seq_corrected:
+        #     if isinstance(elem, XGate):
+        #         elem.angle = 2*elem.angle
+        #     elif isinstance(elem, YGate):
+        #         elem.angle = 2*elem.angle
+        #     elif isinstance(elem, ZGate):
+        #         elem.angle = 2*elem.angle
+        #     else:
+        #         continue
 
         # Manually set target.
         for elem in seq_corrected:
