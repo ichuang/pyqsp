@@ -123,7 +123,7 @@ class AtomicGadget(Gadget):
     get_gadget_sequence(self) :
         Returns flat list of SequenceObject objects which determine the circuit of the AtomicGadget object when read left to right.
     get_gadget_unitary(self) :
-        Currently not implemented.
+        Returns a unitary, called on a specified series of inputs corresponding to input legs of gadget, matching the action of the gadget.
     """
 
     def __init__(self, a, b, label, Xi, S, map_to_grid=dict()):
