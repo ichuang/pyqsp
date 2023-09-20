@@ -315,7 +315,7 @@ def seq2circ(sequence, verbose=False):
             # argv = signal_value			# OLD: use signal_value argument to seq2qcirc call
             argv = qcirc.get_parameter(seq.label)	# NEW: use qiskit Parameter for signal
         elif arg:
-            argv = getattr(seq, arg)
+            argv = getattr(seq, arg) * 2		# TEMPORARY doubling of rotation angles to match GSLW conventions - fix after changing gate primitives
         kwargs = {}
         if 'color_class' in ginfo:
             color_index = getattr(seq, ginfo.get('color_index', 'label'), 0)
