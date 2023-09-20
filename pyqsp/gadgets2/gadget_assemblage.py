@@ -169,8 +169,28 @@ class AtomicGadget(Gadget):
             seq_list.append(seq)
         return seq_list
 
-    def get_gadget_unitary(self):
-        pass 
+    def get_gadget_circuit(self):
+        """
+        Return SequenceQuantumCircuit instance for this gadget
+        """
+        seq = self.get_gadget_sequence()
+        sqcirc = seq2circ(seq)
+        return sqcirc
+
+    def get_gadget_unitary(self, signal_values, decimals=3):
+        """
+        Returns a unitary, called on a specified series of inputs corresponding to input legs of gadget, matching the action of the gadget.
+
+        signal_values: either ordered list of floats, for signal_0, signal_1, ...
+                       or dict with { 0: float, 1: float, ... }
+        
+        decimals: (int) passed to qiskit's get_unitary(), presumably to determine precision of the unitary
+        """
+        sqcirc = self.get_gadget_circuit()
+        if not len(signal_values)==len(sqcirc.signal_parameters):
+            raise Exception(f"[AtomicGadget] get_gadget_unitary must be called with signal_values having length matching the number of signals (which is {len(sqcirc.signal_parameters)}, but signal_values has length {len(signal_values)}")
+        unitary = sqcirc.get_unitary(values=signal_values, decimals=decimals)
+        return unitary
 
     def __str__(self):
         seq = self.get_gadget_sequence()

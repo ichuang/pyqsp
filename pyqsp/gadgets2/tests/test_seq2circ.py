@@ -125,6 +125,15 @@ class TestGadgetSeq2circ(unittest.TestCase):
         assert abs(Y[0] - (-1)) < 1.0e-3
         assert abs(Y[-1] - (1)) < 1.0e-3
 
+    def test_gadget_unitary(self):
+        '''
+        test get_gadget_unitary method of AtomicGadget
+        '''
+        # try a pi/4 gadget
+        ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/2, -np.pi/2, 0]], [[0, 0, 0]])
+        umat = ag.get_gadget_unitary(signal_values=[0.2])
+        assert umat.data.shape==(2,2)
+
 if __name__ == '__main__':
     unittest.main()
         
