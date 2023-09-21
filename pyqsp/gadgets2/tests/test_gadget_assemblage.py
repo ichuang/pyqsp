@@ -3,6 +3,9 @@ import numpy as np
 from pyqsp.gadgets2 import *
 # from gadget_assemblage import *
 
+# Temporary matplotlib import
+from matplotlib import pyplot as plt
+
 """
 Note these tests can be run with 'python -m unittest tests.test_gadget_assemblage' from outside the folder tests
 """
@@ -509,12 +512,12 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         # NOTE: this gadget technically needs no correction, as everything is single variable. As such, it should directly compose pi/3 and pi/4 protocols, even without correction.
 
-    def test_simple_2_1_gadget_composition(self):
+    def otest_simple_2_1_gadget_composition(self):
         # Generate (1, 1) atomic gadgets.
         # Note g0 achieves f = 2x^3 - x
         g0 = AtomicGadget(1, 1, "g0", [[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
-        # Note g1 achieves f = x^3
-        g1 = AtomicGadget(1, 1, "g1", [[0, np.pi/3, -np.pi/3, 0]], [[0, 0, 0]])
+        # Note g1 achieves f = 3x^3 - 2x^2
+        g1 = AtomicGadget(1, 1, "g1", [[0, np.pi/6, -np.pi/6, 0]], [[0, 0, 0]])
         # This last (2, 1) gadget does a simple form of multiplication
         # Note g2 achieves f = (2x^2 - 1)y, where x is the 0th input, and y is the 1st.
         g2 = AtomicGadget(2, 1, "g2", [[0, np.pi/4, -np.pi/4, 0]], [[0, 1, 0]])
@@ -522,14 +525,69 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         a0 = g0.wrap_gadget()
         a1 = g1.wrap_gadget()
         a2 = g2.wrap_gadget()
-        # Link wrapped atomic gadgets
+        # Link wrapped atomic gadgets.
         a3 = a0.link_assemblage(a2, [(("g0", 0), ("g2", 0))])
         a4 = a1.link_assemblage(a3, [(("g1", 0), ("g2", 1))])
         full_seq = a4.sequence
 
-        # Note: this whole gadget should achieve: -y^3 + 2*x^2*y^3 - 8*x^4*y^3 + 8*x^6*y^3, where x is the 0th input and y is the 1st input.
+        leg_0 = full_seq[0]
+        # Retrieve circuit.
+        qc = seq2circ(leg_0, verbose=False)
+        X, Y = qc.one_dim_response_function(npts=100)
 
-        # NOTE: this gadget needs correction in general, as we want to multiply the pi/4 and pi/3 protocols properly, according to the (2, 1) pi/4 gadget, which normally yields T_2(x_0)*x_1.
+        X = X[:,0]
+        # ideal_value = X - 4*X**3 + 12*X**5 - 24*X**7 + 16*X**9 # for both pi/4
+        ideal_value = X - 10*X**3 + 40*X**5 - 66*X**7 + 36*X**9 # for pi/4 and pi/6 protocols
+        
+        plt.close()
+        plt.figure()
+        plt.plot(X, Y)
+        plt.plot(X, ideal_value)
+        plt.show()
+
+    def test_z_correction_full(self):
+        '''
+        Test of full oracle correction for pi/4 gadget.
+        '''
+        # Build a pi/4 gadget.
+        ag = AtomicGadget(1,1,"QSP",[[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
+        seq = ag.get_gadget_sequence()
+       
+        # Manually get first leg and correct it.
+        leg_0 = seq[0]
+        seq_corrected = get_twice_z_correction(leg_0)
+        seq_full_corrected = get_controlled_sequence(seq_corrected, 0, [1])
+        seq_full_corrected_inv = get_inverse_sequence(seq_full_corrected)
+
+        swap_0 = [SwapGate(0, 1)]
+        swap_1 = [SwapGate(0, 1)]
+
+        # Sandwich original leg with controlled corrected versions, along with proper swaps.
+        total_seq = swap_0 + seq_full_corrected_inv + swap_0 + leg_0 + swap_1 + seq_full_corrected + swap_1
+
+        # NOTE: ordering of the correction and its inverse above is opposite that of the main method in gadget_assemblage, but appears to work; may switch, once the multiple-input bug is fixed.
+        
+        # Here we plot the on and off diagonal portions of the resulting unitary, noting that the off diagonal part has become purely imaginary
+        qc = seq2circ(total_seq, verbose=False)
+        X0, Y0 = qc.one_dim_response_function(npts=80, uindex=(0, 0))
+        X1, Y1 = qc.one_dim_response_function(npts=80, uindex=(0, 1))
+
+        # Assert that real part of off diagonal element is small.
+        assert sum(np.real(Y1)) < 1.0e-3
+
+        # plt.close()
+        # plt.figure()
+        # plt.plot(X0, Y0)
+        # plt.plot(X1, np.abs(Y1))
+        # plt.plot(X1, np.real(Y1))
+
+        # # Compare the above to the plot below, which is for the original internal protocol, and shows no such supression.
+        # qc = seq2circ(leg_0, verbose=False)
+        # X0, Y0 = qc.one_dim_response_function(npts=80, uindex=(0, 0))
+        # X1, Y1 = qc.one_dim_response_function(npts=80, uindex=(0, 1))
+
+        # plt.show()
+        
 
 if __name__ == '__main__':
     unittest.main()

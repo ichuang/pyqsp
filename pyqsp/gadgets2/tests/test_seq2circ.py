@@ -116,7 +116,6 @@ class TestGadgetSeq2circ(unittest.TestCase):
         test response function method of SeqeuenceQuantumCircuit
         '''
         # try a pi/4 gadget
-        # ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/2, -np.pi/2, 0]], [[0, 0, 0]])
         ag = AtomicGadget(1,1,"QSP",[ [ 0,np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])	# see TEMPORARY doubling in seq2circ.py
         seq = ag.get_gadget_sequence()
         qc = seq2circ(seq, verbose=False)
@@ -200,6 +199,7 @@ class TestGadgetSeq2circ(unittest.TestCase):
         qc = seq2circ(leg_0, verbose=False)
         X, Y = qc.one_dim_response_function(npts=100)
 
+        X = X[:,0]
         diff_sum = sum([(X[k] - Y[k])**2 for k in range(len(X))])
         assert abs(diff_sum) < 1.0e-3
         
@@ -210,7 +210,7 @@ class TestGadgetSeq2circ(unittest.TestCase):
 
     def test_linked_trivial_gadgets_2(self):
         '''
-        Take two length 1 atomic gadgets, and connect them.
+        Take two length 2 atomic gadgets, and connect them.
         '''
         # Both gadgets have trivial phases.
         ag0 = AtomicGadget(1,1,"QSP0",[[0, 0, 0]], [[0, 0]])
@@ -230,8 +230,10 @@ class TestGadgetSeq2circ(unittest.TestCase):
         qc = seq2circ(leg_0, verbose=False)
         X, Y = qc.one_dim_response_function(npts=100)
 
+        X = X[:,0]
+        X_cheb = 1 - 8*X**2 + 8*X**4
         # Check that achieved function is the fourth Chebyshev polynomial
-        diff_sum = sum([(1 - 8*X[k]**2 + 8*X[k]**4 - Y[k])**2 for k in range(len(X))])
+        diff_sum = sum([(X_cheb[k] - Y[k])**2 for k in range(len(X))])
         assert abs(diff_sum) < 1.0e-3
         
         # plt.close()

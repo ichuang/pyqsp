@@ -28,7 +28,7 @@ class SequenceQuantumCircuit:
         self.qubit_indices_ancillae = qubit_indices_ancillae
         self.verbose = verbose
         self.seqnum = 0
-        self.signal_parameters = {}	# dict with {signal_label: qiskit_parameter, ...}
+        self.signal_parameters = {}	# dict with {signal_label: qiskit_parameter, ...} # QUESTION: where is this initialized?
 
         # construct qiskit quantum circuit with separate main and ancillae registers
         self.q_main = qiskit.QuantumRegister(self.nqubits_main, name='main')
@@ -93,7 +93,11 @@ class SequenceQuantumCircuit:
                 defaults to (0,0)
         npts: (int) number of points to sample uniformly along the vector from start to end
         '''
+
+        # QUESTION: if we want to take the same slice across all inputs, do we replace 0s with 1s below?
+        # QUESTION: it looks like signal_parameters is not returning the expected size on a two-input gadget (see otest_simple_2_1_gadget_composition in test_gadget_assemblage.py)? Does it need to be initialized first? 
         dim_inputs = len(self.signal_parameters)
+
         start_values = np.array(start_values or [-1] + [0]*(dim_inputs-1))
         end_values = np.array(end_values or [1] + [0]*(dim_inputs-1))
         vec = end_values - start_values
@@ -102,7 +106,7 @@ class SequenceQuantumCircuit:
         X = []
         Y = []
         for xv in xs:
-            xp = start_values + xv * vec
+            xp = start_values + xv * vec 
             xpacos = 2*np.arccos(xp)
             umat = self.get_unitary(values=xpacos).data
             Y.append(umat[uindex])

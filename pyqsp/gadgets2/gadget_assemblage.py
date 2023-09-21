@@ -255,7 +255,7 @@ def get_twice_z_correction(sequence):
             # Note necessity of deep copying
             new_seq.extend(copy.deepcopy(sequence))
         else:
-            new_seq.append(elem)
+            new_seq.append(copy.deepcopy(elem))
     return new_seq
 
 def get_controlled_sequence(sequence, target, controls):
@@ -333,8 +333,9 @@ def get_inverse_sequence(sequence):
             controls = elem.controls
             new_elem = SignalGate(label, target=target, controls=controls)
             # TODO: these controls may not be necessary; check this.
+            # POSSIBLE BUG: check the relative sign on these terms!
             z_gate_0 = ZGate(np.pi/2, target=target, controls=controls)
-            z_gate_1 = ZGate(np.pi/2, target=target, controls=controls)
+            z_gate_1 = ZGate(-1*np.pi/2, target=target, controls=controls)
             # Create oracle inversion subroutine.
             new_sub_seq = [z_gate_0, new_elem, z_gate_1]
             new_seq.extend(new_sub_seq)
@@ -581,6 +582,7 @@ class GadgetAssemblage:
                         swap_0 = SwapGate(index_0, index_1, target=target)
                         swap_1 = SwapGate(index_0, index_1, target=target)
                         # Finally, we sandwich internal sequence with the controlled Z rotations, suitably swapped around.
+                        # POSSIBLE BUG: check ordering of inverse
                         new_seq = [swap_0] + control_z_corr + [swap_0] + internal_seq + [swap_1] + inverse_control_z_corr + [swap_1]
                         # Finally, append this corrected protocol to the main sequence.
                         seq.extend(new_seq)
