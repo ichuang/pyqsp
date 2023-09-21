@@ -140,7 +140,7 @@ class TestGadgetSeq2circ(unittest.TestCase):
 
     def test_z_correction(self):
         '''
-        test response function method of SeqeuenceQuantumCircuit
+        test response function for z-correction using pi/4 gadget
         '''
         # try a pi/4 gadget
         ag = AtomicGadget(1,1,"QSP",[[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
@@ -192,6 +192,12 @@ class TestGadgetSeq2circ(unittest.TestCase):
         error = abs(Y_orig_ang - (Y_ang + np.pi/2)).mean()	# note offset by pi/2
         print(error)
         assert error < 1.0e-3
+
+        # compare with theoretical prediction
+        Yth = -np.arctan(2*(X[idx, 0]**2))
+        err_th = abs(Y_orig_ang - Yth).mean()
+        print(f"Error compared with analytical theory: {err_th}")
+        assert err_th < 1.0e-3
 
 if __name__ == '__main__':
     unittest.main()
