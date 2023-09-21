@@ -149,17 +149,6 @@ class TestGadgetSeq2circ(unittest.TestCase):
         # Manually get first leg and correct it.
         leg_0 = seq[0]
         seq_corrected = get_twice_z_correction(leg_0)
-        
-        # Manually double angle.
-        # for elem in seq_corrected:
-        #     if isinstance(elem, XGate):
-        #         elem.angle = 2*elem.angle
-        #     elif isinstance(elem, YGate):
-        #         elem.angle = 2*elem.angle
-        #     elif isinstance(elem, ZGate):
-        #         elem.angle = 2*elem.angle
-        #     else:
-        #         continue
 
         # Manually set target.
         for elem in seq_corrected:
@@ -174,11 +163,74 @@ class TestGadgetSeq2circ(unittest.TestCase):
         Y_abs = list(map(lambda x : np.abs(x), Y))
         Y_ang = list(map(lambda x : np.angle(x), Y))
 
+        # From this we expect that the angle has the form ArcTan[-2 x^2] + Pi/2, to account for the positive i we eventually want on the off-diagonal portions of the QSP unitary.
+
         plt.close()
         plt.figure()
         plt.plot(X[:,0], Y_abs)
         plt.plot(X[:,0], Y_ang)
         plt.show()
+
+    def test_linked_trivial_gadgets_1(self):
+        '''
+        Take two length 1 atomic gadgets, and connect them.
+        '''
+        # Both gadgets have trivial phases.
+        ag0 = AtomicGadget(1,1,"QSP0",[[0, 0]], [[0]])
+        ag1 = AtomicGadget(1,1,"QSP1",[[0, 0]], [[0]])
+
+        a0 = ag0.wrap_gadget()
+        a1 = ag1.wrap_gadget()
+        a2 = a0.link_assemblage(a1, [(("QSP0", 0),("QSP1", 0))])
+
+        # This assertion will fail when single variable protocols are optimized.
+        assert a2.required_ancillae == 1
+
+        # Retrieve sequence and get first and only leg.
+        seq = a2.sequence
+        leg_0 = seq[0]
+        # Retrieve circuit.
+        qc = seq2circ(leg_0, verbose=False)
+        X, Y = qc.one_dim_response_function(npts=100)
+
+        diff_sum = sum([(X[k] - Y[k])**2 for k in range(len(X))])
+        assert abs(diff_sum) < 1.0e-3
+        
+        # plt.close()
+        # plt.figure()
+        # plt.plot(X[:,0], Y)
+        # plt.show()
+
+    def test_linked_trivial_gadgets_2(self):
+        '''
+        Take two length 1 atomic gadgets, and connect them.
+        '''
+        # Both gadgets have trivial phases.
+        ag0 = AtomicGadget(1,1,"QSP0",[[0, 0, 0]], [[0, 0]])
+        ag1 = AtomicGadget(1,1,"QSP1",[[0, 0, 0]], [[0, 0]])
+
+        a0 = ag0.wrap_gadget()
+        a1 = ag1.wrap_gadget()
+        a2 = a0.link_assemblage(a1, [(("QSP0", 0),("QSP1", 0))])
+
+        # This assertion will fail when single variable protocols are optimized.
+        assert a2.required_ancillae == 1
+
+        # Retrieve sequence and get first and only leg.
+        seq = a2.sequence
+        leg_0 = seq[0]
+        # Retrieve circuit.
+        qc = seq2circ(leg_0, verbose=False)
+        X, Y = qc.one_dim_response_function(npts=100)
+
+        # Check that achieved function is the fourth Chebyshev polynomial
+        diff_sum = sum([(1 - 8*X[k]**2 + 8*X[k]**4 - Y[k])**2 for k in range(len(X))])
+        assert abs(diff_sum) < 1.0e-3
+        
+        # plt.close()
+        # plt.figure()
+        # plt.plot(X[:,0], Y)
+        # plt.show()
 
 if __name__ == '__main__':
     unittest.main()
