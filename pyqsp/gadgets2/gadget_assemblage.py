@@ -583,17 +583,23 @@ class GadgetAssemblage:
                         swap_1 = SwapGate(index_0, index_1, target=target)
                         # Finally, we sandwich internal sequence with the controlled Z rotations, suitably swapped around.
                         # POSSIBLE BUG: check ordering of inverse
-                        new_seq = [swap_0] + control_z_corr + [swap_0] + internal_seq + [swap_1] + inverse_control_z_corr + [swap_1]
+                        new_seq = [swap_0] + inverse_control_z_corr + [swap_0] + internal_seq + [swap_1] + control_z_corr + [swap_1]
                         # Finally, append this corrected protocol to the main sequence.
                         seq.extend(new_seq)
                     # If input legs map back to overall input leg instead.
                     else:
                         elem = external_seq[j]
                         old_label = elem.label
+
+                        # BUG TODO: THIS SHOULD BE LABELLED BY THE OVERALL INPUT LEG, AND NOT UNIFORMLY.
+                        input_labels = sorted(self.input_legs)
+                        new_label = input_labels.index(next_collision[1])
+                        
                         old_controls = elem.controls
                         new_target = target
                         # Produce new object, with new target.
-                        new_elem = SignalGate(old_label, target=new_target, controls=old_controls)
+                        # new_elem = SignalGate(old_label, target=new_target, controls=old_controls)
+                        new_elem = SignalGate(new_label, target=new_target, controls=old_controls)
                         seq.append(new_elem)
                 else:
                     elem = external_seq[j]

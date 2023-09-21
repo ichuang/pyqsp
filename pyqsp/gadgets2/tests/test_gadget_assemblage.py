@@ -530,7 +530,10 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         a4 = a1.link_assemblage(a3, [(("g1", 0), ("g2", 1))])
         full_seq = a4.sequence
 
+        print(a4.print_assemblage())
+
         leg_0 = full_seq[0]
+
         # Retrieve circuit.
         qc = seq2circ(leg_0, verbose=False)
         X, Y = qc.one_dim_response_function(npts=100)
