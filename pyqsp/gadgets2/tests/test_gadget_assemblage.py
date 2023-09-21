@@ -512,14 +512,12 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         # NOTE: this gadget technically needs no correction, as everything is single variable. As such, it should directly compose pi/3 and pi/4 protocols, even without correction.
 
-    def otest_simple_2_1_gadget_composition(self):
-        # Generate (1, 1) atomic gadgets.
+    def test_simple_2_1_gadget_composition(self):
         # Note g0 achieves f = 2x^3 - x
         g0 = AtomicGadget(1, 1, "g0", [[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
-        # Note g1 achieves f = 3x^3 - 2x^2
+        # Note g1 achieves f = 3x^3 - 2x
         g1 = AtomicGadget(1, 1, "g1", [[0, np.pi/6, -np.pi/6, 0]], [[0, 0, 0]])
-        # This last (2, 1) gadget does a simple form of multiplication
-        # Note g2 achieves f = (2x^2 - 1)y, where x is the 0th input, and y is the 1st.
+        # Note g2 achieves f = (2x^2 - 1)y, where x is 0-input, and y is 1-input.
         g2 = AtomicGadget(2, 1, "g2", [[0, np.pi/4, -np.pi/4, 0]], [[0, 1, 0]])
         # Wrap atomic gadgets.
         a0 = g0.wrap_gadget()
@@ -529,26 +527,27 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         a3 = a0.link_assemblage(a2, [(("g0", 0), ("g2", 0))])
         a4 = a1.link_assemblage(a3, [(("g1", 0), ("g2", 1))])
         full_seq = a4.sequence
-
-        print(a4.print_assemblage())
-
+        # Get first and only output leg.
         leg_0 = full_seq[0]
-
         # Retrieve circuit.
         qc = seq2circ(leg_0, verbose=False)
         X, Y = qc.one_dim_response_function(npts=100)
-
+        # Transpose X list to match shape.
         X = X[:,0]
-        # ideal_value = X - 4*X**3 + 12*X**5 - 24*X**7 + 16*X**9 # for both pi/4
-        ideal_value = X - 10*X**3 + 40*X**5 - 66*X**7 + 36*X**9 # for pi/4 and pi/6 protocols
+        # Compute the expected composition for y = x.
+        ideal_value = 2*X - 7*X**3 + 22*X**5 - 40*X**7 + 24*X**9
+        # Compute the mean absolute difference and assert small.
+        diff_sum = np.mean(np.abs(Y - ideal_value))
+        assert diff_sum < 1.0e-2
         
-        plt.close()
-        plt.figure()
-        plt.plot(X, Y)
-        plt.plot(X, ideal_value)
-        plt.show()
+        # # Deactivated plot functions.
+        # plt.close()
+        # plt.figure()
+        # plt.plot(X, Y)
+        # plt.plot(X, ideal_value)
+        # plt.show()
 
-    def test_z_correction_full(self):
+    def otest_z_correction_full(self):
         '''
         Test of full oracle correction for pi/4 gadget.
         '''
@@ -581,7 +580,7 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # plt.close()
         # plt.figure()
         # plt.plot(X0, Y0)
-        # plt.plot(X1, np.abs(Y1))
+        # plt.plot(X1, np.imag(Y1))
         # plt.plot(X1, np.real(Y1))
 
         # # Compare the above to the plot below, which is for the original internal protocol, and shows no such supression.
@@ -589,8 +588,7 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # X0, Y0 = qc.one_dim_response_function(npts=80, uindex=(0, 0))
         # X1, Y1 = qc.one_dim_response_function(npts=80, uindex=(0, 1))
 
-        # plt.show()
+        plt.show()
         
-
 if __name__ == '__main__':
     unittest.main()

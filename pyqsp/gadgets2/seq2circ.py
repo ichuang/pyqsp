@@ -100,12 +100,11 @@ class SequenceQuantumCircuit:
         Y : (np.ndarray) one-dimensional array of length npts, giving the [uindex] element of the circuit's unitary
         '''
 
-        # QUESTION: if we want to take the same slice across all inputs, do we replace 0s with 1s below?
-        # QUESTION: it looks like signal_parameters is not returning the expected size on a two-input gadget (see otest_simple_2_1_gadget_composition in test_gadget_assemblage.py)? Does it need to be initialized first? 
         dim_inputs = len(self.signal_parameters)
 
-        start_values = np.array(start_values or [-1] + [0]*(dim_inputs-1))
-        end_values = np.array(end_values or [1] + [0]*(dim_inputs-1))
+        # NOTE CHANGE: this sweeps across all inputs, not just the first.
+        start_values = np.array(start_values or [-1] + [-1]*(dim_inputs-1))
+        end_values = np.array(end_values or [1] + [1]*(dim_inputs-1))
         vec = end_values - start_values
         xs = np.linspace(0, 1, npts)
         uindex = uindex or (0,0)
