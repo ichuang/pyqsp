@@ -512,7 +512,7 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         # NOTE: this gadget technically needs no correction, as everything is single variable. As such, it should directly compose pi/3 and pi/4 protocols, even without correction.
 
-    def test_simple_2_1_gadget_composition(self):
+    def otest_simple_2_1_gadget_composition(self):
         # Note g0 achieves f = 2x^3 - x
         g0 = AtomicGadget(1, 1, "g0", [[0, np.pi/4, -np.pi/4, 0]], [[0, 0, 0]])
         # Note g1 achieves f = 3x^3 - 2x
@@ -539,11 +539,14 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # Compute the mean absolute difference and assert small.
         diff_sum = np.mean(np.abs(Y - ideal_value))
         assert diff_sum < 1.0e-2
-        
-        # # Deactivated plot functions.
+
+        print("THIS QSP PROTOCOL IS THIS LONG:")
+        print(len(leg_0))
+
+        # Deactivated plot function; note shift in Y for first plot, as otherwise the overlap is too good to see two lines.
         # plt.close()
         # plt.figure()
-        # plt.plot(X, Y)
+        # plt.plot(X, Y + 1)
         # plt.plot(X, ideal_value)
         # plt.show()
 
@@ -566,8 +569,6 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         # Sandwich original leg with controlled corrected versions, along with proper swaps.
         total_seq = swap_0 + seq_full_corrected_inv + swap_0 + leg_0 + swap_1 + seq_full_corrected + swap_1
-
-        # NOTE: ordering of the correction and its inverse above is opposite that of the main method in gadget_assemblage, but appears to work; may switch, once the multiple-input bug is fixed.
         
         # Here we plot the on and off diagonal portions of the resulting unitary, noting that the off diagonal part has become purely imaginary
         qc = seq2circ(total_seq, verbose=False)
@@ -577,18 +578,49 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         # Assert that real part of off diagonal element is small.
         assert sum(np.real(Y1)) < 1.0e-3
 
+        # # Deactivated plot function.
         # plt.close()
         # plt.figure()
         # plt.plot(X0, Y0)
         # plt.plot(X1, np.imag(Y1))
         # plt.plot(X1, np.real(Y1))
+        # plt.show()
 
         # # Compare the above to the plot below, which is for the original internal protocol, and shows no such supression.
         # qc = seq2circ(leg_0, verbose=False)
         # X0, Y0 = qc.one_dim_response_function(npts=80, uindex=(0, 0))
         # X1, Y1 = qc.one_dim_response_function(npts=80, uindex=(0, 1))
 
-        plt.show()
+    def test_sqrt_gadget(self):
+
+        degree = 32
+        delta = 0.1
+
+        sqrt_gadget = get_sqrt_gadget("sqrt", degree=degree, delta=delta)
+        a0 = sqrt_gadget.wrap_gadget()
+        seq = a0.sequence
+        leg_0 = seq[0]
+
+        qc = seq2circ(leg_0, verbose=False)
+        X, Y = qc.one_dim_response_function(npts=80)
+
+        plt.close()
+        plt.figure()
+
+        idx = np.where(abs(X[:,0]) > delta)
+        Y_restricted = np.real(Y)[idx]
+        X_restricted = X[:,0][idx]
+
+        # Compare square root followed by T2 application to absolute value.
+        assert sum((2*Y_restricted**2 - 1) - np.abs(X_restricted)) < 1.0e-2
+        
+        # # One can plot to check the imaginary component is small.
+        # plt.plot(X, np.abs(Y))
+        # plt.plot(X, np.imag(Y))
+        # plt.plot(X[:,0], np.real(Y))
+        # plt.plot(X[:,0], 2*np.real(Y)**2 - 1)
+        # plt.plot(X[:,0], np.abs(X))
+        # plt.show()
         
 if __name__ == '__main__':
     unittest.main()

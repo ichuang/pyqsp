@@ -9,7 +9,7 @@ When we actually retrieve the proper phases for get_correction_phases(), we will
 TODO: Note these imports may break when moving around files
 """
 from pyqsp import qsp_models
-from ..phases import ExtractionSequence
+from ..phases import ExtractionSequence, SqrtSequence
 
 class Gadget:
     """
@@ -203,6 +203,17 @@ class AtomicGadget(Gadget):
                 current_str = current_str + str(seq[j][k])
             current_str = current_str + "\n"
         return current_str
+
+def get_sqrt_gadget(label, degree=8, delta=0.1):
+    
+    # Generate phases for the square root protocol
+    phi = SqrtSequence().generate(degree, delta)
+
+    Xi = [phi]
+    S = [[0]*(len(phi) - 1)]
+
+    sqrt_gadget = AtomicGadget(1, 1, label, Xi, S)
+    return sqrt_gadget
 
 def get_correction_phases(degree=4):
     """
