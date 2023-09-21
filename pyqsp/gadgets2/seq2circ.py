@@ -81,17 +81,23 @@ class SequenceQuantumCircuit:
 
     def one_dim_response_function(self, start_values=None, end_values=None, uindex=None, npts=200):
         '''
-        Compute one-dimensional response function for the circuit, returning two one-dimensional
+        Compute one-dimensional response function for the circuit, returning two 
         numpy arrays X, Y each of which has npts points.  The response is computed along a vector
         starting from start_values and ending at end_values.  By default, these are [-1] and [+1]
         (with zeros appended for higher dimensional inputs).  The response is given by the 
         matrix element U[uindex], where uindex defaults to (0,0) if not specified.
 
-        start_values: (list) starting value for inputs, defaults to [-1, 0...]
-        end_values: (list) ending value for inputs, defaults to [+1, 0...]
+        start_values: (list) starting value for inputs, defaults to [-1, 0...], of length = number of signals
+        end_values: (list) ending value for inputs, defaults to [+1, 0...], of length = number of signals
         uindex: (tuple) two-dimensional index for the element of the unitary to take as the response output;
                 defaults to (0,0)
         npts: (int) number of points to sample uniformly along the vector from start to end
+
+        Returns:
+
+        X : (np.ndarray) npts x Nsig dimensional array, where Nsig = number of signals
+            For Nsig=1, a one-dimensional array of X points can be obtained using X[:, 0]
+        Y : (np.ndarray) one-dimensional array of length npts, giving the [uindex] element of the circuit's unitary
         '''
         dim_inputs = len(self.signal_parameters)
         start_values = np.array(start_values or [-1] + [0]*(dim_inputs-1))
