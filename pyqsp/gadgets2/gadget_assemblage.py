@@ -128,13 +128,18 @@ class AtomicGadget(Gadget):
         Returns a unitary, called on a specified series of inputs corresponding to input legs of gadget, matching the action of the gadget.
     """
 
-    def __init__(self, a, b, label, Xi, S, map_to_grid=dict()):
+    def __init__(self, a, b, label, Xi, S, map_to_grid=dict(), correction_guide=dict(), pinning_guide=dict()):
         self.Xi = Xi
         self.S = S
         super().__init__(a, b, label, map_to_grid)
 
         len_xi = len(self.Xi)
         len_s = len(self.S)
+
+        # Currently instantiate correction_guide trivially; eventually this will be a dictionary with elements (out_going_leg_local_y: correction_degree). If correction_degree is zero for a leg, it will be passed forward. We should also verify parity constraints on the allowed degrees.
+        self.correction_guide = correction_guide
+        # Currently instantiate pinning_guide trivially; eventually this will allow for certain gadget inputs to be fixed automatically, with checks after instantiation that these legs are free in any assemblage.
+        self.pinning_guide = pinning_guide
         
         # Check that both Xi and S have length b 
         if (len_xi != b) or (len_s != b):
@@ -156,6 +161,9 @@ class AtomicGadget(Gadget):
                     raise NameError("AtomicGadget %s has invalid integer %s (not between 0 and %s) in S[%s]." % (label, str(self.S[k][j]), str(a-1), str(k)))
                 else:
                     continue
+
+        # If all checks pass, generate sequence attribute.
+        self.sequence = self.get_gadget_sequence()
 
     def get_gadget_sequence(self):
         seq_list = []
@@ -215,34 +223,33 @@ def get_sqrt_gadget(label, degree=8, delta=0.1):
     sqrt_gadget = AtomicGadget(1, 1, label, Xi, S)
     return sqrt_gadget
 
-def get_correction_phases(degree=4):
+def get_correction_phases(degree=4, pass_through=False):
     """
     Takes no arguments and returns a list of SequenceObject objects which, if they were run as a unitary, would implement the broadband NOT protocol of Guang Hao Low's thesis: http://hdl.handle.net/1721.1/115025.
 
     Params:
-        None.
-
+        degree : int, optional
+            Indicates the degree of the broadband NOT QSP protocol used for correction. Defaults to degree = 4.
+        pass_through : bool, optional
+            If True indicates that no correction should be applied, to be used for the (1, 1) gadget case, where correction is not needed. Defaults to pass_through = False.
     Returns:
         seq : list of SequenceObject objects
 
     """
-
-    # Get QSP correction protocol phases for a fixed degree.
-    phi = ExtractionSequence().generate(degree)
-    # Initialize proper correction protocol
-    correction_protocol = []
-    correction_protocol.append(ZGate(phi[0])) # If multiplied by 2, what Qiskit wants
-    for k in range(1, len(phi)):
-        correction_protocol.append(SignalGate(0))
-        correction_protocol.append(ZGate(phi[k])) # If multiplied by 2, what Qiskit wants
-    return correction_protocol
-
-    # NOTE: Dummy 'no-correction' protocol. Uncomment for testing.
-    # p0 = ZGate(0)
-    # sig = SignalGate(0)
-    # p1 = ZGate(0)
-    # seq = [p0, sig, p1]
-    # return seq
+    if not pass_through:
+        # Get QSP correction protocol phases for a fixed degree.
+        phi = ExtractionSequence().generate(degree)
+        # Initialize proper correction protocol
+        correction_protocol = []
+        correction_protocol.append(ZGate(phi[0]))
+        for k in range(1, len(phi)):
+            correction_protocol.append(SignalGate(0))
+            correction_protocol.append(ZGate(phi[k]))
+        return correction_protocol
+    else:
+        # If pass_through is set, returns non-corrected sequence.
+        seq = [SignalGate(0)]
+        return seq
 
 def get_twice_z_correction(sequence):
     """
