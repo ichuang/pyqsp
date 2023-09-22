@@ -1,4 +1,4 @@
-# Quantum computing with gadgets: a guide with examples :star2:
+# Quantum computing with *gadgets* :pager:: a guide with examples
 
 Gadgets are unitary superoperators, based in the theory of quantum signal processing (QSP) and quantum singular values transformation (QSVT), which achieve flexible and intuitive block encodings of multivariable polynomial transforms. They permit *function-first reasoning* about quantum programs, and offer improved resource complexity over competing methods for applying desired functions to the spectrum of large linear operators.
 
@@ -22,7 +22,7 @@ Behind the scenes, the `Gadget` class will handle how these objects can and do c
 
 The `Gadget` class requires at least three arguments: `a`, `b`, and `label`. In the above example `Gadget(2, 2, "g0")` specifies `a = 2` input legs, `b = 2` output legs, and `label = "g0"`. We require `a, b >= 1` (though they can be different in general), and that labels are unique among gadgets. But don't worry: all of these properties are programmatically checked, and throw verbose errors if violated.
 
-> :u7981: **Gadgets cannot be named 'WIRE'**. For low-level reasons, this name is reserved, and if used will throw a verbose error.
+> :warning: *Gadgets cannot be named 'WIRE'*. For low-level reasons, this name is reserved, and if used will throw a verbose error.
 
 ## Linking gadgets together :link:
 
@@ -78,7 +78,7 @@ When linking complex `GadgetAssemblage` objects together, it can become difficul
 ```python
 # Specify some GadgetAssemblage object.
 assemblage = GadgetAssemblage(...)
-# Retrieve (automatically computed) input and output dictionaries
+# Retrieve (automatically computed) input and output dicts.
 input_leg_dict = assemblage.input_dict
 output_leg_dict = assemblage.output_dict
 '''
@@ -163,7 +163,7 @@ q_circ = seq2circ(assemblage_sequence, verbose=False)
 A core visualization technique in QSP is the response function; that is, as input oracles are single-qubit rotations parameterized by a scalar value `x`, it is useful to plot matrix elements of the resulting protocol with respect to this changing `x`. A variety of sophisticated visualization techniques for gadgets are possible, and we give the simplest below.
 
 ```python
-# Standard python math and plotting inputs
+# Standard python math and plotting imports.
 import numpy as np
 from matplotlib import pyplot as plt
 # Generate quantum circuit, and produce discrete data.
@@ -176,7 +176,7 @@ The simplest function `one_dim_response_function` evaluates the gadget on a scal
 
 ### Tips and tricks when building atomic gadgets :sun_with_face:
 
-- `AtomicGadget` objects can be cast to a string form. This will list the indices of output legs of the `AtomicGadget`, followed by a human-readable list of the `SequencObject` objects constituting that leg. Note that for high-degree gadgets, these strings might be quite long. `GadgetAssemblage` objects comprising only `AtomicGadget` objects can also be cast to strings, but may produce prohibitively long strings. The string form of a generic `GadgetAssemblage` object just lists the names of all contained gadgets, joined by hyphens, e.g., `g0-g1-g2`.
+- `AtomicGadget` objects can be cast to a string form. This will list the indices of output legs of the `AtomicGadget`, followed by a human-readable list of the `SequenceObject` objects constituting that leg. Note that for high-degree gadgets, these strings might be quite long. `GadgetAssemblage` objects comprising only `AtomicGadget` objects can also be cast to strings, but may produce prohibitively long strings. The string form of a generic `GadgetAssemblage` object just lists the names of all contained gadgets, joined by hyphens, e.g., `g0-g1-g2`.
 - For faster plotting, the `npts` argument in `one_dim_response_function` can be reduced; this number is precisely the number of equal divisions of `[-1, 1]` over which input `x` are plotted.
 
 ## Additional attributes and methods
