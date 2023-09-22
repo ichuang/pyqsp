@@ -1,8 +1,8 @@
-# Quantum computing with *gadgets* :pager:: a guide with examples
+# Quantum computing with *gadgets* :pager: (a guide with examples)
 
-Gadgets are unitary superoperators, based in the theory of quantum signal processing (QSP) and quantum singular values transformation (QSVT), which achieve flexible and intuitive block encodings of multivariable polynomial transforms. They permit *function-first reasoning* about quantum programs, and offer improved resource complexity over competing methods for applying desired functions to the spectrum of large linear operators.
+Gadgets are unitary superoperators, based in the theory of quantum signal processing (QSP) and quantum singular value transformation (QSVT); they achieve flexible and intuitive block encodings of multivariable polynomial transforms. Uniquely, gadgets permit *function-first reasoning* about quantum programs, and offer improved resource complexity over competing methods for applying desired functions to the spectrum of large linear operators.
 
-While running gadgets requires a quantum computer, their form and realizing circuits can be described classically. This package allows one to design gadgets, snap them together into larger gadgets, and analyze their resource requirements and behavior. 
+While running gadgets requires a quantum computer, their geometric form and realizing circuits can be described classically. This package allows the user to gadgets, snap them together into larger gadgets, visualize their output, and analyze their resource needs. 
 
 Toward this, this README covers a variety of common methods for instantiating, modifying, combining, and visualizing gadgets. We pair these methods with coded examples wherever possible.
 
