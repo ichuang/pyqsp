@@ -54,13 +54,13 @@ While we have shown it already implicitly, multiple `GadgetAssemblage` objects, 
 - If one wishes to place a bunch of `Gadget` objects in parallel, then once can use `wrap_parallel_gadgets`; this function takes a simple list of `Gadget` objects, e.g., `[g0, g1, g2]`, and returns a `GadgetAssemblage` containing all gadgets in the list as if they had been linked with `[]` linking guides.
 - A `GadgetAssemblage` has a `shape` attribute with the from `(a, b)`, where these `a` and `b` are the same as if the whole assemblage were being viewed as a `Gadget` object, forgetting internal structure.
 - A `GadgetAssemblage` has a `input_dict` and `output_dict` attributes. As shown in the next section, these can be used to list off the `GadgetAssemblage` objects input and output legs for easy definition of a linking guide.
-- A `GadgetAssemblage` can generate its own LaTeX `Tikz` diagram! Given a `GadgetAssemblage` named `a0`, for instance, simply call `a0.print_assemblage()`. This returns a string which can be placed within a `tikzpicture` environment in LaTex, automatically creating a figure for the resulting gadget assemblage, showing gadget names, connecting wires, and internal structure. By default the plot uses colored wires, but calling it with the optional argument `in_color = False` turns this off.
+- A `GadgetAssemblage` can generate its own LaTeX `tikz` diagram! Given a `GadgetAssemblage` named `a0`, for instance, simply call `a0.print_assemblage()`. This returns a string which can be placed within a `tikzpicture` environment in LaTex, automatically creating a figure for the resulting gadget assemblage, showing gadget names, connecting wires, and internal structure. By default the plot uses colored wires, but calling it with the optional argument `in_color = False` turns this off.
 
 ## Gadget properties (for the curious) :wrench:
 
 Behind the scenes, `GadgetAssemblage` objects are keeping track of a lot of structure. While for most purposes this structure is not and should not be directly touched, we provide a brief guide to relevant attributes and methods for the curious.
 
-A `GadgetAssemblage` is primarily built from two simply ordered lists, one of of `Gadget` objects (named `gadgets`) and one of `Interlink` objects (named `interlinks`. When building a `GadgetAssemblage` object, these two lists are used, along with a series of `map_to_grid` dictionaries, to situate all `Gadget` and `Interlink` objects with respect to a dynamically generated 2D coordinate system, the `global_grid`. 
+A `GadgetAssemblage` is primarily built from two simply ordered lists, one of of `Gadget` objects (named `gadgets`) and one of `Interlink` objects (named `interlinks`). When building a `GadgetAssemblage` object, these two lists are used, along with a series of `map_to_grid` dictionaries, to situate all `Gadget` and `Interlink` objects with respect to a dynamically generated 2D coordinate system, the `global_grid`. 
 
 Specifying the right `map_to_grid` objects for each `Gadget` and `Interlink` object, such that a valid `GadgetAssemblage` is produced, is quite cumbersome, and we recommend you let this be handled programmatically by the `link_assemblage` method, and various wrapping functions. However, if you want to see a low-level definition of a `GadgetAssemblage` object, a few examples are given in `tests/test_gadget_assemblage.py`.
 
@@ -94,7 +94,7 @@ As a reminder, input legs are labelled by the first `Gadget` *input* they encoun
 
 ## Atomic gadgets and generating circuits :electric_plug:
 
-The `Gadget` class has a sub-class, `AtomicGadget`, which in addition to information about the number of input and output legs, takes information about how to run the corresponding unitary superoperator in terms of parallel instances of multivariable quantum signal processing (M-QSP) [paper](https://quantum-journal.org/papers/q-2022-09-20-811/).
+The `Gadget` class has a sub-class, `AtomicGadget`, which in addition to information about the number of input and output legs, takes information about how to run the corresponding unitary superoperator in terms of parallel instances of multivariable quantum signal processing (M-QSP) [\[see the paper here!\]](https://quantum-journal.org/papers/q-2022-09-20-811/).
 
 
 ```python
@@ -125,13 +125,13 @@ a1 = g1.wrap_gadget()
 a2 = a0.link_assemblage(a1, linking guide)
 ```
 
-For a `GadgetAssemblage` object with size `a, b`, each element *within* its `s` must contain only integers between `0` and `a - 1` inclusive. Moreover, the overall size of `s` must be of size `b`. For the same gadget, its `xi` must have the same length `b`, and each element *within* `xi` must have length *one greater* than the length of the corresponding element in `s`. Again, don't stress: these properties are checked programmatically, and will throw verbose errors.
+For a `GadgetAssemblage` object with shape `(a, b)`, each element *within* its `s` must contain only integers between `0` and `a - 1` inclusive. Moreover, the overall size of `s` must be of size `b`. For the same gadget, its `xi` must have the same length `b`, and each element *within* `xi` must have length *one greater* than the length of the corresponding element in `s`. Again, don't stress: these properties are checked programmatically, and will throw verbose errors.
  
 One more thing: in order for the functional transforms achieved by atomic gadgets to be real (and thus semantically useful), `xi` and `s` for each atomic gadget should satisfy basic symmetries. That is, each element of `s` should be symmetric (the same back-to-front), while each element of `xi` should be antisymmetric (it goes to its negation under reversal).
 
 In special cases, these symmetry constraints can be broken, leading to *atypical atomic gadgets*, but we leave discussion of this to a later section on [additional methods](#additional-attributes-and-methods).
 
-If a `GadgetAssemblage` comprises only `AtomicGadget` objects, additional functionalities are introduced, chiefly in realizing the resulting composite gadget as a circuit with a QSP-like form. Such a circuit, if it can exist, is automatically generated on instantiation of both `AtomicGadget` and `GadgetAssemblage` objects, and can be references through the `sequence` attribute.
+If a `GadgetAssemblage` comprises only `AtomicGadget` objects, additional functionalities are enabled, chiefly the ability to realize the resulting composite gadget as a circuit with a QSP-like form. Such a circuit, if it can exist, is automatically generated on instantiation of both `AtomicGadget` and `GadgetAssemblage` objects, and can be referenced through their `sequence` attributes.
 
 ```python
 # An atomic gadget has its own sequence.
@@ -143,11 +143,11 @@ a0 = g0.wrap_gadget()
 assemblage_sequence = a0.sequence
 ```
 
-In both cases, `sequence` is a length `b` list of lists of `SequenceObject` objects. Each of these lists can be read off, left to right, to generate the corresponding circuit for that output. Each `SequenceObject` represents a single-qubit or two-qubit gate, possibly controlled on other qubits, and possibly representing an unknown oracle unitary. Rarely, however, does one need to work with this circuit representation explicitly, and instead these objects are almost always only used by internal logic of the package to yield Qiskit-based quantum circuit objects.
+In both cases, `sequence` is a length `b` *list of lists of `SequenceObject` objects*. Each of these lists can be read off, left to right, to generate the corresponding quantum circuit, time going again left to right, for that output. Each `SequenceObject` represents a single-qubit or two-qubit gate, possibly controlled on other qubits, and possibly representing an unknown oracle unitary. Rarely, however, does one need to work with this circuit representation explicitly from the `SequenceObject` lists. Instead, these objects are almost always only used by internal methods of the package to yield Qiskit-based quantum circuit objects.
 
 ### On compiling gadget assemblages to Qiskit :computer:
 
-The main logic used to turn `sequence` into a circuit is contained in `seq2circ.py`; the main method within this module, `seq2circ`, can take either a list of list of `SequenceObject` objects, or just a list of `SequenceObject` objects, and product a quantum circuit using Qiskit.
+The main logic used to turn `sequence` into a circuit is contained in `seq2circ.py`; the main method within this module, `seq2circ`, can take either a list of lists of `SequenceObject` objects, or just a list of `SequenceObject` objects, and product a quantum circuit using Qiskit.
 
 ```python
 # Create a gadget g0.
@@ -160,7 +160,7 @@ assemblage_sequence = a0.sequence
 q_circ = seq2circ(assemblage_sequence, verbose=False)
 ```
 
-A core visualization technique in QSP is the response function; that is, as input oracles are single-qubit rotations parameterized by a scalar value `x`, it is useful to plot matrix elements of the resulting protocol with respect to this changing `x`. A variety of sophisticated visualization techniques for gadgets are possible, and we give the simplest below.
+A core visualization technique in QSP is the *response function*; that is, as input oracles in QSP/M-QSP are single-qubit rotations parameterized by a scalar value `x`, it is useful and easy to plot matrix elements of the resulting protocol with respect to changing `x`. A variety of sophisticated visualization techniques for gadgets are possible, and we give the simplest below.
 
 ```python
 # Standard python math and plotting imports.
