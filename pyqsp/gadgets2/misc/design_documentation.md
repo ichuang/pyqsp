@@ -45,4 +45,5 @@
 - [ ] Individual gadgets can have both `pinning_guide` and `correction_guide` attributes specifying the degree to which a given output leg needs to be corrected, as well as whether any input legs are to be automatically fixed when casting to a untiary. These are currently not used within the main body of the code.
 - [ ] Readme and further docstrings can be added where appropriate.
 - [ ] Moving the gadget and atomic gadget definitions to their own file, perhaps along with the top-level methods. 
+- [ ] Multidimensional plotting functionality. We always target a specific matrix element for now, but we should be able to produce either multidimensional arrays or a huge flat list of tuples which plots over relevant slices. What is the best way to do this? Vector basis in each coordinate, following the syntax currently in seq2circ.py?
 
