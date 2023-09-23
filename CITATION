@@ -14,12 +14,12 @@
 }
 
 @article{chao2020finding,
-      title={Finding Angles for Quantum Signal Processing with Machine Precision}, 
-      author={Rui Chao and Dawei Ding and Andras Gilyen and Cupjin Huang and Mario Szegedy},
-      year={2020},
-      eprint={2003.02831},
-      archivePrefix={arXiv},
-      primaryClass={quant-ph}
+  title={Finding Angles for Quantum Signal Processing with Machine Precision}, 
+  author={Rui Chao and Dawei Ding and Andras Gilyen and Cupjin Huang and Mario Szegedy},
+  year={2020},
+  eprint={2003.02831},
+  archivePrefix={arXiv},
+  primaryClass={quant-ph}
 }
 
 @article{Haah2019product,

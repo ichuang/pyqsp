@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pyqsp.gadgets2 import *
+from pyqsp.gadgets import *
 
 # Temporary matplotlib import
 from matplotlib import pyplot as plt
@@ -97,7 +97,8 @@ class TestGadgetSeq2circ(unittest.TestCase):
         assert sqcirc.nqubits==a3.required_ancillae + len(full_seq)
         ngates = sqcirc.circ.size()
         print("Created circuit with {circ.nqubits} qubits and {ngates} gates")
-        sqcirc.draw(output='mpl', filename="test_circuit_from_assemblage_full_sequence1.png")
+        # # Used to draw full circuit to local png.
+        # sqcirc.draw(output='mpl', filename="test_circuit_from_assemblage_full_sequence1.png")
 
     def test_parameters1(self):
         '''

@@ -1,249 +1,193 @@
-# Quantum Signal Processing
+# Quantum computing with *gadgets* :pager: (a guide with examples)
 
-![test workflow](https://github.com/ichuang/pyqsp/actions/workflows/run_tests.yml/badge.svg)
+Gadgets are unitary superoperators, based in the theory of quantum signal processing (QSP) and quantum singular value transformation (QSVT); they achieve flexible and intuitive block encodings of multivariable polynomial transforms. Uniquely, gadgets permit *function-first reasoning* about quantum programs, and offer improved resource complexity over competing methods for applying desired functions to the spectrum of large linear operators.
 
-## Introduction
+While running gadgets requires a quantum computer, their geometric form and realizing circuits can be described classically. This package allows the user to gadgets, snap them together into larger gadgets, visualize their output, and analyze their resource needs. 
 
-[Quantum signal processing](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.118.010501) is a framework for quantum algorithms including Hamiltonian simulation, quantum linear system solving, amplitude amplification, etc. 
+Toward this, this README covers a variety of common methods for instantiating, modifying, combining, and visualizing gadgets. We pair these methods with coded examples wherever possible.
 
-Quantum signal processing performs spectral transformation of any unitary U, given access to an ancilla qubit, a controlled version of U and single-qubit rotations on the ancilla qubit. It first truncates an arbitrary spectral transformation function into a Laurent polynomial, then finds a way to decompose the Laurent polynomial into a sequence of products of controlled-U and single qubit rotations (by certain "QSP phase angles") on the ancilla. Such routines achieve optimal gate complexity for many of the quantum algorithmic tasks mentioned above.  The task achieved is essentially entirely defined by the QSP phase angles employed in the QSP operation sequence, and as such a central part is finding these QSP phase angles, given the desired Laurent polynomial.
+> :warning: This is a beta package; it is under active development. While we don't expect top-level methods and data structures to change, we are constantly working to improve performance, add quality-of-life features, and streamline the package. Major changes will be advertised where possible.
 
-This python package generates QSP phase angles using the code based on two different methods.  The "laurent" method employs [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extends the original code for QSP phase angle calculation, at https://github.com/alibaba-edu/angle-sequence.  The "tf" method employs tensorflow + keras, and finds the QSP angles using optimization.
+## Building gadgets :hammer:
 
-### QSP conventions
+Gadgets are unitary superoperators that take as input and return as output unitary matrices. But abstractly gadgets are just boxes with a finite number of input legs and output legs. Specifying them is simple.
 
-As described in [A Grand Unification of Quantum Algorithms](https://arxiv.org/abs/2105.02859), two important QSP model conventions used in the literature are known as Wx, where the signal W(a) is an X-rotation and QSP signal processing phase shifts are Z-rotations, and Wz, where the signal W(a) is a Z-rotation and QSP signal processing phase shifts are X-rotations.
-
-Specifically, in the Wx convention, the QSP operation sequence is:
-
-<!-- U_x = e^{i\phi_0 Z} \prod_{k=1}^L W(a) e^{i\phi_k Z} ~~~~{\rm where} ~~~ W(x)=\left[ \begin{array}{cc} a & i\sqrt{1-a^2} \\ i\sqrt{1-a^2} & a  \end{array} \right ] -->
-
-<center>
-<img src="https://latex.codecogs.com/svg.latex?%5Clarge%20U_x%20%3D%20e%5E%7Bi%5Cphi_0%20Z%7D%20%5Cprod_%7Bk%3D1%7D%5EL%20W%28a%29%20e%5E%7Bi%5Cphi_k%20Z%7D%20%7E%7E%7E%7E%7B%5Crm%20where%7D%20%7E%7E%7E%20W%28a%29%3D%5Cleft%5B%20%5Cbegin%7Barray%7D%7Bcc%7D%20a%20%26%20i%5Csqrt%7B1-a%5E2%7D%20%5C%5C%20i%5Csqrt%7B1-a%5E2%7D%20%26%20a%20%5Cend%7Barray%7D%20%5Cright%20%5D" />
-</center>
-
-And in the Wz convention, the QSP operation sequence is:
-
-<!-- U_z = e^{i\phi_0 X} \prod_{k=1}^L W(a) e^{i\phi_k X} ~~~~{\rm where} ~~~ W(a)=\left[ \begin{array}{cc} a + i\sqrt{1-a^2} & 0 \\ 0 & a - i\sqrt{1-a^2}  \end{array} \right ] -->
-
-<center>
-<img src="https://latex.codecogs.com/svg.latex?%5Clarge%20U_z%20%3D%20e%5E%7Bi%5Cphi_0%20X%7D%20%5Cprod_%7Bk%3D1%7D%5EL%20W%28a%29%20e%5E%7Bi%5Cphi_k%20X%7D%20%7E%7E%7E%7E%7B%5Crm%20where%7D%20%7E%7E%7E%20W%28a%29%3D%5Cleft%5B%20%5Cbegin%7Barray%7D%7Bcc%7D%20a%20&plus;%20i%5Csqrt%7B1-a%5E2%7D%20%26%200%20%5C%5C%200%20%26%20a%20-%20i%5Csqrt%7B1-a%5E2%7D%20%5Cend%7Barray%7D%20%5Cright%20%5D" />
-</center>
-
-They are related by a Hadamard transform:
-
-<!-- U_x = H U_z H -->
-
-<center>
-<img src="https://latex.codecogs.com/svg.latex?%5Clarge%20U_x%20%3D%20H%20U_z%20H" />
-</center>
-
-The Wz convention is convenient for and employed in [Laurent polynomial formulations of QSP](https://arxiv.org/abs/2003.02831), whereas the Wx convention is more traditional, e.g. as employed in [quantum singular value transform](https://arxiv.org/abs/1806.01838) applications of QSP.
-
-This package can generate QSP phase angles for both conventions (whereas earlier code only handled the Wz convention).  The challenge is that if one wants a certain polynomial  <!-- P_x(a) = \langle 0|U_x|0\rangle --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_x%28a%29%20%3D%20%5Clangle%200%7CU_x%7C0%5Crangle"/> in the Wx convention, one cannot just use the phases generated for this polynomial in the Wz convention.  Instead, first the Q_x(a) corresponding to P_x(a) is needed to complete the full U_x.  This then gives <!-- P_z(a) = \langle 0|U_z|0\rangle = P_x(a) + Q_x(a) --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_z%28a%29%20%3D%20%5Clangle%200%7CU_z%7C0%5Crangle%20%3D%20P_x%28a%29%20&plus;%20Q_x%28a%29" />.  Computing the QSP phases for P_z(a) in the Wz convention then gives the desired QSP phases for P_x(a) in the Wx convention, if suitable care is taken with respect to the Q(a) polynomial.
-
-In addition to specifying the signal rotation operator W and the signal processing operator phase shifts, the QSP signal basis must also be specified.  In this code, the default basis is |+>, but the code also allows the |0> basis to be used (when using tensorflow optimization to generate the phase angles).  See the "--measurement" option.
-
-## Examples
-
-This package also plots the QSP response function, and can be run from the command line.  In the example below, the blue line shows the target ideal polynomial QSP response function P_x(a); the red line shows the real part of the response achieved by the QSP phases, and the green line shows the imaginary part of the QSP response, with L=20.
-
-![Example QSP response function for 1/a](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-one-over-x-kappa3.png?raw=true)
-
-This was generated by running `pyqsp --plot invert`, which generated the following text output:
-
-```
-b=20, j0=10
-[PolyOneOverX] minimum [-2.90002589] is at [-0.25174082]: normalizing
-Laurent P poly 0.0002108924030879319 * w ^ (-21) + -0.0006894043260278334 * w ^ (-19) + 0.001994436843136674 * w ^ (-17) + -0.005148265426149545 * w ^ (-15) + 0.011941126989562179 * w ^ (-13) + -0.02504164571900347 * w ^ (-11) + 0.04774921151669176 * w ^ (-9) + -0.08322978307559126 * w ^ (-7) + 0.1333200017468883 * w ^ (-5) + -0.1973241700493915 * w ^ (-3) + 0.2714342596621151 * w ^ (-1) + 0.2714342596621151 * w ^ (1) + -0.1973241700493915 * w ^ (3) + 0.1333200017468883 * w ^ (5) + -0.08322978307559126 * w ^ (7) + 0.04774921151669176 * w ^ (9) + -0.02504164571900347 * w ^ (11) + 0.011941126989562179 * w ^ (13) + -0.005148265426149545 * w ^ (15) + 0.001994436843136674 * w ^ (17) + -0.0006894043260278334 * w ^ (19) + 0.0002108924030879319 * w ^ (21)
-Laurent Q poly -2.784691352688532e-05 * w ^ (-21) + -3.467046922689296e-06 * w ^ (-19) + -0.00023447352272530086 * w ^ (-17) + 0.00018731079814912242 * w ^ (-15) + -0.0007159634932856078 * w ^ (-13) + 0.0032821300323626736 * w ^ (-11) + -0.001907488898700853 * w ^ (-9) + 0.012591630667616198 * w ^ (-7) + -0.02371053103573988 * w ^ (-5) + -0.016629567619072996 * w ^ (-3) + -0.18519029619384528 * w ^ (-1) + -0.20476480667058175 * w ^ (1) + -0.5374170003848409 * w ^ (3) + -0.2638332742746844 * w ^ (5) + 0.21212227077358078 * w ^ (7) + 0.27748656462486654 * w ^ (9) + -0.34978762979573563 * w ^ (11) + 0.17888109364117422 * w ^ (13) + -0.07649917245226195 * w ^ (15) + 0.03551004671728361 * w ^ (17) + -0.011926352140796492 * w ^ (19) + 0.001997855069006951 * w ^ (21)
-Laurent Pprime poly 0.00018304548956104657 * w ^ (-21) + -0.0006928713729505227 * w ^ (-19) + 0.001759963320411373 * w ^ (-17) + -0.0049609546280004226 * w ^ (-15) + 0.01122516349627657 * w ^ (-13) + -0.021759515686640796 * w ^ (-11) + 0.0458417226179909 * w ^ (-9) + -0.07063815240797505 * w ^ (-7) + 0.10960947071114842 * w ^ (-5) + -0.2139537376684645 * w ^ (-3) + 0.08624396346826982 * w ^ (-1) + 0.06666945299153335 * w ^ (1) + -0.7347411704342324 * w ^ (3) + -0.1305132725277961 * w ^ (5) + 0.12889248769798953 * w ^ (7) + 0.3252357761415583 * w ^ (9) + -0.3748292755147391 * w ^ (11) + 0.1908222206307364 * w ^ (13) + -0.0816474378784115 * w ^ (15) + 0.037504483560420285 * w ^ (17) + -0.012615756466824325 * w ^ (19) + 0.0022087474720948828 * w ^ (21)
-[QuantumSignalProcessingWxPhases] Error in reconstruction from QSP angles = 0.4862234440482484
-QSP angles = [0.11177647198529908, 0.321286291382733, -2.449109005349844, 0.5475854935639934, -0.23068701778999645, 1.852723853663707, -0.1638598380129409, -0.031620025684050396, -0.3018780297835489, -1.8740083256355018, 0.6314873861312269, -0.036881744534211114, 1.300525766122238, 0.3073180685644643, -0.23974313142278042, 0.09536754986888613, -1.188342341212731, -0.6092537117168764, 0.4850840958947118, 0.8800119831449805, 0.4163653216360098, 2.480415494993986]
+```python
+# Create two (2, 2) gadgets named "g0" and "g1".
+g0 = Gadget(2, 2, "g0")
+g1 = Gadget(2, 2, "g1")
 ```
 
-The sign function is also useful to approximate, e.g. for oblivious amplitude amplification.  Running
-```
-pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
-```
-produces the QSP phase angles for a degree 19 polynomial approximation, using the error function of kappa * a, where kappa is 10, with a response function as shown in this plot:
+Behind the scenes, the `Gadget` class will handle how these objects can and do connect, and later we will introduce a special sub-class of `Gadget`, `AtomicGadget` which can even be compiled to explicit circuits.
 
-![Example QSP response function approximating the sign function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-sign-kappa-10-degree-19.png?raw=true)
+The `Gadget` class requires at least three arguments: `a`, `b`, and `label`. In the above example `Gadget(2, 2, "g0")` specifies `a = 2` input legs, `b = 2` output legs, and `label = "g0"`. We require `a, b >= 1` (though they can be different in general), and that labels are unique among gadgets. But don't worry: all of these properties are programmatically checked, and throw verbose errors if violated.
 
-A threshold function is useful, for example, for distinguishing eigenvalues and singular values.  Running
-```
-pyqsp --plot-real-only --plot --polyargs=20,20 --polyname poly_thresh poly
-```
-produces the QSP phase angles for a degree 20 polynomial approximation, using two error functions kappa 20, with a response function as shown in this plot:
+> :warning: *Gadgets cannot be named 'WIRE'*. For low-level reasons, this name is reserved, and if used will throw a verbose error.
 
-![Example QSP response function approximating a threshold function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-threshold-polynomial-degree-20-kappa-20.png?raw=true)
+## Linking gadgets together :link:
 
-Sine and cosine functions are useful, for example, for Hamiltonian simulation.  Running:
-```
-pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
-```
-produces the QSP phase angles for a degree 6 polynomial approximation of cos(3*x), and produces this plot:
+Gadgets can be linked together to form larger gadgets; to prevent self reference, `Gadget` objects are kept flat, and contain no internal gadget structure. Complex constructions keeping track of the internal structure of multiple gadgets are instead handled by the `GadgetAssemblage` class.
 
-![Example QSP response function approximating a cosine function](https://github.com/ichuang/pyqsp/blob/master/docs/IMAGE-sample-qsp-response-for-cos-using-tf-order-6.png?raw=true)
+```python
+# Wrap g0 and g1 into GadgetAssemblage objects, each containing a single gadget.
+a0 = g0.wrap_gadget()
+a1 = g1.wrap_gadget()
 
-This example also shows how an arbitrary function can be specified (using a numpy expression) as a string, and fit using an arbitrary order polynomial (may need to be even or odd, to match the function), using optimization via tensorflow, and a keras model.  The example also shows an alternative style of plot, produced using the `--plot-qsp-model` flag.
+'''
+Create a linking guide sending the 0-th output leg of g0 to the 0-th input of g1. 
 
-## Code design
+Linking guides are lists of tuples; each element contains two tuples: (g0_name, output_leg_index) and (g1_name, input_leg_index).
+'''
+linking_guide = [(("g0", 0), ("g1", 0))]
 
-* `angle_sequence.py` is the main module of the algorithm.
-* `LPoly.py` defines two classes `LPoly` and `LAlg`, representing Laurent polynomials and Low algebra elements respectively.
-* `completion.py` describes the completion algorithm: Given a Laurent polynomial element $F(\tilde{w})$, find its counterpart $G(\tilde{w})$ such that $F(\tilde{w})+G(\tilde{w})*iX$ is a unitary element.
-* `decomposition.py` describes the halving algorithm: Given a unitary parity Low algebra element $V(\tilde{w})$, decompose it as a unique product of degree-0 rotations $\exp\{i\theta X\}$ and degree-1 monomials $w$.
-* `ham_sim.py` shows an example of how the angle sequence for Hamiltonian simulation can be found.
-* `response.py` computes QSP response functions and generates plots
-* `poly.py` provides some utility polynomials, namely the approximation of 1/a using a linear combination of Chebyshev polynomials
-* `main.py` is the main entry point for command line usage
-* `qsp_model` is the submodule providing generation of QSP phase angles using tensorflow + keras
-
-The code is structured such that tensorflow is not imported by default, so that the package can be run without tensorflow being installed.  If `qsp_model` is used, then tensorflow is required.
-
-### Requirements
-
-This package can be run without tensorflow, if the `qsp_model` code is not used.  If `qsp_model` is desired, then also install the requirements specified in [tf_requirements.txt](https://github.com/ichuang/pyqsp/blob/master/tf_requirements.txt)
-
-### Unit tests
-
-A set of unit tests is also provided.  Run them using `python setup.py test`
-
-The `qsp_model` code depends on having tensorflow installed, and the unit tests for this code take awhile to run, so they are not run by default.  To enable unit tests for this code, first do `export PYQSP_TEST_QSP_MODELS=1`
-
-The `qsp_model` code unit tests can be run by themselves using `python setup.py test -s pyqsp.test.test_qsp_models`
-
-### Programmatic usage
-
-To find the QSP angle sequence corresponding to a real Laurent polynomial $A(\tilde{w}) = \sum_{i=-n}\^n a_i\tilde{w}^i$, simply run:
-
-    from pyqsp.angle_sequence import QuantumSignalProcessingPhases
-    ang_seq = QuantumSignalProcessingPhases([a_{-n}, a_{-n+2}, ..., a_n], signal_operator="Wz")
-    print(ang_seq)
-
-To find the QSP angle sequence corresponding to a real (non-Laurent) polynomial $A(x) = \sum_{i=0}\^n a_i x^i$, simply run:
-
-    from pyqsp.angle_sequence import QuantumSignalProcessingPhases
-    ang_seq = QuantumSignalProcessingPhases([a_{0}, a_{1}, ..., a_n], signal_operator="Wx")
-    print(ang_seq)
-
-By default, `QuantumSignalProcessingPhases` uses the "laurent" method, which is typically quite fast, but can become unstable at very high orders of polynomials, due to numerical roundoff errors, and the need for some randomization in completing the polynomials.
-
-`QuantumSignalProcessingPhases` can also be instructed to use the "tf" method, which employs tensorflow with a keras model, to find QSP phase angles using optimization.  This stably finds very high-quality solutions, but can be quite slow, particularly compared with the "laurent" method.  Do this, for example, using:
-
-    ang_seq = QuantumSignalProcessingPhases(poly, signal_operator="Wx", method="tf")
-
-Note that with the "tf" method, only the "Wx" signal_operator model is supported.  With this method, the polynomial can be a numpy Polynomial instance, or an instance of `pyqsp.poly.StringPolynomial`, e.g.
-
-    poly = StringPolynomial("np.cos(3*x)", 6)
-    ang_seq = QuantumSignalProcessingPhases(poly, method="tf")
-
-You can also plot the response given by a given QSP angle sequence, e.g. using:
-
-    pyqsp.response.PlotQSPResponse(ang_seq, target=poly, signal_operator="Wx")
-
-## Command line usage
-
-```
-usage: pyqsp [-h] [-v] [-o OUTPUT] [--signal_operator SIGNAL_OPERATOR] [--plot] [--hide-plot] [--return-angles] [--poly POLY] [--func FUNC]
-             [--polydeg POLYDEG] [--tau TAU] [--epsilon EPSILON] [--seqname SEQNAME] [--seqargs SEQARGS] [--polyname POLYNAME] [--polyargs POLYARGS]
-             [--plot-magnitude] [--plot-probability] [--plot-real-only] [--title TITLE] [--measurement MEASUREMENT] [--output-json]
-             [--plot-positive-only] [--plot-tight-y] [--plot-npts PLOT_NPTS] [--tolerance TOLERANCE] [--method METHOD] [--plot-qsp-model]
-             [--phiset PHISET] [--nepochs NEPOCHS] [--npts-theta NPTS_THETA]
-             cmd
-
-usage: pyqsp [options] cmd
-
-Version: 0.1.4
-Commands:
-
-    poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
-    hamsim      - compute QSP phase angles for Hamiltonian simulation using the Jacobi-Anger expansion of exp(-i tau sin(2 theta))
-    invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
-    angles      - generate QSP phase angles for the specified --seqname and --seqargs
-    poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
-    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf)
-    response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
-
-Examples:
-
-    pyqsp --poly=-1,0,2 poly2angles
-    pyqsp --poly=-1,0,2 --plot poly2angles
-    pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot  poly2angles
-    pyqsp --plot --tau 10 hamsim
-    pyqsp --plot --tolerance=0.01 --seqargs 3 invert
-    pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
-    pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
-    pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles
-    pyqsp --plot-real-only --plot --polyargs=20,20 --polyname poly_thresh poly
-    pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
-    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
-    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
-    pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly
-    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
-    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
-    pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
-    pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
-
-positional arguments:
-  cmd                   command
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -v, --verbose         increase output verbosity (add more -v to increase versbosity)
-  -o OUTPUT, --output OUTPUT
-                        output filename
-  --signal_operator SIGNAL_OPERATOR
-                        QSP sequence signal_operator, either Wx (signal is X rotations) or Wz (signal is Z rotations)
-  --plot                generate QSP response plot
-  --hide-plot           do not show plot (but it may be saved to a file if --output is specified)
-  --return-angles       return QSP phase angles to caller
-  --poly POLY           comma delimited list of floating-point coeficients for polynomial, as const, a, a^2, ...
-  --func FUNC           for tf method, numpy expression specifying ideal function (of x) to be approximated by a polynomial, e.g. 'np.cos(3 * x)'
-  --polydeg POLYDEG     for tf method, degree of polynomial to use in generating approximation of specified function (see --func)
-  --tau TAU             time value for Hamiltonian simulation (hamsim command)
-  --epsilon EPSILON     parameter for polynomial approximation to 1/a, giving bound on error
-  --seqname SEQNAME     name of QSP phase angle sequence to generate using the 'angles' command, e.g. fpsearch
-  --seqargs SEQARGS     arguments to the phase angles generated by seqname (e.g. length,delta,gamma for fpsearch)
-  --polyname POLYNAME   name of polynomial generate using the 'poly' command, e.g. 'sign'
-  --polyargs POLYARGS   arguments to the polynomial generated by poly (e.g. degree,kappa for 'sign')
-  --plot-magnitude      when plotting only show magnitude, instead of separate imaginary and real components
-  --plot-probability    when plotting only show squared magnitude, instead of separate imaginary and real components
-  --plot-real-only      when plotting only real component, and not imaginary
-  --title TITLE         plot title
-  --measurement MEASUREMENT
-                        measurement basis if using the polyfunc argument
-  --output-json         output QSP phase angles in JSON format
-  --plot-positive-only  when plotting only a-values (x-axis) from 0 to +1, instead of from -1 to +1 
-  --plot-tight-y        when plotting scale y-axis tightly to real part of data
-  --plot-npts PLOT_NPTS
-                        number of points to use in plotting
-  --tolerance TOLERANCE
-                        error tolerance for phase angle optimizer
-  --method METHOD       method to use for qsp phase angle generation, either 'laurent' (default) or 'tf' (for tensorflow + keras)
-  --plot-qsp-model      show qsp_model version of response plot instead of the default plot
-  --phiset PHISET       comma delimited list of QSP phase angles, to be used in the 'response' command
-  --nepochs NEPOCHS     number of epochs to use in tensorflow optimization
-  --npts-theta NPTS_THETA
-                        number of discretized values of theta to use in tensorflow optimization
-
+# Create a GadgetAssemblage object containing two gadgets, linked according to linking_guide.
+a2 = a0.link_assemblage(a1, linking guide)
 ```
 
-### Example: plot response polynomial functions for sin(a) approximation
+Again, it is difficult to improperly specify assemblages of linked gadgets. Linking guides are checked and will throw a verbose error if improperly specified; later, we will expose easier ways to build linking guides in special cases.
 
-    pyqsp --plot-qsp-model --phiset="[-1.63276817 0.20550406 -0.84198335  0.39732059 -0.26820613 2.41324245  0.04662674 -2.02847501 1.11311765  0.04662674 -0.72835021 -0.26820613 0.39732059 -0.84198335  0.20550406 -0.06197184]" response
+While we have shown it already implicitly, multiple `GadgetAssemblage` objects, each containing multiple internal `Gadget` objects, can be simply combined. Internally, this is handled by the package unwrapping the internal `Gadget` objects contained in each `GadgetAssemblage`, updating their respective internal structure, and re-wrapping everything again with `GadgetAssemblage`. As such, a `GadgetAssemblage` object never contains reference to other `GadgetAssemblage` objects, only `Gadget` objects, `Interlink` (covered in the next section) objects, or their sub-classes.
 
-## Citing this repository
+### Tips and tricks when building gadgets :sun_with_face:
 
-To cite this repository please include a reference to [our paper](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040203) and [Chao et al.](https://github.com/alibaba-edu/angle-sequence).
-A full list of references can be found [here](https://github.com/ichuang/pyqsp/blob/master/CITATION).
+- The function `wrap_gadget` can be applied to both `Gadget` and `AtomicGadget` objects, and returns a `GadgetAssemblage` containing only that gadget, with all special internal attributes automatically defined. As `link_assemblage` expects `GadgetAssemblage` arguments, wrapping is often necessary when trying to append a single gadget.
+- If one wishes to place a bunch of `Gadget` objects in parallel, then once can use `wrap_parallel_gadgets`; this function takes a simple list of `Gadget` objects, e.g., `[g0, g1, g2]`, and returns a `GadgetAssemblage` containing all gadgets in the list as if they had been linked with `[]` linking guides.
+- A `GadgetAssemblage` has a `shape` attribute with the from `(a, b)`, where these `a` and `b` are the same as if the whole assemblage were being viewed as a `Gadget` object, forgetting internal structure.
+- A `GadgetAssemblage` has a `input_dict` and `output_dict` attributes. As shown in the next section, these can be used to list off the `GadgetAssemblage` objects input and output legs for easy definition of a linking guide.
+- A `GadgetAssemblage` can generate its own LaTeX `tikz` diagram! Given a `GadgetAssemblage` named `a0`, for instance, simply call `a0.print_assemblage()`. This returns a string which can be placed within a `tikzpicture` environment in LaTex, automatically creating a figure for the resulting gadget assemblage, showing gadget names, connecting wires, and internal structure. By default the plot uses colored wires, but calling it with the optional argument `in_color = False` turns this off.
 
-## History
+## Gadget properties (for the curious) :wrench:
 
-- v0.0.3: initial version, with phase angle generation entirely done using https://arxiv.org/abs/2003.02831
-- v0.1.0: added generation of phase angles using optimization via tensorflow (qsp_model code by Jordan Docter and Zane Rossi)
-- v0.1.1: add tf unit tests to test_main; readme updates
-- v0.1.2: fixed bug in qsp_model plotting (Re[q] wasn't being correctly computed for the qsp_model plot); made tf an optional requirement
-- v0.1.3: fixed bug in qsp_model.qsp_layers - Re[q] is actually proportional to Imag[u[0,1]]; allow --nepochs and --npts-theta to be specified
-- v0.1.4: add measurement basis option for qsp_models; add phase estimation polynomial
+Behind the scenes, `GadgetAssemblage` objects are keeping track of a lot of structure. While for most purposes this structure is not and should not be directly touched, we provide a brief guide to relevant attributes and methods for the curious.
+
+A `GadgetAssemblage` is primarily built from two simply ordered lists, one of of `Gadget` objects (named `gadgets`) and one of `Interlink` objects (named `interlinks`). When building a `GadgetAssemblage` object, these two lists are used, along with a series of `map_to_grid` dictionaries, to situate all `Gadget` and `Interlink` objects with respect to a dynamically generated 2D coordinate system, the `global_grid`. 
+
+Specifying the right `map_to_grid` objects for each `Gadget` and `Interlink` object, such that a valid `GadgetAssemblage` is produced, is quite cumbersome, and we recommend you let this be handled programmatically by the `link_assemblage` method, and various wrapping functions. However, if you want to see a low-level definition of a `GadgetAssemblage` object, a few examples are given in `tests/test_gadget_assemblage.py`.
+
+Remember that a `GadgetAssemblage`, if one forgot its internal structure, is just a gadget; aligned with this, the *effective* `a` and `b` of a `GadgetAssemblage` are easily recoverable.
+
+```python
+# Specify some GadgetAssemblage object.
+assemblage = GadgetAssemblage(...)
+# Retrieve the (automatically computed) effective shape
+effective_a, effective_b = assemblage.shape
+```
+
+When linking complex `GadgetAssemblage` objects together, it can become difficult to remember their free input and output legs. Remember, a linking guide does not refer to `global_grid` (even though it modifies it behind the scenes); instead, it refers to free input and output legs of `GadgetAssemblage` objects. Listing these legs if forgotten is simple enough.
+
+```python
+# Specify some GadgetAssemblage object.
+assemblage = GadgetAssemblage(...)
+# Retrieve (automatically computed) input and output dicts.
+input_leg_dict = assemblage.input_dict
+output_leg_dict = assemblage.output_dict
+'''
+The keys of these dictionaries have the form (gadget_name, local_y_coord, local_x_coord).
+
+Sometimes local_x_coord is helpful to know, but for linking guides, we don't need it, and can strip it off.
+'''
+input_legs = [e[:2] for e in list(input_leg_dict.keys())]
+output_legs = [e[:2] for e in list(output_leg_dict.keys())]
+```
+
+As a reminder, input legs are labelled by the first `Gadget` *input* they encounter moving *forward*. Output legs are labelled by the first `Gadget` *output* they encounter moving *backward*.
+
+## Atomic gadgets and generating circuits :electric_plug:
+
+The `Gadget` class has a sub-class, `AtomicGadget`, which in addition to information about the number of input and output legs, takes information about how to run the corresponding unitary superoperator in terms of parallel instances of multivariable quantum signal processing (M-QSP) [\[see the paper here!\]](https://quantum-journal.org/papers/q-2022-09-20-811/).
+
+
+```python
+'''
+Specify two length-2 lists of M-QSP phases (note anti-symmetry).
+
+Here, xi_0 specifies the QSP phases for each of the two outputs of the eventual g0, in order. Here, the phases for each output are all zero.
+'''
+xi_0 = [[0, 0, 0, 0], [0, 0, 0, 0]]
+xi_1 = [[0, 0, 0, 0], [0, 0, 0, 0]]
+
+'''
+Specify two length-2 lists of oracle guides (note symmetry).
+
+Here, s_0 specifies the order in which each of the two input unitaries of the eventual g0 will be called. Here, the first output leg calls [0, 1, 0], while the second calls [1, 0, 1].
+'''
+s_0 = [[0, 1, 0], [1, 0, 1]]
+s_1 = [[0, 1, 0], [1, 0, 1]] 
+
+# Create two (2, 2) atomic gadgets named "g0" and "g1".
+g0 = AtomicGadget(2, 2, "g0", xi_0, s_0)
+g1 = AtomicGadget(2, 2, "g1", xi_0, s_1)
+
+# Linking occurs as before, as AtomicGadget is a subclass of Gadget.
+linking_guide = [(("g0", 0), ("g1", 0))]
+a0 = g0.wrap_gadget()
+a1 = g1.wrap_gadget()
+a2 = a0.link_assemblage(a1, linking guide)
+```
+
+For a `GadgetAssemblage` object with shape `(a, b)`, each element *within* its `s` must contain only integers between `0` and `a - 1` inclusive. Moreover, the overall size of `s` must be of size `b`. For the same gadget, its `xi` must have the same length `b`, and each element *within* `xi` must have length *one greater* than the length of the corresponding element in `s`. Again, don't stress: these properties are checked programmatically, and will throw verbose errors.
+ 
+One more thing: in order for the functional transforms achieved by atomic gadgets to be real (and thus semantically useful), `xi` and `s` for each atomic gadget should satisfy basic symmetries. That is, each element of `s` should be symmetric (the same back-to-front), while each element of `xi` should be antisymmetric (it goes to its negation under reversal).
+
+In special cases, these symmetry constraints can be broken, leading to *atypical atomic gadgets*, but we leave discussion of this to a later section on [additional methods](#additional-attributes-and-methods).
+
+If a `GadgetAssemblage` comprises only `AtomicGadget` objects, additional functionalities are enabled, chiefly the ability to realize the resulting composite gadget as a circuit with a QSP-like form. Such a circuit, if it can exist, is automatically generated on instantiation of both `AtomicGadget` and `GadgetAssemblage` objects, and can be referenced through their `sequence` attributes.
+
+```python
+# An atomic gadget has its own sequence.
+g0 = AtomicGadget(1, 1, "g0", [[0, 0, 0, 0]], [[0, 0, 0]])
+gadget_sequence = g0.sequence
+
+# The wrapped version of a0 contains the same sequence in this case, but in general will depend on the arrangement of internal AtomicGadget objects.
+a0 = g0.wrap_gadget()
+assemblage_sequence = a0.sequence
+```
+
+In both cases, `sequence` is a length `b` *list of lists of `SequenceObject` objects*. Each of these lists can be read off, left to right, to generate the corresponding quantum circuit, time going again left to right, for that output. Each `SequenceObject` represents a single-qubit or two-qubit gate, possibly controlled on other qubits, and possibly representing an unknown oracle unitary. Rarely, however, does one need to work with this circuit representation explicitly from the `SequenceObject` lists. Instead, these objects are almost always only used by internal methods of the package to yield Qiskit-based quantum circuit objects.
+
+### On compiling gadget assemblages to Qiskit :computer:
+
+The main logic used to turn `sequence` into a circuit is contained in `seq2circ.py`; the main method within this module, `seq2circ`, can take either a list of lists of `SequenceObject` objects, or just a list of `SequenceObject` objects, and product a quantum circuit using Qiskit.
+
+```python
+# Create a gadget g0.
+g0 = AtomicGadget(1, 1, "g0", [[0, 0, 0, 0]], [[0, 0, 0]])
+# Wrap gadget g0 to an assemblage (optional here).
+a0 = g0.wrap_gadget()
+# Get sequence for assemblage a0.
+assemblage_sequence = a0.sequence
+# Get quantum circuit from assemblage_sequence.
+q_circ = seq2circ(assemblage_sequence, verbose=False)
+```
+
+A core visualization technique in QSP is the *response function*; that is, as input oracles in QSP/M-QSP are single-qubit rotations parameterized by a scalar value `x`, it is useful and easy to plot matrix elements of the resulting protocol with respect to changing `x`. A variety of sophisticated visualization techniques for gadgets are possible, and we give the simplest below.
+
+```python
+# Standard python math and plotting imports.
+import numpy as np
+from matplotlib import pyplot as plt
+# Generate quantum circuit, and produce discrete data.
+q_circ = seq2circ(assemblage_sequence, verbose=False)
+# X is real within [-1, 1] and Y has modulus within [-1, 1].
+X, Y = q_circ.one_dim_response_function(npts=50)
+```
+
+The simplest function `one_dim_response_function` evaluates the gadget on a scalar parameter `x` *for all `a` inputs at once*. By default, `Y`, which has the same size as `X`, is a list of `00` matrix elements of the resulting unitary. In the section on [additional methods](#additional-attributes-and-methods), we indicate how one can choose to query an arbitrary matrix element, as well as sweep gadget outputs over more complex input sets.
+
+### Tips and tricks when building atomic gadgets :sun_with_face:
+
+- `AtomicGadget` objects can be cast to a string form. This will list the indices of output legs of the `AtomicGadget`, followed by a human-readable list of the `SequenceObject` objects constituting that leg. Note that for high-degree gadgets, these strings might be quite long. `GadgetAssemblage` objects comprising only `AtomicGadget` objects can also be cast to strings, but may produce prohibitively long strings. The string form of a generic `GadgetAssemblage` object just lists the names of all contained gadgets, joined by hyphens, e.g., `g0-g1-g2`.
+- For faster plotting, the `npts` argument in `one_dim_response_function` can be reduced; this number is precisely the number of equal divisions of `[-1, 1]` over which input `x` are plotted.
+
+## Additional attributes and methods
+
+In what follows we describe a variety of more involved optional arguments, suppressed properties, and corresponding reminders for the advanced user of this package. Many of these points will eventually be defined, handled, or checked automatically. We will indicate explicitly where and when this occurs.
+
+- While all `AtomicGadget` objects with antisymmetric `Xi` and symmetric `S` are guaranteed to have real `00` matrix elements for each output leg, this is not true in general. However, there exist  `AtomicGadget` objects without antisymmetric `Xi` and symmetric `S` which *do* have this property. Currently no checks are in place to verify whether this is the case, so users are warned to verify this property (or an approximate version of it) independently is using such *atypical atomic gadgets*.
+- The function Unitary `one_dim_response_function` can take an optional argument, `uindex` of the form `(int, int)`, indicating which matrix element should be returned from the resulting matrix, evaluated over the size-`npts` set `X`. By default `uindex = (0, 0)`.
+- The `AtomicGadget` class currently has two optional arguments corresponding to internal attributes which are currently undefined. The first `correction_guide`, will allow for different *output legs* of an atomic gadget to receive different-length correction protocols when `sequence` is being generated. Currently all outgoing legs are corrected with the same protocol, fixed at `degree=4` in `get_correction_phases` in `gadget_assemblage.py`. The second attribute, `pinning_guide`, will allow for *input legs* of an atomic gadget to have pre-fixed input values. In other words, the free values for the user to defined for the input legs of a `GadgetAssemblage` containing such *pinned* `AtomicGadget` objects will be fewer in number. The user is already free to fix a subset of a `GadgetAssemblage` object's inputs, but eventually this will be handled and checked at the individual gadget level, helping in the definition of certain common *atypical atomic gadgets*.
+
+## Coming soon :construction:
+- Improved ancillae-allocation subroutines in `gadget_assemblage.py`, taking advantage of special properties of the `AtomicGadget` object `S` attribute.
+- Instantiation and automatic verification of `correction_guide` attribute in `AtomicGadget`.
+- Instantiation and automatic verification of `pinning_guide` attribute in `AtomicGadget`.

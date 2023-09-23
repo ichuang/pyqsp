@@ -5,7 +5,7 @@ import numpy as np
 
 from qiskit import QuantumCircuit
 from qiskit.circuit import Parameter	# used for signal parameters
-from pyqsp.gadgets2.sequences import *
+from pyqsp.gadgets.sequences import *
 
 class SequenceQuantumCircuit:
     '''

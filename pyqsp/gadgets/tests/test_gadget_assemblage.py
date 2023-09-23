@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from pyqsp.gadgets2 import *
+from pyqsp.gadgets import *
 # from gadget_assemblage import *
 
 # Temporary matplotlib import
