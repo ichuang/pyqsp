@@ -540,9 +540,6 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         diff_sum = np.mean(np.abs(Y - ideal_value))
         assert diff_sum < 1.0e-2
 
-        print("THIS QSP PROTOCOL IS THIS LONG:")
-        print(len(leg_0))
-
         # Deactivated plot function; note shift in Y for first plot, as otherwise the overlap is too good to see two lines.
         # plt.close()
         # plt.figure()
@@ -593,7 +590,7 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
     def test_sqrt_gadget(self):
 
-        degree = 32
+        degree = 18
         delta = 0.1
 
         sqrt_gadget = get_sqrt_gadget("sqrt", degree=degree, delta=delta)
@@ -604,9 +601,6 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         qc = seq2circ(leg_0, verbose=False)
         X, Y = qc.one_dim_response_function(npts=80)
 
-        plt.close()
-        plt.figure()
-
         idx = np.where(abs(X[:,0]) > delta)
         Y_restricted = np.real(Y)[idx]
         X_restricted = X[:,0][idx]
@@ -615,12 +609,84 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
         assert sum((2*Y_restricted**2 - 1) - np.abs(X_restricted)) < 1.0e-2
         
         # # One can plot to check the imaginary component is small.
+        # plt.close()
+        # plt.figure()
         # plt.plot(X, np.abs(Y))
         # plt.plot(X, np.imag(Y))
         # plt.plot(X[:,0], np.real(Y))
         # plt.plot(X[:,0], 2*np.real(Y)**2 - 1)
         # plt.plot(X[:,0], np.abs(X))
         # plt.show()
+
+    def test_atomic_gadget_correction_passthrough(self):
+        g0 = AtomicGadget(1, 1, "g0", [[0, 0, 0, 0]], [[0, 0, 0]])
+        g1 = AtomicGadget(1, 1, "g1", [[0, 0, 0]], [[0, 0]])
+        
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+        
+        a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
+        full_seq = a2.sequence
+        leg_0 = full_seq[0]
+
+        # Using default correction.
+        self.assertEqual(len(leg_0), 253)
+
+        # Instantiate trivial correction guides
+        correction_guide_0 = {0 : 0}
+        correction_guide_1 = {0 : 0}
+
+        g0 = AtomicGadget(1, 1, "g0", [[0, 0, 0, 0]], [[0, 0, 0]], correction_guide=correction_guide_0)
+        g1 = AtomicGadget(1, 1, "g1", [[0, 0, 0]], [[0, 0]], correction_guide=correction_guide_1)
+        
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+
+        self.assertEqual(set(a0.gadgets[0].correction_guide.keys()), set([0]))
+        self.assertEqual(set(a1.gadgets[0].correction_guide.keys()), set([0]))
+        
+        a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
+
+        self.assertEqual(set(a2.gadgets[0].correction_guide.keys()), set([0]))
+        self.assertEqual(set(a2.gadgets[1].correction_guide.keys()), set([0]))
+
+        full_seq = a2.sequence
+        leg_0 = full_seq[0]
+
+        # Using trivial correction (pass through) internally.
+        self.assertEqual(len(leg_0), 17)
+
+        # Check that function is close to 6th Chebyshev polynomial.
+        qc = seq2circ(leg_0, verbose=False)
+        X, Y = qc.one_dim_response_function(npts=80)
+        X = X[:,0]
+        diff_sum = np.mean(np.abs(np.real(Y) - (32*X**6 - 48*X**4 + 18*X**2 - 1)))
+        assert diff_sum < 1.0e-3
+
+        # Instantiate longer correction guides
+        # NOTE: length 6 fails due to completion error in pyqsp.
+        correction_guide_0 = {0 : 8}
+        correction_guide_1 = {0 : 8}
+
+        g0 = AtomicGadget(1, 1, "g0", [[0, 0, 0, 0]], [[0, 0, 0]], correction_guide=correction_guide_0)
+        g1 = AtomicGadget(1, 1, "g1", [[0, 0, 0]], [[0, 0]], correction_guide=correction_guide_1)
+        
+        a0 = g0.wrap_gadget()
+        a1 = g1.wrap_gadget()
+
+        self.assertEqual(set(a0.gadgets[0].correction_guide.keys()), set([0]))
+        self.assertEqual(set(a1.gadgets[0].correction_guide.keys()), set([0]))
+        
+        a2 = a0.link_assemblage(a1, [(("g0", 0), ("g1", 0))])
+
+        self.assertEqual(set(a2.gadgets[0].correction_guide.keys()), set([0]))
+        self.assertEqual(set(a2.gadgets[1].correction_guide.keys()), set([0]))
+
+        full_seq = a2.sequence
+        leg_0 = full_seq[0]
+
+        # Using length 8 correction internally.
+        self.assertEqual(len(leg_0), 429)
         
 if __name__ == '__main__':
     unittest.main()

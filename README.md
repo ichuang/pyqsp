@@ -8,6 +8,8 @@ Toward this, this README covers a variety of common methods for instantiating, m
 
 > :warning: This is a beta package; it is under active development. While we don't expect top-level methods and data structures to change, we are constantly working to improve performance, add quality-of-life features, and streamline the package. Major changes will be advertised where possible.
 
+> :round_pushpin: This package runs in tandem with software for the numerical investigation of standard QSP/QSVT, written by a subset of authors of this package, [pyqsp](https://github.com/ichuang/pyqsp/tree/master). The introduction below only lightly covers the use of standard *pyqsp*, and we refer interested readers to its documentation.
+
 ## Building gadgets :hammer:
 
 Gadgets are unitary superoperators that take as input and return as output unitary matrices. But abstractly gadgets are just boxes with a finite number of input legs and output legs. Specifying them is simple.

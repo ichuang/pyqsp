@@ -36,10 +36,14 @@ class Gadget:
         Returns a GadgetAssemblage object containing only self, with mapt_to_grid and additional required Interlink objects automatically instantiated.
     """
     def __init__(self, a, b, label, map_to_grid=dict()):
-        self.a, self.b = a, b
-        self.label = label
-        self.legs = [(k, 0) for k in range(a)] + [(k, 1) for k in range(b)]
-        self.map_to_grid = map_to_grid
+        
+        if (a <= 0) or (b <= 0):
+            raise NameError("Gadget %s cannot have a or b <= 0." %(label))
+        else:
+            self.a, self.b = a, b
+            self.label = label
+            self.legs = [(k, 0) for k in range(a)] + [(k, 1) for k in range(b)]
+            self.map_to_grid = map_to_grid
 
     def wrap_gadget(self):
         """
@@ -59,7 +63,7 @@ class Gadget:
 
         # Check if is AtomicGadget or not, and preserve sub-type.
         if isinstance(self, AtomicGadget):
-            g0 = AtomicGadget(self.a, self.b, self.label, self.Xi, self.S, g0_map)
+            g0 = AtomicGadget(self.a, self.b, self.label, self.Xi, self.S, map_to_grid=g0_map, correction_guide=self.correction_guide, pinning_guide=self.pinning_guide)
         else:
             g0 = Gadget(self.a, self.b, self.label, g0_map)
 
@@ -137,6 +141,9 @@ class AtomicGadget(Gadget):
         len_s = len(self.S)
 
         # Currently instantiate correction_guide trivially; eventually this will be a dictionary with elements (out_going_leg_local_y: correction_degree). If correction_degree is zero for a leg, it will be passed forward. We should also verify parity constraints on the allowed degrees.
+        """
+        guide = {0: 4, 1: 6, 2: 8, ...} # keys in legs set, and values are positive integers. If not defined, then default value.
+        """
         self.correction_guide = correction_guide
         # Currently instantiate pinning_guide trivially; eventually this will allow for certain gadget inputs to be fixed automatically, with checks after instantiation that these legs are free in any assemblage.
         self.pinning_guide = pinning_guide
@@ -213,8 +220,7 @@ class AtomicGadget(Gadget):
         return current_str
 
 def get_sqrt_gadget(label, degree=8, delta=0.1):
-    
-    # Generate phases for the square root protocol
+    # Generate QSP phases for the square root protocol.
     phi = SqrtSequence().generate(degree, delta)
 
     Xi = [phi]
@@ -251,7 +257,7 @@ def get_correction_phases(degree=4, pass_through=False):
         seq = [SignalGate(0)]
         return seq
 
-def get_twice_z_correction(sequence):
+def get_twice_z_correction(sequence, degree=None):
     """
     Takes a list of SequenceObject objects and returns a new list of SequenceObject objects which, when run, results in approximately twice the Z-rotation conjugating the unitary resulting from running the original sequence. The correction phases are determined in get_correction_phases.
 
@@ -261,7 +267,13 @@ def get_twice_z_correction(sequence):
     Returns:
         new_seq : list of SequenceObject objects
     """
-    correction_protocol = get_correction_phases()
+    # Custom correction degree support, with pass through possibility.
+    if not degree:
+        correction_protocol = get_correction_phases()
+    elif degree == 0:
+        correction_protocol = get_correction_phases(pass_through=True)
+    else:
+        correction_protocol = get_correction_phases(degree=degree)
     new_seq = []
     # Prepend an X gate. Note that there is no target or control specified; this is handled in get_controlled_sequence().
     x_gate = XGate(angle=np.pi/2) # if changed to np.pi, gives what Qiskit wants
@@ -588,28 +600,58 @@ class GadgetAssemblage:
                         # Make recursive call with increased depth.
                         internal_seq = self.get_assemblage_sequence(true_y, c_x, depth + 1, target, ancilla_start)
 
-                        # The target is fixed by output leg, and controls depends on depth and ancilla_start.
-                        controls = [ancilla_start + depth]
-                        twice_z_corr = get_twice_z_correction(internal_seq)
-                        control_z_corr = get_controlled_sequence(twice_z_corr, target, controls)
-                        inverse_control_z_corr = get_inverse_sequence(control_z_corr)
-                        # We create SWAP gates around inner protocol to place phase correctly.
-                        index_0 = target
-                        index_1 = ancilla_start + depth
-                        # Note we initialize target for SWAPS, even though they have an ill defined target.
-                        swap_0 = SwapGate(index_0, index_1, target=target)
-                        swap_1 = SwapGate(index_0, index_1, target=target)
-                        # Finally, we sandwich internal sequence with the controlled Z rotations, suitably swapped around.
-                        # POSSIBLE BUG: check ordering of inverse
-                        new_seq = [swap_0] + inverse_control_z_corr + [swap_0] + internal_seq + [swap_1] + control_z_corr + [swap_1]
-                        # Finally, append this corrected protocol to the main sequence.
-                        seq.extend(new_seq)
+                        """
+                        Here we determine which leg we've plugged into, and get its correction parameters (if any).
+                        """
+                        # We get the local y of the gadget we've run into.
+                        collision_leg = next_collision[1]
+                        if collision_leg in collision_gadget.correction_guide:
+                            # Determine correction degree for gadget leg.
+                            correction_degree = collision_gadget.correction_guide[collision_leg]
+                            if correction_degree == 0:
+                                # If pass through is called, just tack on internal sequence.
+                                seq.extend(internal_seq)
+                            else:
+                                # The target is fixed by output leg, and controls depends on depth and ancilla_start.
+                                controls = [ancilla_start + depth]
+                                # Note we use the custom correction degree.
+                                twice_z_corr = get_twice_z_correction(internal_seq, degree=correction_degree)
+                                control_z_corr = get_controlled_sequence(twice_z_corr, target, controls)
+                                inverse_control_z_corr = get_inverse_sequence(control_z_corr)
+                                # Create SWAP gates around inner protocol.
+                                index_0 = target
+                                index_1 = ancilla_start + depth
+                                # Note we initialize target for SWAPS, even though they have an ill defined target.
+                                swap_0 = SwapGate(index_0, index_1, target=target)
+                                swap_1 = SwapGate(index_0, index_1, target=target)
+                                # Finally, we sandwich internal sequence with the controlled Z rotations, suitably swapped around.
+                                # POSSIBLE BUG: check ordering of inverse
+                                new_seq = [swap_0] + inverse_control_z_corr + [swap_0] + internal_seq + [swap_1] + control_z_corr + [swap_1]
+                                # Finally, append this corrected protocol to the main sequence.
+                                seq.extend(new_seq)
+                        else:
+                            # The target is fixed by output leg, and controls depends on depth and ancilla_start.
+                            controls = [ancilla_start + depth]
+                            twice_z_corr = get_twice_z_correction(internal_seq)
+                            control_z_corr = get_controlled_sequence(twice_z_corr, target, controls)
+                            inverse_control_z_corr = get_inverse_sequence(control_z_corr)
+                            # Create SWAP gates around inner protocol.
+                            index_0 = target
+                            index_1 = ancilla_start + depth
+                            # Note we initialize target for SWAPS, even though they have an ill defined target.
+                            swap_0 = SwapGate(index_0, index_1, target=target)
+                            swap_1 = SwapGate(index_0, index_1, target=target)
+                            # Finally, we sandwich internal sequence with the controlled Z rotations, suitably swapped around.
+                            # POSSIBLE BUG: check ordering of inverse
+                            new_seq = [swap_0] + inverse_control_z_corr + [swap_0] + internal_seq + [swap_1] + control_z_corr + [swap_1]
+                            # Finally, append this corrected protocol to the main sequence.
+                            seq.extend(new_seq)
                     # If input legs map back to overall input leg instead.
                     else:
                         elem = external_seq[j]
                         old_label = elem.label
 
-                        # BUG TODO: THIS SHOULD BE LABELLED BY THE OVERALL INPUT LEG, AND NOT UNIFORMLY.
+                        # Label the resulting oracle by the overall input leg.
                         input_labels = sorted(self.input_legs)
                         new_label = input_labels.index(next_collision[1])
                         
@@ -2034,7 +2076,7 @@ class GadgetAssemblage:
             # new_g = Gadget(new_g_a, new_g_b, new_g_label, new_g_map)
             # new_gadgets.append(new_g)
             if isinstance(g, AtomicGadget):
-                new_g = AtomicGadget(new_g_a, new_g_b, new_g_label, g.Xi, g.S, new_g_map)
+                new_g = AtomicGadget(new_g_a, new_g_b, new_g_label, g.Xi, g.S, map_to_grid=new_g_map, correction_guide=g.correction_guide, pinning_guide=g.pinning_guide)
                 new_gadgets.append(new_g)
             else:
                 new_g = Gadget(new_g_a, new_g_b, new_g_label, new_g_map)
@@ -2058,7 +2100,7 @@ class GadgetAssemblage:
             # new_gadgets.append(new_g)
 
             if isinstance(g, AtomicGadget):
-                new_g = AtomicGadget(new_g_a, new_g_b, new_g_label, g.Xi, g.S, new_g_map)
+                new_g = AtomicGadget(new_g_a, new_g_b, new_g_label, g.Xi, g.S, map_to_grid=new_g_map, correction_guide=g.correction_guide, pinning_guide=g.pinning_guide)
                 new_gadgets.append(new_g)
             else:
                 new_g = Gadget(new_g_a, new_g_b, new_g_label, new_g_map)
