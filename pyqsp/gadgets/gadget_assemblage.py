@@ -117,12 +117,16 @@ class AtomicGadget(Gadget):
         The name of the gadget; checked to be unique when placed in a GadgetAssemblage object.
     legs : list of (int, int)
         A list of tuples of the form (y_coord, x_coord), where all input legs have x_coord = 0 and all output legs have x_coord = 1. For input legs y_coord goes between 0 and (a - 1) inclusive, while for output legs y_coord goes between 0 and (b - 1) inclusive.
-    map_to_grid : dictionay with keys (int, int) and values (int, int), optional
-        A dictionary mapping all elements in self.legs to (int, int) locations on a global_grid as specified in GadgetAssemblage. This map is often automatically instantiated when linking GadgetAssemblage objects.
     Xi : list of lists of floats
         A list of self.b phase lists for M-QSP protocols, each of possibly different lengths. Note the len(S[k]) = len(Xi[k]) + 1 for all k between 0 and (self.b - 1) inclusive.
     S : list of lists of ints
         A list of self.b lists of integers between 0 and (self.a - 1) inclusive, indicating which of the self.a possible oracle unitaries is to be inserted at that position in the self.b-th circuit. Note the len(S[k]) = len(Xi[k]) + 1 for all k between 0 and (self.b - 1) inclusive.
+    map_to_grid : dictionay with keys (int, int) and values (int, int), optional
+        A dictionary mapping all elements in self.legs to (int, int) locations on a global_grid as specified in GadgetAssemblage. This map is often automatically instantiated when linking GadgetAssemblage objects.
+    correction_guide : dict with (int : int) entries, optional
+        Specifies, for some possibly trivial subset of local_y coordinates of output legs (i.e., ints between 0 and b - 1 inclusive) the correction protocol degree (an int, either 0, meaning no correction, or >= 4) applied to that leg when linked to other AtomicGadget objects.
+    pinning_guide : dict with (int : float) entries, optional
+        Currently not implemented.
 
     Methods
     -------
@@ -140,11 +144,25 @@ class AtomicGadget(Gadget):
         len_xi = len(self.Xi)
         len_s = len(self.S)
 
-        # Currently instantiate correction_guide trivially; eventually this will be a dictionary with elements (out_going_leg_local_y: correction_degree). If correction_degree is zero for a leg, it will be passed forward. We should also verify parity constraints on the allowed degrees.
         """
-        guide = {0: 4, 1: 6, 2: 8, ...} # keys in legs set, and values are positive integers. If not defined, then default value.
+        correction_guide is a dictionary with elements of the form (local_leg_y : correction_degree).
         """
-        self.correction_guide = correction_guide
+        correction_keys = set(correction_guide.keys())
+        correction_vals = list(correction_guide.values())
+        out_leg_set = set(range(b))
+
+        cor_vals_size_check = all(list(map(lambda x : (x >= 4) or (x == 0), correction_vals)))
+        cor_vals_type_check = all(list(map(lambda x : isinstance(x, int), correction_vals)))
+        cor_keys_check = correction_keys <= out_leg_set
+
+        if not cor_vals_size_check:
+            raise NameError("correction_guide values for AtomicGadget %s are not 0 or >= 4." %(label))
+        elif not cor_vals_size_check:
+            raise NameError("correction_guide values for AtomicGadget %s are not all ints." %(label))
+        elif not cor_keys_check:
+            raise NameError("correction_guide keys for AtomicGadget %s are not between 0 and %s inclusive." %(label, b - 1))
+        else:
+            self.correction_guide = correction_guide
         # Currently instantiate pinning_guide trivially; eventually this will allow for certain gadget inputs to be fixed automatically, with checks after instantiation that these legs are free in any assemblage.
         self.pinning_guide = pinning_guide
         
@@ -1894,12 +1912,12 @@ class GadgetAssemblage:
 
         # Finally, instantiate Gadget objects, checking if atomic first.
         if isinstance(gadget_0, AtomicGadget):
-            new_g0 = AtomicGadget(gadget_0.a, gadget_0.b, gadget_0.label, gadget_0.Xi, gadget_0.S, new_g0_map)
+            new_g0 = AtomicGadget(gadget_0.a, gadget_0.b, gadget_0.label, gadget_0.Xi, gadget_0.S, map_to_grid=new_g0_map, correction_guide=gadget_0.correction_guide, pinning_guide=gadget_0.pinning_guide)
         else:
             new_g0 = Gadget(gadget_0.a, gadget_0.b, gadget_0.label, new_g0_map)
 
         if isinstance(gadget_1, AtomicGadget):
-            new_g1 = AtomicGadget(gadget_1.a, gadget_1.b, gadget_1.label, gadget_1.Xi, gadget_1.S, new_g1_map)
+            new_g1 = AtomicGadget(gadget_1.a, gadget_1.b, gadget_1.label, gadget_1.Xi, gadget_1.S, map_to_grid=new_g1_map, correction_guide=gadget_1.correction_guide, pinning_guide=gadget_1.pinning_guide)
         else:
             new_g1 = Gadget(gadget_1.a, gadget_1.b, gadget_1.label, new_g1_map)
 

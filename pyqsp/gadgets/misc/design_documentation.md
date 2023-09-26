@@ -48,9 +48,9 @@
 - [ ] Multidimensional plotting functionality. We always target a specific matrix element for now, but we should be able to produce either multidimensional arrays or a huge flat list of tuples which plots over relevant slices. What is the best way to do this? Vector basis in each coordinate, following the syntax currently in seq2circ.py?
 
 ## Bugs to fix
-- [ ] Currently correction and pinning guides need to be replaced upon gadget wrapping (fixed already) and swapping.
+- [x] Currently correction and pinning guides need to be replaced upon gadget wrapping (fixed already) and swapping.
 - [ ] For (1,1) gadgets that feed into other (1,1) gadgets, correction can always be neglected, and this could be dynamically checked.
-- [ ] Setting up checks on correction guide to ensure uniqueness and range specifications. These checks are: unique keys, keys within output leg range, values positive integers greater than or equal to four.
+- [x] Setting up checks on correction guide to ensure uniqueness and range specifications. These checks are: unique keys, keys within output leg range, values positive integers greater than or equal to four.
 - [ ] Plotting options should be expanded; sweep and fixed, for arbitrary slices. If anything, just allow one to feed in a series of a-dimensional input point, and return these points evaluated through the gadget as d-dimensional outputs.
 - [ ] Pinning guides requires more work to get up and running, and should interact nicely with current plotting.
 - [ ] Changing ancilla allocation to the new, more conservative form, which takes in to account atomic gadget S prescriptions.

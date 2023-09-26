@@ -687,6 +687,20 @@ class TestGadgetAssemblageMethods(unittest.TestCase):
 
         # Using length 8 correction internally.
         self.assertEqual(len(leg_0), 429)
+
+    def test_correction_guide_init_errors(self):
+        # Test for correction value in improper range
+        correction_guide_0 = {0 : -1}
+        with self.assertRaises(NameError):
+            g0 = AtomicGadget(1, 1, "g0", [[0, 0]], [[0]], correction_guide=correction_guide_0)
+        # Test for correction value with improper type.
+        correction_guide_0 = {0 : 2.5}
+        with self.assertRaises(NameError):
+            g0 = AtomicGadget(1, 1, "g0", [[0, 0]], [[0]], correction_guide=correction_guide_0)
+        # Test for correction value with improper keys.
+        correction_guide_0 = {1 : 0}
+        with self.assertRaises(NameError):
+            g0 = AtomicGadget(1, 1, "g0", [[0, 0]], [[0]], correction_guide=correction_guide_0)
         
 if __name__ == '__main__':
     unittest.main()
