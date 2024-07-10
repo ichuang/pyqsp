@@ -1,1 +1,0 @@
-cirq_pasqal.PasqalGateset(include_additional_controlled_ops=False)

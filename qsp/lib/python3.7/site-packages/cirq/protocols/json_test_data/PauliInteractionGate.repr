@@ -1,1 +1,0 @@
-cirq.PauliInteractionGate(cirq.Z, False, cirq.X, True)
