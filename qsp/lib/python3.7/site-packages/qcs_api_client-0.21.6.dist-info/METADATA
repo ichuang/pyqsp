@@ -1,0 +1,90 @@
+Metadata-Version: 2.1
+Name: qcs-api-client
+Version: 0.21.6
+Summary: A client library for accessing the Rigetti QCS API
+Home-page: https://github.com/rigetti/qcs-api-client-python
+License: Apache-2.0
+Requires-Python: >=3.7,<4.0
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Dist: PyJWT (>=2.4.0,<3.0.0)
+Requires-Dist: attrs (>=21.3.0,<22.0.0)
+Requires-Dist: httpx (>=0.23.0,<0.24.0)
+Requires-Dist: iso8601 (>=1.0.2,<2.0.0)
+Requires-Dist: pydantic (>=1.7.2,<2.0.0)
+Requires-Dist: python-dateutil (>=2.8.1,<3.0.0)
+Requires-Dist: retrying (>=1.3.3,<2.0.0)
+Requires-Dist: rfc3339 (>=6.2,<7.0)
+Requires-Dist: toml (>=0.10.2,<0.11.0)
+Project-URL: Documentation, https://qcs-api-client-python.readthedocs.io/en/latest/index.html
+Project-URL: Repository, https://github.com/rigetti/qcs-api-client-python
+Description-Content-Type: text/markdown
+
+[![Documentation Status](https://readthedocs.org/projects/qcs-api-client-python/badge/?version=latest)](https://qcs-api-client-python.readthedocs.io/en/latest/?badge=latest)
+
+# QCS API Client
+
+A client library for accessing the [Rigetti QCS API](https://docs.api.qcs.rigetti.com/).
+
+## Usage
+
+### Synchronous Usage
+
+```python
+from qcs_api_client.client import build_sync_client
+from qcs_api_client.models import ListReservationsResponse
+from qcs_api_client.operations.sync import list_reservations
+
+with build_sync_client() as client:
+    response: ListReservationsResponse = list_reservations(client=client).parsed
+```
+
+### Asynchronous Usage
+
+```python
+from qcs_api_client.client import build_async_client
+from qcs_api_client.models import ListReservationsResponse
+from qcs_api_client.operations.asyncio import list_reservations
+
+# Within an event loop:
+async with build_async_client() as client:
+    response: ListReservationsResponse = await list_reservations(client=client).parsed
+```
+
+### Configuration
+
+By default, initializing your client with `build_sync_client` or `build_async_client` will
+use `QCSClientConfiguation.load` to load default configuration values. This function accepts:
+
+- A profile name (env: `QCS_PROFILE_NAME`). The name of the profile referenced in your settings
+  file. If not provided, `QCSClientConfiguation.load` will evaluate this to a `default_profile_name`
+  set in your settings file or "default".
+- A settings file path (env: `QCS_SETTINGS_FILE_PATH`). A path to the current user's settings file in TOML format. If not provided,  `QCSClientConfiguation.load` will evaluate this to `~/.qcs/settings.toml`.
+- A secrets file path (env: `QCS_SECRETS_FILE_PATH`). A path to the current user's secrets file in TOML format. If not provided,  `QCSClientConfiguation.load` will evaluate this to `~/.qcs/secrets.toml`. The user should have write access to this file, as the client will attempt to update the file with refreshed access tokens as necessary.
+     
+If you need to specify a custom profile name or path you can initialize your client accordingly:
+
+```python
+from qcs_api_client.client import build_sync_client, QCSClientConfiguration
+from qcs_api_client.models import ListReservationsResponse
+from qcs_api_client.operations.sync import list_reservations
+
+configuration = QCSClientConfiguration.load(
+    profile_name='custom',
+    secrets_file_path='./path/to/custom/secrets.toml',
+    settings_file_path='./path/to/custom/settings.toml',
+)
+
+with build_sync_client(configuration=configuration) as client:
+    response: ListReservationsResponse = list_reservations(client=client).parsed
+```
+
+## Development
+
+The source code for this repository is synchronized from another source. No commits made directly to GitHub will be retained.
+

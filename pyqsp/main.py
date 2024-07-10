@@ -21,7 +21,6 @@ class VAction(argparse.Action):
 
 # -----------------------------------------------------------------------------
 
-
 def CommandLine(args=None, arglist=None):
     '''
     Main command line.  Accepts args, to allow for simple unit testing.

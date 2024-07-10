@@ -11,7 +11,7 @@ from pyqsp.response import ComputeQSPResponse
 
 
 class AngleFindingError(Exception):
-    """Raised when angle finding step failes."""
+    """Raised when angle finding step fails."""
     pass
 
 
@@ -58,7 +58,7 @@ def angle_sequence(p, eps=1e-4, suc=1 - 1e-4):
 def poly2laurent(pcoefs):
     """
     Convert polynomial coefficients to Laurent coefficients for polynomials
-    with definit parity.
+    with definite parity.
 
     Args:
         pcoefs: array of polynomial coefficients
