@@ -62,6 +62,7 @@
 			- Computes mean of those objectives
 			- Computes how much change from last iteration `ad`
 			- Breaks if step gets too small (decreasing multiplicatively by gamma), or *if too large?*
+				- *NOTE*: these look like the Wolfe conditions following from an inexact line search. We require that the slope is reduced sufficiently (we're not stepping too far), and that we're making progress.
 		- Then we move onto a final step in the outer overall loop
 			- Set as phi the temp theta found in previous step
 			- Compute the objective and the *MAX* of those samples
@@ -76,17 +77,48 @@
 		- We end if one of two conditions is met
 			- We reach `max_iter`
 			- If the worst case `obj_max` objective error computed above is less than `crit` (*SQUARED* for some reason).
+	- Note that the structure is covered more clearly on 22 of [this paper](https://arxiv.org/pdf/2002.11649)
+	- Note also Appx D proof that Chebyshev nodes are enough for accurate computation.
 
 
 ## On computing gradients
+- *Remaining questions*; is this some form of conjugate gradient descent; it's unclear what the gradient estimation algorithm is, and why it involves a forward and backward pass over the phases.
+	- Think of this as what happens when we compute the derivative with respect to some middle phase. We get something like sigma z in the center
+	- The use of the gap parameter seems to assume that we're close to the ideal value
+	- The factor of gap comes directly from applying the chain rule to `0.5*(real(qspmat(1,1))-targetx(x))^2;`, which leads to `2*gap*real(grad_tmp)`. And this temp grad is just computed by hand as one would expect; try to write this out entirely to see how it depends on the relevant product
+	- We have actual products and elementwise products here. Note that `.*` together imply elementwise operations.
 - Located in `QSPGrad_sym.m` and symmetrized real version
 	- *NOTE: THIS SECTION IS UNFINISHED*
 	- Computes the gradient with respect to each phase of the objective function, assuming that phi is symmetric.
-	-
-	-
-	-
-	-
-	-
+- Overall program structure
+	- Inputs:
+		- `phi`: the varying parameters
+		- `delta`: samples (*QUESTION: DETERMINE HOW THESE ARE SELECTED*).
+			- At the top level module, chosen as `delta = cos((1:2:(2*tot_len-1))*(pi/2/(2*tot_len)))'`; these look like the Chebyshev nodes. The question now is *Why is sampling over this sufficient for computing a good gradient?*
+			- *ANSWER*: this is not about sampling or averaging, it's about finding a good pointwise evaluation of the uniform error between the achieved and target functions. 
+		- `opts`: various metadata like the target function and parity.
+	- Outputs:
+		- `grad` vector
+		- `obj` evaluation of objective function
+	- Critical component structure
+		- Loop over all chebyshev nodes defined by delta
+			- Initialize `x`, initial W(x), and generate two length d (len(phi)) lists of 2x2 matrices
+			- The *first* of these is filled by identity matrices
+			- The *second* of these is filled with z-rotations by `exp(1j * phi(d))` mulitiplied with the *S* gate descibed previously, called `gate`
+			- Then we loop over the phi's, from 2 to d
+				- We fill the `j`-th of these 2x2 matrices with something depending on the previous one. Namely a product of W(x) and the relevant z-rotation according to phi.
+				- The second list works backward through the phis, but does the same thing.
+			- Then we split into two cases based on parity
+				- WLOG, considering the `parity = 1` case
+					- We compute `qspmat` which is conjugation by the l*ast element of the second matrix* of the signal operator (presumably recovering the symmetrized form)
+					- We compute `gap`, which is the element error at the specified `x`
+					- A placeholder matrix is computed `leftmat`
+					- Then we loop over all phases *THIS IS THE CRITICAL STEP*
+						- We update a `grad_tmp` matrix again in steps, which looks at something like a symplectic product of the `j`-th element of the first and second lists of matrices computed in the previous step.
+						- Then the `(i, j)` element of the grad becomes the (1,1) element of the j-th component times the `gap` variable specified above.
+						- Finally obj(i) is just `(1/2)*gap**2`.
+				- The only difference in the parity case is the addition of `grad(i,1) = grad(i,1)/2` in the `parity = 0` case.
+		
 
 ## On computing loss function
 - The objective function should be contained in the grad computation, but is also called with `QSPObj_sym.m`
