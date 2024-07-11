@@ -1,6 +1,14 @@
 # Overview
 - This document covers the implementation of L-BFGR methods for QSP protocol optimization as covered in [this paper](https://arxiv.org/pdf/2002.11649) and [this package subroutine](https://github.com/qsppack/QSPPACK/blob/master/Solvers/Optimization/QSP_solver.m)
 
+## Notes on some basic functionality in original package
+- For response functions
+	- Contained in `response.py`, and simply loops over input data and evaluates the proper matrix product.
+- Classes exist for polynomial types in `LPoly.py`, with personal properties and class methods
+- Special classes of polynomials returned by `poly.py`; this is useful for tests
+- For tests:
+	- Import `unittest`, `numpy`, and `pyqsp` with derived subfiles often for some reason.
+
 ## Required components
 - Overall QSP solver file
 	- Input parameters in original `QSP_solver.m`
