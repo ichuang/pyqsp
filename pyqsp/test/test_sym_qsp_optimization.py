@@ -61,6 +61,27 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 		assert (t1 - 1/np.sqrt(2)) <= 10**(-3)
 		assert (t2 - 1/np.sqrt(2)) <= 10**(-3)
 
+	def test_poly_jacobian_components(self):
+		# Temporarily set the full and reduced phases.
+		qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(full_phases=[0,0,0,0,0], reduced_phases=[0,0,0], poly_deg=3)
+
+		argument = 0
+		result = qsp_protocol.gen_poly_jacobian_components(argument)
+
+		assert result.shape == (1, 4)
+
+	def test_jacobian_full(self):
+		qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(full_phases=[0,0,0,0,0], reduced_phases=[0,0,0], poly_deg=3)
+
+		f, df = qsp_protocol.gen_jacobian()
+
+		# Dummy test right now, checking proper poly-deg-dependent dimension.
+		assert f.shape == (3,)
+		assert df.shape == (3, 3)
+
+
+
+
 
 
 
