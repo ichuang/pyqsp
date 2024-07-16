@@ -159,10 +159,10 @@ class SymmetricQSPProtocol:
         
         # Note that original iterator is xrange(n-1:-1:1):
         # The Matlab convention is start:skip:end, with inclusive handling.
-        for k in range(n-1,1,-1): # We have lowered all called indices by one.
-            L[k-1,:] = L[k,:] @ np.array([
-                [np.cos(2*self.reduced_phases[k]), -1*np.sin(2*self.reduced_phases[k]), 0], 
-                [np.sin(2*self.reduced_phases[k]), np.cos(2*self.reduced_phases[k]), 0], 
+        for k in range(n-2,-1,-1): # To cover all indices
+            L[k,:] = L[k+1,:] @ np.array([
+                [np.cos(2*self.reduced_phases[k+1]), -1*np.sin(2*self.reduced_phases[k+1]), 0], 
+                [np.sin(2*self.reduced_phases[k+1]), np.cos(2*self.reduced_phases[k+1]), 0], 
                 [0, 0, 1]]) @ B
         
         R = np.zeros((3, n))
@@ -173,12 +173,12 @@ class SymmetricQSPProtocol:
             R[:,0] = np.array([np.cos(t),0,np.sin(t)]) # Note flat indexing.
 
         # Lowering all indices by 1.
-        for k in range(1,n-1):
+        for k in range(1,n): # RAISED BY ONE
             R[:,k] = B @ (np.array([[np.cos(2*self.reduced_phases[k-1]), -1*np.sin(2*self.reduced_phases[k-1]), 0],[np.sin(2*self.reduced_phases[k-1]), np.cos(2*self.reduced_phases[k-1]), 0],[0, 0, 1]]) @ R[:,k-1])
 
         y = np.zeros((1,n+1)) # Note extending this by one; is this automatically handled in matlab? Apparently this is a thing, lol.
 
-        for k in range(0,n-1):
+        for k in range(n):
             # TODO: Change to setting an entire row; note this is different than matlab code; why do they allow casting like this?
             y[:,k] = 2*L[k,:] @ np.array([
                 [-1*np.sin(2*self.reduced_phases[k]), -1*np.cos(2*self.reduced_phases[k]), 0],
