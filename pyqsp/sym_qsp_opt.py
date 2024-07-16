@@ -193,11 +193,59 @@ class SymmetricQSPProtocol:
         # Finally, return Jacobian matrix evaluations
         return y
 
+def newton_Solver(coef, **kwargs):
+    """
+        In what remains we include methods for actually performing Newton with respect to some target, maxiter, accuracy, and other parameters.
 
-"""
-    In what remains we include methods for actually performing L-BFGS with respect to some target, maxiter, accuracy, and other parameters.
+        If there are methods in original package for computing a bounded polynomial approximation, these can be used to generate a target function, which can then be passed to the gradient computation of the symmetric QSP class.
 
-    If there are methods in original package for computing a bounded polynomial approximation, these can be used to generate a target function, which can then be passed to the gradient computation of the symmetric QSP class.
+        In one of the examples online (https://qsppack.gitbook.io/qsppack/examples/quantum-linear-system-problems#solving-the-phase-factors-for-qlsp), they call the following two methods, which serve as a good example
+        -----------------------------------------
+        coef_full=cvx_poly_coef(targ, deg, opts);
+        coef = coef_full(1+parity:2:end);
+    """
 
-"""
+    maxiter = 1e3 # In original is 1e5
+    crit = 1e-4 # In original is 1e-12
+    targetPre = True
+    # self.useReal = True
+
+    # Determines if targeting real or imaginary component.
+    if targetPre:
+        coef = -1*coef
+    
+    reduced_phases = coef/2 # Determine if the order of setting is proper here
+    poly_deg = len(reduced_phases)
+
+    qsp_seq_opt = SymmetricQSPProtocol(reduced_phases=reduced_phases, poly_deg=poly_deg)
+
+    curr_iter = 0
+
+    # Start the main loop
+    while True:
+        (Fval,DFval) = qsp_seq_opt.gen_jacobian()
+        res = Fval - coef
+        err = np.linalg.norm(res, ord=1) # Take the one norm.
+        curr_iter = curr_iter + 1
+
+        # Break conditions
+        if curr_iter >= maxiter:
+            print("Max iteration reached.\n")
+            break
+
+        if err < crit:
+            print("Stop criteria satisfied.\n")
+            break
+
+        # Use Matlab's strange backslash division: DFval\res
+        print(DFval)
+        print(Fval)
+        lin_sol = np.linalg.solve(DFval, res)
+        qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - lin_sol
+
+        # The rest of the original code deals with pretty printing.
+
+    return (qsp_seq_opt.reduced_phases, err, curr_iter)
+
+
 

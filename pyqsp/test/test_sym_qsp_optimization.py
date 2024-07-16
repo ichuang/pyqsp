@@ -79,6 +79,19 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 		assert f.shape == (3,)
 		assert df.shape == (3, 3)
 
+	def test_qsp_newton_solver(self):
+		coef = np.array([1,1,1])
+
+		# Current error is duplicate columns in the final matrix, meaning we're probably indexing wrong in the dependent methods.
+		
+		(phases, err, total_iter) = sym_qsp_opt.newton_Solver(coef)
+		
+		print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
+
+		assert (err == 0)
+		assert (total_iter == 100)
+
+
 
 
 
