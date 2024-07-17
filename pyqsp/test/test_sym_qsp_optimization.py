@@ -80,7 +80,7 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 		assert df.shape == (3, 3)
 
 	def test_qsp_newton_solver(self):
-		coef = np.array([1,1,1])
+		coef = np.array([0.1, 0.3, 0.2, 0.3, 0.2])
 
 		# Current error is duplicate columns in the final matrix, meaning we're probably indexing wrong in the dependent methods.
 		

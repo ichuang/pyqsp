@@ -13,7 +13,7 @@ class SymmetricQSPProtocol:
         self.reduced_phases = reduced_phases
         self.full_phases = full_phases
         # Parity is (d mod 2), where len(full_phases) = d + 1.
-        self.parity = (self.poly_deg + 1)%2
+        self.parity = (self.poly_deg + 1)%2 # Check for degree here.
 
         # Eventually, we should be able to call with just a poly, and series of parameters, and automatically drive function toward desired behavior.
         self.target_poly = None
@@ -90,57 +90,47 @@ class SymmetricQSPProtocol:
         pass
 
     def gen_jacobian(self):
+        """
+        Following the structure and conventions of `F_Jacobian.m' in QSPPACK, which in turn follows the conventions of Alg 3.2 in (https://arxiv.org/pdf/2307.12468).
+
+        This method has been checked numerous times for index-convention agreement with the original source.
+        """
         
-        # Reference to an external function; see if we can recover this sort of syntax in python.
-        # f = @(x) QSPGetPimDeri_sym_real(phi, x, parity);
+        # Anonymous function to component method for columns.
         f = lambda x: self.gen_poly_jacobian_components(x)
         
         d = len(self.reduced_phases)
         dd = 2*d
 
-        # Check transpose syntax and range syntax
-        # CHECK WHETHER MATLAB EXPECTS FINAL INDEX OR NOT.
+        # Generate equispaced sample angles.
         theta = np.transpose(np.arange(0,d+1)) * (np.pi/dd)
-
         M = np.zeros((2*dd, d+1))
 
-        for n in range(1,d+2):
-            M[n-1,:] = f(np.cos(theta[n-1]))
+        # Evaluate columns over each angle.
+        for n in range(0,d+1):
+            M[n,:] = f(np.cos(theta[n]))
 
-        # TODO: Note convention for start, end, step ordering, 'end' keyword. We may also need to adjust indices after slice. IMPORTANT
-        M[d+1:dd+1,:] = (-1)**self.parity * M[d-1::-1,:]
-        M[dd+1:,:] = M[dd-1:0:-1,:]
 
-        M = np.fft.fft(M) # FFT over columns.
-        M = np.real(M[0:dd+1,:])
-        M[1:-1,:] = M[1:-1,:]*2
+        # Flip sign of second half of rows, and flip order of remaining elements.
+        M[d+1:dd+1,:] = ((-1)**self.parity) * np.copy(M[d-1::-1,:])
+        M[dd+1:,:] = np.copy(M[dd-1:0:-1,:])
+
+        # Take FFT over columns.
+        M = np.fft.fft(M)
+        M = np.copy(np.real(M[0:dd+1,:]))
+        M[1:-1,:] = np.copy(M[1:-1,:]*2)
         M = M/(2*dd)
 
-        f = M[self.parity:2*d:2,-1]
-        df = M[self.parity:2*d:2,0:-1]
+        f = np.copy(M[self.parity:2*d:2,-1])
+        df = np.copy(M[self.parity:2*d:2,0:-1])
 
         return (f, df)
 
-        """
-        M(d+2:dd+1,:)=(-1)^parity * M(d:-1:1,:);
-        M(dd+2:end,:)= M(dd:-1:2,:);
-
-        M = fft(M); %FFT w.r.t. columns.
-        M = real(M(1:(dd+1),:));
-        M(2:end-1,:) = M(2:end-1,:)*2;
-        M = M/(2*dd);
-
-        f = M(parity+1:2:2*d,end);
-        df = M(parity+1:2:2*d,1:end-1);
-        """
-
-        """
-        We have to replace parentheses with square brackets and subtract 1 from all indices (except after :)!!! Note that the second criterion seems to not occur in the code below.
-        """
-
     def gen_poly_jacobian_components(self, a):
         """
-        Following the structure and conventions of `QSPGetPimDeri_sym_real.m' in QSPPACK, which in turn follows the conventions of Alg 3.2 in (https://arxiv.org/pdf/2307.12468).
+        Following the structure and conventions of `QSPGetPimDeri_sym_real.m' in QSPPACK, which in turn follows the conventions of Alg 3.3 in (https://arxiv.org/pdf/2307.12468).
+
+        This method has been checked numerous times for index-convention agreement with the original source.
         """
 
         n = len(self.reduced_phases)
@@ -152,15 +142,13 @@ class SymmetricQSPProtocol:
             [np.sin(2*t), 0, np.cos(2*t)]])
         L = np.zeros((n, 3))
 
-        # TODO: new indexing schemes begin here! Also change phi to reduced phases, and make sure indecing above and below starts at zero versus one. Also make an auto conversion from non-reduced to reduced, or vice versa, and check in all of these cases on instantiation.
 
-        L[n-1,:] = np.array([0,1,0]) # Set final column of L. Note zero indexing
+        # Fix the final column of L.
+        L[n-1,:] = np.array([0,1,0])
         
-        
-        # Note that original iterator is xrange(n-1:-1:1):
-        # The Matlab convention is start:skip:end, with inclusive handling.
-        for k in range(n-2,-1,-1): # To cover all indices
-            L[k,:] = L[k+1,:] @ np.array([
+        # Modify range parameters to update elements n-2 to 0.
+        for k in range(n-2,-1,-1):
+            L[k,:] = np.copy(L[k+1,:]) @ np.array([
                 [np.cos(2*self.reduced_phases[k+1]), -1*np.sin(2*self.reduced_phases[k+1]), 0], 
                 [np.sin(2*self.reduced_phases[k+1]), np.cos(2*self.reduced_phases[k+1]), 0], 
                 [0, 0, 1]]) @ B
@@ -168,29 +156,31 @@ class SymmetricQSPProtocol:
         R = np.zeros((3, n))
 
         if self.parity == 0:
-            R[:,0] = np.array([1,0,0]) # Note flat indexing.
+            R[:,0] = np.array([1,0,0]) # Updating column with flat list.
         else:
-            R[:,0] = np.array([np.cos(t),0,np.sin(t)]) # Note flat indexing.
+            R[:,0] = np.array([np.cos(t),0,np.sin(t)])
 
-        # Lowering all indices by 1.
-        for k in range(1,n): # RAISED BY ONE
-            R[:,k] = B @ (np.array([[np.cos(2*self.reduced_phases[k-1]), -1*np.sin(2*self.reduced_phases[k-1]), 0],[np.sin(2*self.reduced_phases[k-1]), np.cos(2*self.reduced_phases[k-1]), 0],[0, 0, 1]]) @ R[:,k-1])
+        # Updating R matrix with a second pass; ranging over 1 to n-1.
+        for k in range(1,n):
+            R[:,k] = B @ (np.array([
+                [np.cos(2*self.reduced_phases[k-1]), -1*np.sin(2*self.reduced_phases[k-1]), 0],
+                [np.sin(2*self.reduced_phases[k-1]), np.cos(2*self.reduced_phases[k-1]), 0],
+                [0, 0, 1]]) @ np.copy(R[:,k-1]))
 
-        y = np.zeros((1,n+1)) # Note extending this by one; is this automatically handled in matlab? Apparently this is a thing, lol.
+        y = np.zeros((1,n+1)) 
 
+        # Here we have to convert from Matlab's 'single indexing' scheme.
         for k in range(n):
-            # TODO: Change to setting an entire row; note this is different than matlab code; why do they allow casting like this?
-            y[:,k] = 2*L[k,:] @ np.array([
+            y[0,k] = np.copy(2*L[k,:]) @ np.array([
                 [-1*np.sin(2*self.reduced_phases[k]), -1*np.cos(2*self.reduced_phases[k]), 0],
                 [np.cos(2*self.reduced_phases[k]), -1*np.sin(2*self.reduced_phases[k]), 0],
-                [0, 0, 0]]) @ R[:,k]
+                [0, 0, 0]]) @ np.copy(R[:,k])
 
-        y[:,n] = L[n-1,:] @ np.array([
+        y[0,n] = np.copy(L[n-1,:]) @ np.array([
             [np.cos(2*self.reduced_phases[n-1]), -1*np.sin(2*self.reduced_phases[n-1]), 0],
             [np.sin(2*self.reduced_phases[n-1]), np.cos(2*self.reduced_phases[n-1]), 0],
-            [0, 0, 1]]) @ R[:,n-1]
+            [0, 0, 1]]) @ np.copy(R[:,n-1])
 
-        # Finally, return Jacobian matrix evaluations
         return y
 
 def newton_Solver(coef, **kwargs):
@@ -238,12 +228,16 @@ def newton_Solver(coef, **kwargs):
             break
 
         # Use Matlab's strange backslash division: DFval\res
+        print("CURRENT ITER:%s"%(curr_iter))
         print(DFval)
         print(Fval)
+        print(coef)
+        print(err)
+        print(qsp_seq_opt.reduced_phases)
+        print("\n")
+
         lin_sol = np.linalg.solve(DFval, res)
         qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - lin_sol
-
-        # The rest of the original code deals with pretty printing.
 
     return (qsp_seq_opt.reduced_phases, err, curr_iter)
 
