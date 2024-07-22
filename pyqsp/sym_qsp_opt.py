@@ -111,18 +111,34 @@ class SymmetricQSPProtocol:
             M[n,:] = f(np.cos(theta[n]))
 
 
+        print("INITIAL")
+        print(M)
+        # CORRECT AFTER THIS STEP FOR THE TRIVIAL CASE.
+
         # Flip sign of second half of rows, and flip order of remaining elements.
         M[d+1:dd+1,:] = ((-1)**self.parity) * np.copy(M[d-1::-1,:])
         M[dd+1:,:] = np.copy(M[dd-1:0:-1,:])
 
+        print("BEFORE FFT")
+        print(M)
+        # CORRECT AFTER THIS STEP FOR THE TRIVIAL CASE.
+
         # Take FFT over columns.
-        M = np.fft.fft(M)
+        M = np.fft.fft(M,axis=0) # SEEMS FFT TAKEN OVER THIS AXIS
         M = np.copy(np.real(M[0:dd+1,:]))
+
+        print("AFTER FFT")
+        print(M)
+
         M[1:-1,:] = np.copy(M[1:-1,:]*2)
         M = M/(2*dd)
 
         f = np.copy(M[self.parity:2*d:2,-1])
         df = np.copy(M[self.parity:2*d:2,0:-1])
+
+        print("AFTER ALL")
+        print(f)
+        print(df)
 
         return (f, df)
 
@@ -156,7 +172,7 @@ class SymmetricQSPProtocol:
         R = np.zeros((3, n))
 
         if self.parity == 0:
-            R[:,0] = np.array([1,0,0]) # Updating column with flat list.
+            R[:,0] = np.array([1,0,0]) # Updating column with flat list. Why is this seemingly different from the convention in Alg A.1.?
         else:
             R[:,0] = np.array([np.cos(t),0,np.sin(t)])
 
@@ -195,10 +211,9 @@ def newton_Solver(coef, **kwargs):
         coef = coef_full(1+parity:2:end);
     """
 
-    maxiter = 1e3 # In original is 1e5
-    crit = 1e-4 # In original is 1e-12
+    maxiter = 1e3 # In original is 1e5.
+    crit = 1e-4 # In original is 1e-12.
     targetPre = True
-    # self.useReal = True
 
     # Determines if targeting real or imaginary component.
     if targetPre:
@@ -238,6 +253,8 @@ def newton_Solver(coef, **kwargs):
 
         lin_sol = np.linalg.solve(DFval, res)
         qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - lin_sol
+
+        # qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - res/2 # Standard fixed point method.
 
     return (qsp_seq_opt.reduced_phases, err, curr_iter)
 

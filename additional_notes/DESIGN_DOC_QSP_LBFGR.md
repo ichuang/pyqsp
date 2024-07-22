@@ -8,7 +8,7 @@
 - Special classes of polynomials returned by `poly.py`; this is useful for tests
 - For tests:
 	- Import `unittest`, `numpy`, and `pyqsp` with derived subfiles often for some reason.
-	- Note testing run per `pytest pyqsp/test/test_sym_qsp_optimization.py`
+	- Note testing run per `pytest pyqsp/test/test_sym_qsp_optimization.py`, or `python -m unittest pyqsp/test/test_sym_qsp_optimization.py`
 
 ## Required components
 - Overall QSP solver file
