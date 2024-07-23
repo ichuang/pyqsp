@@ -3,28 +3,38 @@ import scipy.linalg
 
 class SymmetricQSPProtocol:
 
-    def __init__(self, poly_deg=0, reduced_phases=[], full_phases=[]):
+    def __init__(self, reduced_phases=[], parity=None):
         
         """
         TODO: assert that the degree matches the length of the phases, and that the reduced and full phases agree, and that if one or the other is not instantiated, then full phases are recovered. Also check parity.
         """
 
-        self.poly_deg = poly_deg
-        self.reduced_phases = reduced_phases
-        self.full_phases = full_phases
-        # Parity is (d mod 2), where len(full_phases) = d + 1.
-        self.parity = (self.poly_deg + 1)%2 # Check for degree here.
+        self.reduced_phases = np.array(reduced_phases)
+        self.parity = parity
 
-        # Eventually, we should be able to call with just a poly, and series of parameters, and automatically drive function toward desired behavior.
+        if (len(reduced_phases) != 0) and (parity != None):
+            if parity == 1:
+                # Start with reversed phases and append phases.
+                phi_front = np.flip(np.copy(self.reduced_phases),0)
+                phi_back = np.copy(self.reduced_phases)
+                self.full_phases = np.concatenate((phi_front, phi_back), axis=0)
+            else:
+                # Combine final element of reversed and standard phases.
+                if len(reduced_phases) == 1:
+                    # Trivial case of length 'zero' QSP protocol consisting of only a phase.
+                    self.full_phases = 2*self.reduced_phases
+                else:
+                    phi_front = np.flip(np.copy(self.reduced_phases)[1:])
+                    phi_back = np.copy(self.reduced_phases)[1:]
+                    middle_phase = 2*np.array([self.reduced_phases[0]])
+                    self.full_phases = np.concatenate((phi_front,middle_phase,phi_back), axis=0)
+            self.poly_deg = len(self.full_phases) - 1
+        else:
+            self.full_phases = None
+            self.poly_deg = None
+        
+        # Currently vestigial variable.
         self.target_poly = None
-
-        """
-        We assert the following:
-        len(full_phases) == poly_deg + 1
-        If d is even, start with half the middle phase onward. (dt - 1) onward with dt = ceil([d + 1]/2).
-        If d is odd, start with the second half of the phases. dt onward.
-        Conventions found in (2.5) of (https://arxiv.org/pdf/2307.12468)
-        """
 
     def help(self):
         return("Basic class for storing classical description (e.g., length, phases) of symmetric QSP protocol, with auxiliary methods for generating derived quantities (e.g., response function, gradients and Jacobians).")
@@ -51,12 +61,17 @@ class SymmetricQSPProtocol:
         for phi in self.full_phases:
             phi_mats.append(self.phase(phi))
 
-        for s in samples:
-            W = self.signal(s)
-            U = phi_mats[0]
-            for mat in phi_mats[1:]:
-                U = U @ W @ mat
-            u_mats.append(U)
+        if len(self.full_phases) == 1:
+            for s in samples:
+                U = phi_mats[0]
+                u_mats.append(U)
+        else:
+            for s in samples:
+                W = self.signal(s)
+                U = phi_mats[0]
+                for mat in phi_mats[1:]:
+                    U = U @ W @ mat
+                u_mats.append(U)
 
         u_mats = np.array(u_mats)
         return u_mats
@@ -78,14 +93,6 @@ class SymmetricQSPProtocol:
     def gen_loss(self, samples, target_poly):
         """
         Compute L(phi) function over samples with respect to target_poly.
-        """
-        pass
-
-    def gen_grad(self, samples, index):
-        """
-        Return gradient with respect to index phase over samples. The intended use case for this is that the phases of a given protocol can be internally updated based on the computed gradient, resulting in the ultimately desired object.
-
-        TODO: determine if this whole thing is too slow; in principle a new object doesn't need to be instantiated a bunch of times, just one, and every other method just performs a derived calculation. If we can guarantee that only internal methods can update phases, then we can have a set-method that (called rarely) checks whether the required conditions are preserved.
         """
         pass
 
@@ -111,24 +118,24 @@ class SymmetricQSPProtocol:
             M[n,:] = f(np.cos(theta[n]))
 
 
-        print("INITIAL")
-        print(M)
+        ## print("INITIAL")
+        ## print(M)
         # CORRECT AFTER THIS STEP FOR THE TRIVIAL CASE.
 
         # Flip sign of second half of rows, and flip order of remaining elements.
         M[d+1:dd+1,:] = ((-1)**self.parity) * np.copy(M[d-1::-1,:])
         M[dd+1:,:] = np.copy(M[dd-1:0:-1,:])
 
-        print("BEFORE FFT")
-        print(M)
+        ## print("BEFORE FFT")
+        ## print(M)
         # CORRECT AFTER THIS STEP FOR THE TRIVIAL CASE.
 
         # Take FFT over columns.
         M = np.fft.fft(M,axis=0) # SEEMS FFT TAKEN OVER THIS AXIS
         M = np.copy(np.real(M[0:dd+1,:]))
 
-        print("AFTER FFT")
-        print(M)
+        ## print("AFTER FFT")
+        ## print(M)
 
         M[1:-1,:] = np.copy(M[1:-1,:]*2)
         M = M/(2*dd)
@@ -136,9 +143,9 @@ class SymmetricQSPProtocol:
         f = np.copy(M[self.parity:2*d:2,-1])
         df = np.copy(M[self.parity:2*d:2,0:-1])
 
-        print("AFTER ALL")
-        print(f)
-        print(df)
+        ## print("AFTER ALL")
+        ## print(f)
+        ## print(df)
 
         return (f, df)
 
@@ -199,7 +206,7 @@ class SymmetricQSPProtocol:
 
         return y
 
-def newton_Solver(coef, **kwargs):
+def newton_Solver(coef, parity, **kwargs):
     """
         In what remains we include methods for actually performing Newton with respect to some target, maxiter, accuracy, and other parameters.
 
@@ -220,9 +227,9 @@ def newton_Solver(coef, **kwargs):
         coef = -1*coef
     
     reduced_phases = coef/2 # Determine if the order of setting is proper here
-    poly_deg = len(reduced_phases)
 
-    qsp_seq_opt = SymmetricQSPProtocol(reduced_phases=reduced_phases, poly_deg=poly_deg)
+    # This is necessary for giving a parity argument for internal methods, but is slightly backwards. We should convert everything to reduced phases and parity, which is sufficient for the rest.
+    qsp_seq_opt = SymmetricQSPProtocol(reduced_phases=reduced_phases, parity=parity)
 
     curr_iter = 0
 
