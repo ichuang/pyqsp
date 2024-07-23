@@ -1,5 +1,5 @@
 import numpy as np
-import scipy.linalg
+# import scipy.linalg
 
 class SymmetricQSPProtocol:
 
@@ -38,12 +38,6 @@ class SymmetricQSPProtocol:
 
     def help(self):
         return("Basic class for storing classical description (e.g., length, phases) of symmetric QSP protocol, with auxiliary methods for generating derived quantities (e.g., response function, gradients and Jacobians).")
-
-    def get_reduced_phases(self):
-        return self.reduced_phases
-
-    def get_full_phases(self):
-        return self.full_phases
 
     def signal(self, a):
         return np.array(
@@ -89,6 +83,12 @@ class SymmetricQSPProtocol:
         """
         u_mats = self.gen_unitary(samples)
         return np.array(list(map(lambda x: np.imag(x[0,0]), u_mats)))
+
+    def plot_response_range(self, samples):
+        """
+        The purpose of this method is to plot the real and imaginary parts across the entire range with proper scaling.
+        """
+        pass
 
     def gen_loss(self, samples, target_poly):
         """
@@ -247,23 +247,14 @@ def newton_Solver(coef, parity, **kwargs):
 
         if err < crit:
             print("Stop criteria satisfied.\n")
-            break
-
-        # Use Matlab's strange backslash division: DFval\res
-        print("CURRENT ITER:%s"%(curr_iter))
-        print(DFval)
-        print(Fval)
-        print(coef)
-        print(err)
-        print(qsp_seq_opt.reduced_phases)
-        print("\n")
+            break    
 
         lin_sol = np.linalg.solve(DFval, res)
         qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - lin_sol
 
         # qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - res/2 # Standard fixed point method.
 
-    return (qsp_seq_opt.reduced_phases, err, curr_iter)
+    return (qsp_seq_opt.reduced_phases, err, curr_iter, qsp_seq_opt)
 
 
 

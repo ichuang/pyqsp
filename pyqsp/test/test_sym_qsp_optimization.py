@@ -133,7 +133,7 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 		coef = np.array([0.2,0.1,0.3])
 		parity = 0
 
-		(phases, err, total_iter) = sym_qsp_opt.newton_Solver(coef, parity)
+		(phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity)
 		
 		print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
