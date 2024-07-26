@@ -121,7 +121,7 @@ class PolyCosineTX(PolyGenerator):
             print(f"[PolyCosineTX] rescaling by {scale}.")
 
         if return_coef:
-            pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            pcoefs = g.coef # TODO: NOTE CHANGED: np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -231,7 +231,7 @@ class PolyOneOverX(PolyGenerator):
             g = scale * g
 
         if return_coef:
-            if 1:
+            if 1: # To switch from coefficients.
                 pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             else:
                 pcoefs = g.coef

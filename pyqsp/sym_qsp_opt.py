@@ -11,14 +11,14 @@ class SymmetricQSPProtocol:
         self.reduced_phases = np.array(reduced_phases)
         self.parity = parity
 
-        if (len(reduced_phases) != 0) and (parity != None):
-            if parity == 1:
+        if (len(self.reduced_phases) != 0) and (self.parity != None):
+            if self.parity == 1:
                 # Append reduced phases to reversed reduced phases.
                 phi_front = np.flip(np.copy(self.reduced_phases),0)
                 phi_back = np.copy(self.reduced_phases)
                 self.full_phases = np.concatenate((phi_front, phi_back), axis=0)
             else:
-                if len(reduced_phases) == 1:
+                if len(self.reduced_phases) == 1:
                     # For trivial case of length 'zero' QSP protocol, double the only phase.
                     self.full_phases = 2*self.reduced_phases
                 else:
@@ -51,6 +51,33 @@ class SymmetricQSPProtocol:
         return np.array(
             [[np.exp(1j * phi), 0.],
              [0., np.exp(-1j * phi)]])
+
+    def update_reduced_phases(self, new_reduced_phases):
+        # Update reduced phases and full phases simultaneously with a single call
+        self.reduced_phases = np.array(new_reduced_phases)
+
+        if (len(self.reduced_phases) != 0) and (self.parity != None):
+            if self.parity == 1:
+                # Append reduced phases to reversed reduced phases.
+                phi_front = np.flip(np.copy(self.reduced_phases),0)
+                phi_back = np.copy(self.reduced_phases)
+                self.full_phases = np.concatenate((phi_front, phi_back), axis=0)
+            else:
+                if len(self.reduced_phases) == 1:
+                    # For trivial case of length 'zero' QSP protocol, double the only phase.
+                    self.full_phases = 2*self.reduced_phases
+                else:
+                    # Otherwise create new middle phase which is twice the initial phase.
+                    phi_front = np.flip(np.copy(self.reduced_phases)[1:])
+                    phi_back = np.copy(self.reduced_phases)[1:]
+                    middle_phase = 2*np.array([self.reduced_phases[0]])
+                    self.full_phases = np.concatenate((phi_front,middle_phase,phi_back), axis=0)
+            # Set the overall degree of P.
+            self.poly_deg = len(self.full_phases) - 1
+        else:
+            # Otherwise, instantiate all to null. We could also throw an error here.
+            self.full_phases = None
+            self.poly_deg = None
 
     def gen_unitary(self, samples):
         # From full phases, generate overall QSP unitary mapped over sample signal values (i.e., the argument a in the signal method).
@@ -188,8 +215,18 @@ def newton_Solver(coef, parity, **kwargs):
         If there are methods in original package for computing a bounded polynomial approximation, these can be used to generate a target function (n.b., in the Chebyshev basis, with zero-components due to definite parity removed, from low to high order!), which can then be passed to the Jacobian computation of the symmetric QSP class.
     """
 
-    maxiter = 1e5 # Cutoff for maximum iterations.
-    crit = 1e-12 # Cutoff for desired error at Chebyshev nodes.
+    # maxiter = 1e5 # Cutoff for maximum iterations.
+    # crit = 1e-12 # Cutoff for desired error at Chebyshev nodes.
+
+    if 'crit' in kwargs:
+        crit = kwargs['crit']
+    else:
+        crit = 1e-12
+
+    if 'maxiter' in kwargs:
+        maxiter = kwargs['maxiter']
+    else:
+        maxiter = 1e5
     
     # Currently deprecated, but real and imaginary parts can be alternately targeted by flipping overall sign of coef.
     # # targetPre = True
@@ -212,6 +249,13 @@ def newton_Solver(coef, parity, **kwargs):
         err = np.linalg.norm(res, ord=1) # Take the one norm error.
         curr_iter = curr_iter + 1
 
+        print("Reached iteration: %s with err %s"%(str(curr_iter), str(err)))
+
+        # Invert Jacobian at evaluated point to determine direction of next step.
+        lin_sol = np.linalg.solve(DFval, res)
+        # Note: update reduced and full phases together through specialized method, to prevent schism.
+        qsp_seq_opt.update_reduced_phases(qsp_seq_opt.reduced_phases - lin_sol)
+
         # Break conditions (beyond maxiter or within err.)
         if curr_iter >= maxiter:
             print("Max iteration reached.\n")
@@ -219,10 +263,6 @@ def newton_Solver(coef, parity, **kwargs):
         if err < crit:
             print("Stop criteria satisfied.\n")
             break    
-
-        # Invert Jacobian at evaluated point to determine direction of next step.
-        lin_sol = np.linalg.solve(DFval, res)
-        qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - lin_sol
 
     return (qsp_seq_opt.reduced_phases, err, curr_iter, qsp_seq_opt)
 

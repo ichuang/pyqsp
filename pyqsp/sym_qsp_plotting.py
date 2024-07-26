@@ -5,59 +5,73 @@ import poly
 
 def main():
 
-    pg = poly.PolyOneOverX()
-    pcoefs = pg.generate(4, 0.05, return_coef=True, ensure_bounded=True)
-    # TODO: temporary hack! Change from poly convention back to cheb.
-    pcoefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
-    inverse_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
+    # Call existing methods to compute Jacobi-Anger expression for cosine.
+    freq = 16
+    pg = poly.PolyCosineTX()
+    pcoefs = pg.generate(tau=freq, epsilon=1e-12) # tau specifies frequency, epsilon accuracy.
 
-    # Generating some random Chebyshev decomposition.
-    coef = np.array(10*[0.05])
-    full_coef = np.zeros(2*len(coef))
-    parity = 0
+    # pg = poly.PolyRect()
+    # pcoefs = pg.generate(degree=10,delta=2,kappa=3,epsilon=0.1) # tau specifies frequency, epsilon accuracy.
 
-    # Generate full Chebyshev coefficients by padding with zeros.
-    full_coef[parity::2] = coef
-
-    """
-    NOTE THIS: Here we temporarily bypass the above coefficients to try to achieve the inverse function
-    """
+    # TEMP HACK: currently we're getting Chebyshev coefficients directly by modifying poly.py.
+    cos_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
+    # Initialize definite parity coefficients, and slice out nontrivial ones.
     full_coef = pcoefs
-    parity = 1
+    parity = 0
     coef = full_coef[parity::2]
 
-    # Compute the ideal polynomial from Chebyshev coefficients.
-    desired_fun = lambda x: np.polynomial.chebyshev.chebval(x, full_coef)
+    # Anonymous function for ideal polynomial from Chebyshev coefficients.
+    true_fun = lambda x: 0.5*np.cos(freq*x)
 
-    # Optimize to the desired function.
-    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity)    
+    # Optimize to the desired function using Newton solver.
+    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=1e-12)    
     print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
-    # Plot achieved versus desired function.
-    num_samples = 150
+    # Plot achieved versus desired function over samples.
+    num_samples = 400
     samples = np.linspace(-1,1,num=num_samples)
 
-    re_vals = qsp_seq_opt.gen_response_re(samples)
-    im_vals = qsp_seq_opt.gen_response_im(samples)
+    # Compute real and imaginary parts of (0,0) matrix element.
+    re_vals = np.array(qsp_seq_opt.gen_response_re(samples))
+    im_vals = np.array(qsp_seq_opt.gen_response_im(samples))
 
-    # TODO: Can go back to target real component later.
-    des_vals = np.array(list(map(desired_fun, samples)))
-    inv_vals = np.array(list(map(inverse_fun, samples)))
+    # Map the desired function and achieved function over samples.
+    des_vals = np.array(list(map(true_fun, samples)))
+    cos_vals = np.array(list(map(cos_fun, samples)))
 
-    # plt.plot(samples, re_vals, 'r', label="Real") # Currently unimportant
-    plt.plot(samples, im_vals, 'g', label="Imag")
-    plt.plot(samples, des_vals, 'b', label="Input poly")
-    plt.plot(samples, inv_vals, 'y', label="Inverse")
+    # Generate simultaneous plots.
+    fig, axs = plt.subplots(2,sharex=True)
 
-    ax = plt.gca()
-    ax.set_xlim([-1, 1])
-    ax.set_ylim([-1, 1])
+    # Standard plotting of relevant components.
+    axs[0].plot(samples, im_vals, 'r', label="QSP poly")
+    axs[0].plot(samples, cos_vals, 'b', label="Target poly")
+    axs[0].plot(samples, des_vals, 'g', label="Ideal fun")
+    # plt.plot(samples, re_vals, 'r', label="Real") # Unimportant real component.
 
-    plt.ylabel("Matrix component value")
-    plt.xlabel("Signal")
-    plt.legend(loc="upper right")
+    diff = np.abs(im_vals - cos_vals)
+    true_diff = np.abs(des_vals - cos_vals)
+    axs[1].plot(samples, diff, 'b', label="Approx vs QSP")
+    axs[1].plot(samples, true_diff, 'r', label="Approx vs true")
+    axs[1].set_yscale('log')
+
+    # Set axis limits and quality of life features.
+    # ax = plt.gca()
+    axs[0].set_xlim([-1, 1])
+    axs[0].set_ylim([-1, 1])
+    axs[0].set_ylabel("Component value")
+    axs[1].set_ylabel("Absolute error")
+    axs[1].set_xlabel('Input signal')
+
+    # Further cosmetic alterations
+    axs[0].spines['top'].set_visible(False)
+    axs[0].spines['right'].set_visible(False)
+    axs[1].spines['top'].set_visible(False)
+    axs[1].spines['right'].set_visible(False)
+
+    axs[0].legend(loc="upper right")
+    axs[1].legend(loc="upper right")
+
     plt.show()
-
 
 if __name__ == '__main__':
     main()
