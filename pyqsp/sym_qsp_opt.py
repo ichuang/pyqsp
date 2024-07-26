@@ -1,12 +1,11 @@
 import numpy as np
-# import scipy.linalg
 
 class SymmetricQSPProtocol:
 
     def __init__(self, reduced_phases=[], parity=None):
         
         """
-        TODO: assert that the degree matches the length of the phases, and that the reduced and full phases agree, and that if one or the other is not instantiated, then full phases are recovered. Also check parity.
+        Initialize a symmetric QSP protocol in terms of its reduced phases and parity, following the convention of Dong, Lin, Ni, & Wang in (https://arxiv.org/pdf/2307.12468). For even (0) parity, the central phase is split in half across the initial position of the reduced phases, while for odd (1) parity, the reduced phase list is mirrored and concatenated with itself.
         """
 
         self.reduced_phases = np.array(reduced_phases)
@@ -14,42 +13,47 @@ class SymmetricQSPProtocol:
 
         if (len(reduced_phases) != 0) and (parity != None):
             if parity == 1:
-                # Start with reversed phases and append phases.
+                # Append reduced phases to reversed reduced phases.
                 phi_front = np.flip(np.copy(self.reduced_phases),0)
                 phi_back = np.copy(self.reduced_phases)
                 self.full_phases = np.concatenate((phi_front, phi_back), axis=0)
             else:
-                # Combine final element of reversed and standard phases.
                 if len(reduced_phases) == 1:
-                    # Trivial case of length 'zero' QSP protocol consisting of only a phase.
+                    # For trivial case of length 'zero' QSP protocol, double the only phase.
                     self.full_phases = 2*self.reduced_phases
                 else:
+                    # Otherwise create new middle phase which is twice the initial phase.
                     phi_front = np.flip(np.copy(self.reduced_phases)[1:])
                     phi_back = np.copy(self.reduced_phases)[1:]
                     middle_phase = 2*np.array([self.reduced_phases[0]])
                     self.full_phases = np.concatenate((phi_front,middle_phase,phi_back), axis=0)
+            # Set the overall degree of P.
             self.poly_deg = len(self.full_phases) - 1
         else:
+            # Otherwise, instantiate all to null. We could also throw an error here.
             self.full_phases = None
             self.poly_deg = None
         
-        # Currently vestigial variable.
+        # Currently a vestigial variable, but could eventually be used to allow for immediate instantiation of self-optimizing symmetric protocol.
         self.target_poly = None
 
     def help(self):
-        return("Basic class for storing classical description (e.g., length, phases) of symmetric QSP protocol, with auxiliary methods for generating derived quantities (e.g., response function, gradients and Jacobians).")
+        return("Class for storing classical description (i.e., reduced phases, parity) of symmetric QSP protocol, with auxiliary methods for generating derived quantities (e.g., response function, gradients and Jacobians).")
 
     def signal(self, a):
+        # QSP signal unitary at scalar arguement a.
         return np.array(
             [[a, 1j * np.sqrt(1 - a**2)],
              [1j * np.sqrt(1 - a**2), a]])
 
     def phase(self, phi):
+        # QSP phase unitary at scalar phase phi.
         return np.array(
             [[np.exp(1j * phi), 0.],
              [0., np.exp(-1j * phi)]])
 
     def gen_unitary(self, samples):
+        # From full phases, generate overall QSP unitary mapped over sample signal values (i.e., the argument a in the signal method).
         phi_mats = []
         u_mats = []
         for phi in self.full_phases:
@@ -71,43 +75,29 @@ class SymmetricQSPProtocol:
         return u_mats
 
     def gen_response_re(self, samples):
-        """
-        Returns real part of (0,0) matrix element over samples.
-        """
+        # Return real part of (0,0) matrix element of QSP protocol over samples.
         u_mats = self.gen_unitary(samples)
         return np.array(list(map(lambda x: np.real(x[0,0]), u_mats)))
 
     def gen_response_im(self, samples):
-        """
-        Returns real part of (0,0) matrix element over samples.
-        """
+        # Return real part of (0,0) matrix element of QSP protocol over samples.
         u_mats = self.gen_unitary(samples)
         return np.array(list(map(lambda x: np.imag(x[0,0]), u_mats)))
 
-    def plot_response_range(self, samples):
-        """
-        The purpose of this method is to plot the real and imaginary parts across the entire range with proper scaling.
-        """
-        pass
-
     def gen_loss(self, samples, target_poly):
-        """
-        Compute L(phi) function over samples with respect to target_poly.
-        """
+        # Currently vestigial; compute L(phi) function over samples with respect to target_poly.
         pass
 
     def gen_jacobian(self):
         """
-        Following the structure and conventions of `F_Jacobian.m' in QSPPACK, which in turn follows the conventions of Alg 3.2 in (https://arxiv.org/pdf/2307.12468).
-
-        This method has been checked numerous times for index-convention agreement with the original source.
+        Following the structure and conventions of `F_Jacobian.m' in QSPPACK, which in turn follows the conventions of Alg 3.2 in (https://arxiv.org/pdf/2307.12468). Compute the Jacobian matrix of the overall loss function (difference between desired matrix element implicit in gen_poly_jacobian_components and the achieved matrix element at the Chebyshev nodes of order len(reduced_phases)) against the reduced QSP phases.
         """
-        
-        # Anonymous function to component method for columns.
-        f = lambda x: self.gen_poly_jacobian_components(x)
-        
+
         d = len(self.reduced_phases)
         dd = 2*d
+        
+        # Anonymous function to generate columns.
+        f = lambda x: self.gen_poly_jacobian_components(x)
 
         # Generate equispaced sample angles.
         theta = np.transpose(np.arange(0,d+1)) * (np.pi/dd)
@@ -117,43 +107,27 @@ class SymmetricQSPProtocol:
         for n in range(0,d+1):
             M[n,:] = f(np.cos(theta[n]))
 
-
-        ## print("INITIAL")
-        ## print(M)
-        # CORRECT AFTER THIS STEP FOR THE TRIVIAL CASE.
-
         # Flip sign of second half of rows, and flip order of remaining elements.
         M[d+1:dd+1,:] = ((-1)**self.parity) * np.copy(M[d-1::-1,:])
         M[dd+1:,:] = np.copy(M[dd-1:0:-1,:])
 
-        ## print("BEFORE FFT")
-        ## print(M)
-        # CORRECT AFTER THIS STEP FOR THE TRIVIAL CASE.
-
-        # Take FFT over columns.
-        M = np.fft.fft(M,axis=0) # SEEMS FFT TAKEN OVER THIS AXIS
+        # Take FFT over rows. Note difference from MATLAB convention.
+        M = np.fft.fft(M,axis=0)
         M = np.copy(np.real(M[0:dd+1,:]))
 
-        ## print("AFTER FFT")
-        ## print(M)
-
+        # Double initial element and rescale matrix. 
         M[1:-1,:] = np.copy(M[1:-1,:]*2)
         M = M/(2*dd)
 
+        # Slice out phases and the full Jacobian.
         f = np.copy(M[self.parity:2*d:2,-1])
         df = np.copy(M[self.parity:2*d:2,0:-1])
-
-        ## print("AFTER ALL")
-        ## print(f)
-        ## print(df)
 
         return (f, df)
 
     def gen_poly_jacobian_components(self, a):
         """
-        Following the structure and conventions of `QSPGetPimDeri_sym_real.m' in QSPPACK, which in turn follows the conventions of Alg 3.3 in (https://arxiv.org/pdf/2307.12468).
-
-        This method has been checked numerous times for index-convention agreement with the original source.
+        Following the structure and conventions of `QSPGetPimDeri_sym_real.m' in QSPPACK, which in turn follows the conventions of Alg 3.3 in (https://arxiv.org/pdf/2307.12468). Compute individual columns of the overall jacobian at a given scalar signal a by direct computation of the product of QSP signal and phase unitaries composing the derivative of the unitary with respect to each reduced phase index.
         """
 
         n = len(self.reduced_phases)
@@ -166,10 +140,10 @@ class SymmetricQSPProtocol:
         L = np.zeros((n, 3))
 
 
-        # Fix the final column of L.
+        # Fix the final row of L.
         L[n-1,:] = np.array([0,1,0])
         
-        # Modify range parameters to update elements n-2 to 0.
+        # Modify range parameters to update rows from n-2 to 0.
         for k in range(n-2,-1,-1):
             L[k,:] = np.copy(L[k+1,:]) @ np.array([
                 [np.cos(2*self.reduced_phases[k+1]), -1*np.sin(2*self.reduced_phases[k+1]), 0], 
@@ -178,12 +152,13 @@ class SymmetricQSPProtocol:
         
         R = np.zeros((3, n))
 
+        # Fix the initial column of R depending on parity.
         if self.parity == 0:
-            R[:,0] = np.array([1,0,0]) # Updating column with flat list. Why is this seemingly different from the convention in Alg A.1.?
+            R[:,0] = np.array([1,0,0])
         else:
             R[:,0] = np.array([np.cos(t),0,np.sin(t)])
 
-        # Updating R matrix with a second pass; ranging over 1 to n-1.
+        # Updating R with a second pass ranging from 1 to n-1.
         for k in range(1,n):
             R[:,k] = B @ (np.array([
                 [np.cos(2*self.reduced_phases[k-1]), -1*np.sin(2*self.reduced_phases[k-1]), 0],
@@ -192,7 +167,7 @@ class SymmetricQSPProtocol:
 
         y = np.zeros((1,n+1)) 
 
-        # Here we have to convert from Matlab's 'single indexing' scheme.
+        # Finally, update y according to L, R.
         for k in range(n):
             y[0,k] = np.copy(2*L[k,:]) @ np.array([
                 [-1*np.sin(2*self.reduced_phases[k]), -1*np.cos(2*self.reduced_phases[k]), 0],
@@ -208,51 +183,46 @@ class SymmetricQSPProtocol:
 
 def newton_Solver(coef, parity, **kwargs):
     """
-        In what remains we include methods for actually performing Newton with respect to some target, maxiter, accuracy, and other parameters.
+        External method for performing Newton iteration with respect to some target polynomial, maxiter, and accuracy.
 
-        If there are methods in original package for computing a bounded polynomial approximation, these can be used to generate a target function, which can then be passed to the gradient computation of the symmetric QSP class.
-
-        In one of the examples online (https://qsppack.gitbook.io/qsppack/examples/quantum-linear-system-problems#solving-the-phase-factors-for-qlsp), they call the following two methods, which serve as a good example
-        -----------------------------------------
-        coef_full=cvx_poly_coef(targ, deg, opts);
-        coef = coef_full(1+parity:2:end);
+        If there are methods in original package for computing a bounded polynomial approximation, these can be used to generate a target function (n.b., in the Chebyshev basis, with zero-components due to definite parity removed, from low to high order!), which can then be passed to the Jacobian computation of the symmetric QSP class.
     """
 
-    maxiter = 1e3 # In original is 1e5.
-    crit = 1e-4 # In original is 1e-12.
-    targetPre = True
-
-    # Determines if targeting real or imaginary component.
-    if targetPre:
-        coef = -1*coef
+    maxiter = 1e5 # Cutoff for maximum iterations.
+    crit = 1e-12 # Cutoff for desired error at Chebyshev nodes.
     
-    reduced_phases = coef/2 # Determine if the order of setting is proper here
+    # Currently deprecated, but real and imaginary parts can be alternately targeted by flipping overall sign of coef.
+    # # targetPre = True
+    # # Determines if targeting real or imaginary component.
+    # if targetPre:
+    #     coef = -1*coef
+    
+    # Set an initial guess for the reduced phases which is approximately correct locally around the origin.
+    reduced_phases = coef/2
 
-    # This is necessary for giving a parity argument for internal methods, but is slightly backwards. We should convert everything to reduced phases and parity, which is sufficient for the rest.
+    # Generate symmetric QSP phases with these parameters, which will be iteratively updated.
     qsp_seq_opt = SymmetricQSPProtocol(reduced_phases=reduced_phases, parity=parity)
-
     curr_iter = 0
 
     # Start the main loop
     while True:
+        # Recover evaluated differences and Jacobian.
         (Fval,DFval) = qsp_seq_opt.gen_jacobian()
         res = Fval - coef
-        err = np.linalg.norm(res, ord=1) # Take the one norm.
+        err = np.linalg.norm(res, ord=1) # Take the one norm error.
         curr_iter = curr_iter + 1
 
-        # Break conditions
+        # Break conditions (beyond maxiter or within err.)
         if curr_iter >= maxiter:
             print("Max iteration reached.\n")
             break
-
         if err < crit:
             print("Stop criteria satisfied.\n")
             break    
 
+        # Invert Jacobian at evaluated point to determine direction of next step.
         lin_sol = np.linalg.solve(DFval, res)
         qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - lin_sol
-
-        # qsp_seq_opt.reduced_phases = qsp_seq_opt.reduced_phases - res/2 # Standard fixed point method.
 
     return (qsp_seq_opt.reduced_phases, err, curr_iter, qsp_seq_opt)
 
