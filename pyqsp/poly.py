@@ -91,7 +91,8 @@ class PolyCosineTX(PolyGenerator):
             epsilon=0.1,
             return_coef=True,
             ensure_bounded=True,
-            return_scale=False):
+            return_scale=False,
+            chebyshev_basis=False):
         '''
         Approximation to cos(tx) polynomial, using sums of Chebyshev
         polynomials, from Optimal Hamiltonian Simulation by Quantum Signal
@@ -121,7 +122,10 @@ class PolyCosineTX(PolyGenerator):
             print(f"[PolyCosineTX] rescaling by {scale}.")
 
         if return_coef:
-            pcoefs = g.coef # TODO: NOTE CHANGED: np.polynomial.chebyshev.cheb2poly(g.coef)
+            if chebyshev_basis:
+                pcoefs = g.coef
+            else:
+                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -140,7 +144,8 @@ class PolySineTX(PolyGenerator):
             epsilon=0.1,
             return_coef=True,
             ensure_bounded=True,
-            return_scale=False):
+            return_scale=False,
+            chebyshev_basis=False):
         '''
         Approximation to cos(tx) polynomial, using sums of Chebyshev
         polynomials, from Optimal Hamiltonian Simulation by Quantum Signal
@@ -170,7 +175,10 @@ class PolySineTX(PolyGenerator):
             print(f"[PolySineTX] rescaling by {scale}.")
 
         if return_coef:
-            pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            if chebyshev_basis:
+                pcoefs = g.coef
+            else:
+                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -191,7 +199,8 @@ class PolyOneOverX(PolyGenerator):
             epsilon=0.1,
             return_coef=True,
             ensure_bounded=True,
-            return_scale=False):
+            return_scale=False,
+            chebyshev_basis=False):
         '''
         Approximation to 1/x polynomial, using sums of Chebyshev polynomials,
         from Quantum algorithm for systems of linear equations with exponentially
@@ -231,10 +240,10 @@ class PolyOneOverX(PolyGenerator):
             g = scale * g
 
         if return_coef:
-            if 1: # To switch from coefficients.
-                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
-            else:
+            if chebyshev_basis:
                 pcoefs = g.coef
+            else:
+                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
             if ensure_bounded and return_scale:
                 return pcoefs, scale

@@ -249,7 +249,7 @@ def newton_Solver(coef, parity, **kwargs):
         err = np.linalg.norm(res, ord=1) # Take the one norm error.
         curr_iter = curr_iter + 1
 
-        print("Reached iteration: %s with err %s"%(str(curr_iter), str(err)))
+        print("iter: %s --- err: %.4g"%(str(curr_iter).zfill(3), err))
 
         # Invert Jacobian at evaluated point to determine direction of next step.
         lin_sol = np.linalg.solve(DFval, res)

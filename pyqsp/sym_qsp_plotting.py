@@ -8,13 +8,13 @@ def main():
     # Call existing methods to compute Jacobi-Anger expression for cosine.
     freq = 16
     pg = poly.PolyCosineTX()
-    pcoefs = pg.generate(tau=freq, epsilon=1e-12) # tau specifies frequency, epsilon accuracy.
-
-    # pg = poly.PolyRect()
-    # pcoefs = pg.generate(degree=10,delta=2,kappa=3,epsilon=0.1) # tau specifies frequency, epsilon accuracy.
-
-    # TEMP HACK: currently we're getting Chebyshev coefficients directly by modifying poly.py.
+    
+    # Note new argument to use Chebyshev basis.
+    pcoefs = pg.generate(tau=freq, epsilon=1e-12, chebyshev_basis=True)
+    
+    # Generate anonymous function (approx to cosine) using pcoefs.
     cos_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
+    
     # Initialize definite parity coefficients, and slice out nontrivial ones.
     full_coef = pcoefs
     parity = 0
@@ -41,6 +41,7 @@ def main():
 
     # Generate simultaneous plots.
     fig, axs = plt.subplots(2,sharex=True)
+    fig.suptitle('Approximating cosine with QSP to machine precision')
 
     # Standard plotting of relevant components.
     axs[0].plot(samples, im_vals, 'r', label="QSP poly")
@@ -50,12 +51,13 @@ def main():
 
     diff = np.abs(im_vals - cos_vals)
     true_diff = np.abs(des_vals - cos_vals)
-    axs[1].plot(samples, diff, 'b', label="Approx vs QSP")
-    axs[1].plot(samples, true_diff, 'r', label="Approx vs true")
+    total_diff = np.abs(im_vals - des_vals)
+    axs[1].plot(samples, diff, 'r', label="Approx vs QSP")
+    axs[1].plot(samples, true_diff, 'g', label="Approx vs true")
+    axs[1].plot(samples, total_diff, 'b', label="QSP vs true")
     axs[1].set_yscale('log')
 
     # Set axis limits and quality of life features.
-    # ax = plt.gca()
     axs[0].set_xlim([-1, 1])
     axs[0].set_ylim([-1, 1])
     axs[0].set_ylabel("Component value")

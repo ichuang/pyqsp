@@ -10,6 +10,17 @@
 	- Import `unittest`, `numpy`, and `pyqsp` with derived subfiles often for some reason.
 	- Note testing run per `pytest pyqsp/test/test_sym_qsp_optimization.py`, or `python -m unittest pyqsp/test/test_sym_qsp_optimization.py`
 
+## Notes on remaining items to match QSPPack implementation
+- [ ] Currently parity is automatically determined from the full phases; generate two methods for bidirectional conversion with an optional parity parameter.
+- [ ] Direct plotting GUI is helpful for debugging; eventually this can be converted to something visible for, e.g., bandpass functions.
+	- The GUI could be for common functions, and if fast enough, can directly plot and list the phases. Values can be entered, and absolute error can be plotted on a separate graph below with modified axes.
+	- This can also automatically generate the command to run with the relevant parameters, allowing for someone to copy paste into their code
+- [ ] Current polynomial generators in the `poly.py` file should have the option to directly return Chebyshev coefficients, as this might be a bottleneck for current plotting.
+- [ ] Try to port method for computing bandpass function from other repos, as a supplement to the simpler optimization schemes currently implemented here.
+- [ ] Determine how best to integrate current new module with the command line interface allowed by previous repo
+- [ ] `cheb2poly` method is currently used in `poly.py` in three locations: `PolyCosineTX`, `PolySineTX`, `PolyOneOverX`.
+- [ ] We might need to implement something closer to `https://github.com/qsppack/QSPPACK/blob/master/Solvers/Optimization/cvx_poly_coef.m` to achieve phase sequences of the proper length.
+
 ## Required components
 - Overall QSP solver file
 	- Input parameters in original `QSP_solver.m`
