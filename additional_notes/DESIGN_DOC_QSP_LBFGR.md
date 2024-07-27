@@ -20,6 +20,8 @@
 - [ ] Determine how best to integrate current new module with the command line interface allowed by previous repo
 - [ ] `cheb2poly` method is currently used in `poly.py` in three locations: `PolyCosineTX`, `PolySineTX`, `PolyOneOverX`.
 - [ ] We might need to implement something closer to `https://github.com/qsppack/QSPPACK/blob/master/Solvers/Optimization/cvx_poly_coef.m` to achieve phase sequences of the proper length.
+- Possible bug when normalizing polynomial in `poly.py`; replace this with two optimizations, taking the maximum of both. Also determine how 1/2 scaling works.
+- [ ] Changing equispaced points from Chebyshev approximation to Chebyshev nodes may improved things; otherwise we just want to inherit this minimization scheme in all classes subsidiary to taylor series class.
 
 ## Required components
 - Overall QSP solver file

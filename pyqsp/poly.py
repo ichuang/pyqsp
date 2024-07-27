@@ -291,6 +291,13 @@ class PolyOneOverXRect(PolyGenerator):
 
 # -----------------------------------------------------------------------------
 
+"""
+    As an addendum, we can add a boolean parameter in the taylor series method to compute, instead of the monomial expansion, the chebyshev expansion, which can be passed down through the inheriting classes. This requires understanding the reversal of coefficients before instantiating a numpy polynomial. It's also worth determining whether numpy polynomial objects can themselves be implemented with chebyshev coefficients, in which case the normalization that occurs can be handled in situ.
+
+    # Another question; we only attempt to optimize for the minimum that the negative of the polynomial acquires (which is the same as maximizing on the interval); we have definite parity, so this would always seem to give the maximum magnitude regardless (unless the polynomial is of even parity and is highly negative?). This seems to be a bug.
+
+    It looks like we can directly instantiate a Chebyshev expansion object. This can be paired with the chebfit method to directly determine coefficients.
+"""
 
 class PolyTaylorSeries(PolyGenerator):
     '''
@@ -304,34 +311,72 @@ class PolyTaylorSeries(PolyGenerator):
             ensure_bounded=True,
             return_scale=False,
             npts=100,
-            max_scale=0.5):
+            max_scale=0.5,
+            chebyshev_basis=False,
+            cheb_samples=20):
         '''
-        Return numpy Polynomial approximation for func, constructed using
-        taylor series, of specified degree.
-        Evaluate approximation using mean absolut difference on npts points in
-        the domain from -1 to 1.
+        If chebyshev_basis is True:
+            Return numpy Chebyshev approximation for func, using numpy methods for Chebyshev approximation of specified degree. 
+            We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
+
+        If chebyshev_basis is False:
+            Return numpy Polynomial approximation for func, constructed using
+            taylor series, of specified degree.
+            We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
         '''
-        the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
-        the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
-        if ensure_bounded:
-            res = scipy.optimize.minimize(-the_poly, (0.1,), bounds=[(-1, 1)])
-            pmax = res.x
-            scale = 1 / abs(the_poly(pmax))
-            # use this for the new QuantumSignalProcessingWxPhases code, which
-            # employs np.polynomial.chebyshev.poly2cheb(pcoefs)
-            scale = scale * max_scale
-            print(f"[PolyTaylorSeries] max {scale} is at {pmax}: normalizing")
-            the_poly = scale * the_poly
-        adat = np.linspace(-1, 1, npts)
-        pdat = the_poly(adat)
-        edat = func(adat)
-        avg_err = abs(edat - pdat).mean()
-        print(
-            f"[PolyTaylorSeries] average error = {avg_err} in the domain [-1, 1] using degree {degree}")
-        if ensure_bounded and return_scale:
-            return the_poly, scale
-        else:
-            return the_poly
+        if chebyshev_basis:
+            # Generate x and y values for fit according to func.
+            samples = np.linspace(-1, 1, cheb_samples)
+            vals = np.array(list(map(func, samples)))
+            # Generate cheb fit for function.
+            cheb_coefs = np.polynomial.chebyshev.chebfit(samples, vals, degree, rcond=None, full=False, w=None)
+            # Generate chebyshev polynomial object from coefs.
+            cheb_poly = np.polynomial.chebyshev.Chebyshev(cheb_coefs)
+
+            # Determine maximum over interval and rescale.
+            if ensure_bounded:
+                res = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
+                pmax = res.x
+                scale = 1 / abs(cheb_poly(pmax))
+                scale = scale * max_scale
+                print(f"[PolyTaylorSeries] (Cheb) max {scale} is at {pmax}: normalizing")
+                cheb_poly = scale * cheb_poly
+            
+            # Determine average error on interval and print. 
+            adat = np.linspace(-1, 1, npts)
+            pdat = cheb_poly(adat)
+            edat = func(adat)
+            avg_err = abs(edat - pdat).mean()
+            print(
+                f"[PolyTaylorSeries] (Cheb) average error = {avg_err} in the domain [-1, 1] using degree {degree}")
+            
+            if ensure_bounded and return_scale:
+                return cheb_poly, scale
+            else:
+                return cheb_poly
+
+        else: 
+            the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
+            the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
+            if ensure_bounded:
+                res = scipy.optimize.minimize(-the_poly, (0.1,), bounds=[(-1, 1)])
+                pmax = res.x
+                scale = 1 / abs(the_poly(pmax))
+                # use this for the new QuantumSignalProcessingWxPhases code, which
+                # employs np.polynomial.chebyshev.poly2cheb(pcoefs)
+                scale = scale * max_scale
+                print(f"[PolyTaylorSeries] max {scale} is at {pmax}: normalizing")
+                the_poly = scale * the_poly
+            adat = np.linspace(-1, 1, npts)
+            pdat = the_poly(adat)
+            edat = func(adat)
+            avg_err = abs(edat - pdat).mean()
+            print(
+                f"[PolyTaylorSeries] average error = {avg_err} in the domain [-1, 1] using degree {degree}")
+            if ensure_bounded and return_scale:
+                return the_poly, scale
+            else:
+                return the_poly
 
 # -----------------------------------------------------------------------------
 

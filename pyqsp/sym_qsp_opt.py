@@ -2,7 +2,7 @@ import numpy as np
 
 class SymmetricQSPProtocol:
 
-    def __init__(self, reduced_phases=[], parity=None):
+    def __init__(self, reduced_phases=[], parity=None, target_poly=None):
         
         """
         Initialize a symmetric QSP protocol in terms of its reduced phases and parity, following the convention of Dong, Lin, Ni, & Wang in (https://arxiv.org/pdf/2307.12468). For even (0) parity, the central phase is split in half across the initial position of the reduced phases, while for odd (1) parity, the reduced phase list is mirrored and concatenated with itself.
@@ -34,8 +34,11 @@ class SymmetricQSPProtocol:
             self.full_phases = None
             self.poly_deg = None
         
-        # Currently a vestigial variable, but could eventually be used to allow for immediate instantiation of self-optimizing symmetric protocol.
-        self.target_poly = None
+        # Currently vestigial, but can eventually allow for immediate self-optimization upon instantiation with target poly of proper dimension.
+        if target_poly:
+            self.target_poly = target_poly
+        else:
+            self.target_poly = None
 
     def help(self):
         return("Class for storing classical description (i.e., reduced phases, parity) of symmetric QSP protocol, with auxiliary methods for generating derived quantities (e.g., response function, gradients and Jacobians).")
@@ -166,7 +169,6 @@ class SymmetricQSPProtocol:
             [np.sin(2*t), 0, np.cos(2*t)]])
         L = np.zeros((n, 3))
 
-
         # Fix the final row of L.
         L[n-1,:] = np.array([0,1,0])
         
@@ -214,9 +216,6 @@ def newton_Solver(coef, parity, **kwargs):
 
         If there are methods in original package for computing a bounded polynomial approximation, these can be used to generate a target function (n.b., in the Chebyshev basis, with zero-components due to definite parity removed, from low to high order!), which can then be passed to the Jacobian computation of the symmetric QSP class.
     """
-
-    # maxiter = 1e5 # Cutoff for maximum iterations.
-    # crit = 1e-12 # Cutoff for desired error at Chebyshev nodes.
 
     if 'crit' in kwargs:
         crit = kwargs['crit']
