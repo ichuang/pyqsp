@@ -391,7 +391,9 @@ class PolySign(PolyTaylorSeries):
             degree=7,
             delta=2,
             ensure_bounded=True,
-            return_scale=False):
+            return_scale=False,
+            chebyshev_basis=False,
+            cheb_samples=20):
         '''
         Approximation to sign function, using erf(delta * x)
         '''
@@ -409,14 +411,18 @@ class PolySign(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
         else:
             the_poly = self.taylor_series(
                 erf_delta,
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
         # force even coefficients to be zero, since the polynomial must be odd
@@ -433,10 +439,12 @@ class PolyThreshold(PolyTaylorSeries):
         return "approximation to a thresholding function at threshold 1/2, using linear combination of erf(delta * a); give degree and delta"
 
     def generate(self,
-                 degree=6,
-                 delta=2,
-                 ensure_bounded=True,
-                 return_scale=False):
+                degree=6,
+                delta=2,
+                ensure_bounded=True,
+                return_scale=False,
+                chebyshev_basis=False,
+                cheb_samples=20):
         '''
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
@@ -457,14 +465,18 @@ class PolyThreshold(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
         else:
             the_poly = self.taylor_series(
                 threshold,
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -481,10 +493,12 @@ class PolyPhaseEstimation(PolyTaylorSeries):
         return "phase estimation polynomial given "
 
     def generate(self,
-                 degree=6,
-                 delta=2,
-                 ensure_bounded=True,
-                 return_scale=False):
+                degree=6,
+                delta=2,
+                ensure_bounded=True,
+                return_scale=False,
+                chebyshev_basis=False,
+                cheb_samples=20):
         '''
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
@@ -505,14 +519,18 @@ class PolyPhaseEstimation(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
         else:
             the_poly = self.taylor_series(
                 threshold,
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -529,12 +547,14 @@ class PolyRect(PolyTaylorSeries):
         return "approximation to a thresholding function at threshold 1/2, using linear combination of erf(delta * a); give degree and delta"
 
     def generate(self,
-                 degree=6,
-                 delta=2,
-                 kappa=3,
-                 epsilon=0.1,
-                 ensure_bounded=True,
-                 return_scale=False):
+                degree=6,
+                delta=2,
+                kappa=3,
+                epsilon=0.1,
+                ensure_bounded=True,
+                return_scale=False,
+                chebyshev_basis=False,
+                cheb_samples=20):
         '''
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
@@ -558,14 +578,18 @@ class PolyRect(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
         else:
             the_poly = self.taylor_series(
                 rect,
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9)
+                max_scale=0.9,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -584,11 +608,13 @@ class PolyLinearAmplification(PolyTaylorSeries):
         return "approximates x/(2*gamma) in region (-2*gamma, 2*gamma) capped to +/- 1 outside for some constant gamma"
 
     def generate(self,
-                 degree=7,
-                 gamma=0.25,
-                 kappa=10,
-                 ensure_bounded=True,
-                 return_scale=False):
+                degree=7,
+                gamma=0.25,
+                kappa=10,
+                ensure_bounded=True,
+                return_scale=False,
+                chebyshev_basis=False,
+                cheb_samples=20):
         '''
         Approximation to the truncated linear function described in Low's thesis (2017)
         '''
@@ -612,7 +638,9 @@ class PolyLinearAmplification(PolyTaylorSeries):
             degree,
             ensure_bounded=ensure_bounded,
             return_scale=return_scale,
-            max_scale=1.)
+            max_scale=1.0,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
 
         if ensure_bounded and return_scale:
             the_poly, scale = result
@@ -640,10 +668,12 @@ class PolyGibbs(PolyTaylorSeries):
         return "approximation to exp(-beta*a) ; specify degree and beta"
 
     def generate(self,
-                 degree=6,
-                 beta=2,
-                 ensure_bounded=True,
-                 return_scale=False):
+                degree=6,
+                beta=2,
+                ensure_bounded=True,
+                return_scale=False,
+                chebyshev_basis=False,
+                cheb_samples=20):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyGibbs] degree={degree}, beta={beta}")
         if (degree % 2):
@@ -658,14 +688,18 @@ class PolyGibbs(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=1)
+                max_scale=1,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
         else:
             the_poly = self.taylor_series(
                 gibbs,
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=1)
+                max_scale=1,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -692,7 +726,9 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
             delta=0.2,
             max_scale=0.9,
             ensure_bounded=True,
-            return_scale=False):
+            return_scale=False,
+            chebyshev_basis=False,
+            cheb_samples=20):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyEfilter] degree={degree}, delta={delta}")
         if (degree % 2):
@@ -712,14 +748,18 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=max_scale)
+                max_scale=max_scale,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
         else:
             the_poly = self.taylor_series(
                 efpoly,
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=max_scale)
+                max_scale=max_scale,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -747,7 +787,8 @@ class PolyRelu(PolyTaylorSeries):
             max_scale=0.99,
             ensure_bounded=True,
             return_scale=False,
-    ):
+            chebyshev_basis=False,
+            cheb_samples=20):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyRelu] degree={degree}, delta={delta}")
         if (degree % 2):
@@ -762,7 +803,9 @@ class PolyRelu(PolyTaylorSeries):
             gelu,
             degree,
             ensure_bounded=ensure_bounded,
-            max_scale=max_scale)
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
@@ -788,7 +831,9 @@ class PolySoftPlus(PolyTaylorSeries):
             kappa=1,
             max_scale=0.90,
             ensure_bounded=True,
-            return_scale=False):
+            return_scale=False,
+            chebyshev_basis=False,
+            cheb_samples=20):
         degree = int(degree)
         print(
             f"[pyqsp.poly.PolySoftPlus] degree={degree}, delta={delta}, kappa={kappa}")
@@ -803,14 +848,18 @@ class PolySoftPlus(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=max_scale)
+                max_scale=max_scale,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
         else:
             the_poly = self.taylor_series(
                 func,
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=max_scale)
+                max_scale=max_scale,
+                chebyshev_basis=chebyshev_basis,
+                cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
