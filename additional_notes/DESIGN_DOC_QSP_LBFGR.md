@@ -9,6 +9,7 @@
 - For tests:
 	- Import `unittest`, `numpy`, and `pyqsp` with derived subfiles often for some reason.
 	- Note testing run per `pytest pyqsp/test/test_sym_qsp_optimization.py`, or `python -m unittest pyqsp/test/test_sym_qsp_optimization.py`
+	- Running `python setup.py test` runs all tests at once; currently they pass (modulo model tests with tensorflow dependence).
 
 ## Notes on remaining items to match QSPPack implementation
 - [ ] Currently parity is automatically determined from the full phases; generate two methods for bidirectional conversion with an optional parity parameter.

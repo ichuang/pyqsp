@@ -252,7 +252,7 @@ class PolyOneOverX(PolyGenerator):
 
         return g
 
-
+# TODO: add chebyshev support here.
 class PolyOneOverXRect(PolyGenerator):
 
     def help(self):
@@ -329,7 +329,7 @@ class PolyTaylorSeries(PolyGenerator):
             samples = np.linspace(-1, 1, cheb_samples)
             vals = np.array(list(map(func, samples)))
             # Generate cheb fit for function.
-            cheb_coefs = np.polynomial.chebyshev.chebfit(samples, vals, degree, rcond=None, full=False, w=None)
+            cheb_coefs = np.polynomial.chebyshev.chebfit(samples, vals, degree)
             # Generate chebyshev polynomial object from coefs.
             cheb_poly = np.polynomial.chebyshev.Chebyshev(cheb_coefs)
 
@@ -430,7 +430,7 @@ class PolySign(PolyTaylorSeries):
         if ensure_bounded and return_scale:
             return pcoefs, scale
         else:
-            return TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
+            return pcoefs #TODO: TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
 
 
 class PolyThreshold(PolyTaylorSeries):
