@@ -325,8 +325,9 @@ class PolyTaylorSeries(PolyGenerator):
             We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
         '''
         if chebyshev_basis:
-            # Generate x and y values for fit according to func.
-            samples = np.linspace(-1, 1, cheb_samples)
+            # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.
+            samples = np.polynomial.chebyshev.chebpts1(cheb_samples)
+
             vals = np.array(list(map(func, samples)))
             # Generate cheb fit for function.
             cheb_coefs = np.polynomial.chebyshev.chebfit(samples, vals, degree)
@@ -430,7 +431,9 @@ class PolySign(PolyTaylorSeries):
         if ensure_bounded and return_scale:
             return pcoefs, scale
         else:
-            return TargetPolynomial(pcoefs, target=lambda x: np.sign(x)) # TODO: change to just pcoefs for use by cheb methods
+            # return TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
+            return pcoefs
+            # return TargetPolynomial(pcoefs, target=lambda x: np.sign(x)) # TODO: change to just pcoefs for use by cheb methods. It's not clear why the TargetPolynomial object is being given pcoefs as an argument; right now this only occurs in two places. This can be mitigated by just calling the response as a numpy polynomial, which can be done without the annoying mapping in the other file.
 
 
 class PolyThreshold(PolyTaylorSeries):
