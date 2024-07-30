@@ -4,14 +4,11 @@ import unittest
 import numpy as np
 import matplotlib.pyplot as plt
 
-# TODO: determine the proper order of these imports.
+import pyqsp
+from pyqsp import sym_qsp_opt, poly
 
-from .. import sym_qsp_opt
-from .. import poly
-
-# import pyqsp
-# from pyqsp import sym_qsp_opt
-# import pyqsp
+# from .. import sym_qsp_opt
+# from .. import poly
 
 # -----------------------------------------------------------------------------
 """

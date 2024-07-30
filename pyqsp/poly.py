@@ -430,7 +430,7 @@ class PolySign(PolyTaylorSeries):
         if ensure_bounded and return_scale:
             return pcoefs, scale
         else:
-            return pcoefs #TODO: TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
+            return TargetPolynomial(pcoefs, target=lambda x: np.sign(x)) # TODO: change to just pcoefs for use by cheb methods
 
 
 class PolyThreshold(PolyTaylorSeries):
