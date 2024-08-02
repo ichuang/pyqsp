@@ -6,5 +6,6 @@ build
 dist
 OLD
 NOTES-*
+additional_notes
 
 qsp/
