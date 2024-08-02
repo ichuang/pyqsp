@@ -200,6 +200,8 @@ def main():
     (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=1e-12)    
     print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
+    ### TODO: note that current return here is of wrapped polynomial type, and not what the code above is expecting.
+
     # Plot achieved versus desired function over samples.
     num_samples = 400
     samples = np.linspace(-1,1,num=num_samples)

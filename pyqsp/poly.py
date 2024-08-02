@@ -431,8 +431,8 @@ class PolySign(PolyTaylorSeries):
         if ensure_bounded and return_scale:
             return pcoefs, scale
         else:
-            # return TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
-            return pcoefs
+            return TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
+            # TODO: modify to handle the following: return pcoefs
             # return TargetPolynomial(pcoefs, target=lambda x: np.sign(x)) # TODO: change to just pcoefs for use by cheb methods. It's not clear why the TargetPolynomial object is being given pcoefs as an argument; right now this only occurs in two places. This can be mitigated by just calling the response as a numpy polynomial, which can be done without the annoying mapping in the other file.
 
 
