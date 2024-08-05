@@ -2,9 +2,9 @@ import os
 import unittest
 
 import numpy as np
-import tensorflow as tf
+# TODO: Currently silenced as transitioning away from Tensorflow. # import tensorflow as tf
 
-from pyqsp import qsp_models
+# TODO: Currently silenced as transitioning away from Tensorflow. # from pyqsp import qsp_models
 
 class Test_qsp_models(unittest.TestCase):
     '''
