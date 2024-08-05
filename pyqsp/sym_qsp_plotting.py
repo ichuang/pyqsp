@@ -184,6 +184,8 @@ def main():
             delta=25,
             chebyshev_basis=True, 
             cheb_samples=250)
+    # Cast from TargetPolynomial class bare Chebyshev coefficients.
+    pcoefs = pcoefs.coef
     
     # Generate anonymous function (approx to cosine) using pcoefs.
     cos_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
