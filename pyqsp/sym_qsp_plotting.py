@@ -160,22 +160,27 @@ def main():
 
     #######################################################
     #                                                     #
-    #                   RECT APPROX                       #
+    #                   SIGN APPROX                       #
     #                                                     #
     #######################################################
 
+    """
+    Here we include some notes on how to choose the proper number of phases, sample points, and polynomial degree when determining good QSP protocols for piecewise continous functions.
+
+    We know that the degree of the polynomial should be greater than the number of sampling points, as otherwise we can directly interpolate these points and will get a bad fit.
+
+    We also know that the degree of the polynomial should roughly match the scaling suggested by the ultimate uniform error and slew rates specified for the fit (e.g., the delta and epsilon parameters used for a given bandpass filter.).
+
+    For the sign function below the degree is hardcoded, and the error function being compared against depends on delta; note there is no explicit epsilon dependence, other than the one baked into the degree. Currently the chebyshev samples used do not depend on the degree, but could be chosen to be something like 2*degree if unspecified (currently not permitted).
+
+    Otherwise, the max_scale is currently hardcoded in the call of the function. We could relax this (defaulting to 0.9) and checking somewhere that it is not within some small epsilon of 1, given the known performance of the iterative algorithm even for large infinity norm.
+
+    
+
+    """
+
     # Call existing methods to compute approximation to rect.
     freq = 16
-    # pg = poly.PolyRect()
-    
-    # # Note new argument to use Chebyshev basis with default parameters.
-    # pcoefs = pg.generate(degree=20,
-    #             delta=2,
-    #             kappa=3, 
-    #             epsilon=0.1, 
-    #             chebyshev_basis=True, 
-    #             cheb_samples=60)
-
     pg = poly.PolySign()
     
     # TODO: note that definition of PolySign has been changed to return bare pcoefs and not TargetPolynomial

@@ -252,7 +252,7 @@ class PolyOneOverX(PolyGenerator):
 
         return g
 
-# TODO: add chebyshev support here.
+
 class PolyOneOverXRect(PolyGenerator):
 
     def help(self):
@@ -265,18 +265,21 @@ class PolyOneOverXRect(PolyGenerator):
             kappa=3,
             epsilon=0.1,
             ensure_bounded=True,
-            return_scale=False):
+            return_scale=False,
+            chebyshev_basis=False):
 
         coefs_invert, scale1 = PolyOneOverX().generate(2 * kappa,
                                                        epsilon,
                                                        ensure_bounded,
-                                                       return_scale=True)
+                                                       return_scale=True,
+                                                       chebyshev_basis=chebyshev_basis)
 
         coefs_rect, scale2 = PolyRect().generate(degree,
                                                  delta,
                                                  kappa,
                                                  ensure_bounded,
-                                                 return_scale=True)
+                                                 return_scale=True,
+                                                 chebyshev_basis=chebyshev_basis)
 
         poly_invert = np.polynomial.Polynomial(coefs_invert)
         poly_rect = np.polynomial.Polynomial(coefs_rect)
@@ -394,7 +397,8 @@ class PolySign(PolyTaylorSeries):
             ensure_bounded=True,
             return_scale=False,
             chebyshev_basis=False,
-            cheb_samples=20):
+            cheb_samples=20,
+            max_scale=0.9):
         '''
         Approximation to sign function, using erf(delta * x)
         '''
@@ -412,7 +416,7 @@ class PolySign(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
         else:
@@ -421,7 +425,7 @@ class PolySign(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
 
@@ -445,7 +449,8 @@ class PolyThreshold(PolyTaylorSeries):
                 ensure_bounded=True,
                 return_scale=False,
                 chebyshev_basis=False,
-                cheb_samples=20):
+                cheb_samples=20,
+                max_scale=0.9):
         '''
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
@@ -466,7 +471,7 @@ class PolyThreshold(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
         else:
@@ -475,7 +480,7 @@ class PolyThreshold(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
 
@@ -499,7 +504,8 @@ class PolyPhaseEstimation(PolyTaylorSeries):
                 ensure_bounded=True,
                 return_scale=False,
                 chebyshev_basis=False,
-                cheb_samples=20):
+                cheb_samples=20,
+                max_scale=0.9):
         '''
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
@@ -520,7 +526,7 @@ class PolyPhaseEstimation(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
         else:
@@ -529,7 +535,7 @@ class PolyPhaseEstimation(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
 
@@ -555,7 +561,8 @@ class PolyRect(PolyTaylorSeries):
                 ensure_bounded=True,
                 return_scale=False,
                 chebyshev_basis=False,
-                cheb_samples=20):
+                cheb_samples=20,
+                max_scale=0.9):
         '''
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
@@ -579,7 +586,7 @@ class PolyRect(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
         else:
@@ -588,7 +595,7 @@ class PolyRect(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=0.9,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
 
@@ -615,7 +622,8 @@ class PolyLinearAmplification(PolyTaylorSeries):
                 ensure_bounded=True,
                 return_scale=False,
                 chebyshev_basis=False,
-                cheb_samples=20):
+                cheb_samples=20,
+                max_scale=1.0):
         '''
         Approximation to the truncated linear function described in Low's thesis (2017)
         '''
@@ -639,7 +647,7 @@ class PolyLinearAmplification(PolyTaylorSeries):
             degree,
             ensure_bounded=ensure_bounded,
             return_scale=return_scale,
-            max_scale=1.0,
+            max_scale=max_scale,
             chebyshev_basis=chebyshev_basis,
             cheb_samples=cheb_samples)
 
@@ -674,7 +682,8 @@ class PolyGibbs(PolyTaylorSeries):
                 ensure_bounded=True,
                 return_scale=False,
                 chebyshev_basis=False,
-                cheb_samples=20):
+                cheb_samples=20,
+                max_scale=1.0):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyGibbs] degree={degree}, beta={beta}")
         if (degree % 2):
@@ -689,7 +698,7 @@ class PolyGibbs(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=1,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
         else:
@@ -698,7 +707,7 @@ class PolyGibbs(PolyTaylorSeries):
                 degree,
                 ensure_bounded=ensure_bounded,
                 return_scale=return_scale,
-                max_scale=1,
+                max_scale=max_scale,
                 chebyshev_basis=chebyshev_basis,
                 cheb_samples=cheb_samples)
 
