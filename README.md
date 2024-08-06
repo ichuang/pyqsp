@@ -18,9 +18,9 @@ Specifically, in the Wx convention, the QSP operation sequence is:
 
 <!-- U_x = e^{i\phi_0 Z} \prod_{k=1}^L W(a) e^{i\phi_k Z} ~~~~{\rm where} ~~~ W(x)=\left[ \begin{array}{cc} a & i\sqrt{1-a^2} \\ i\sqrt{1-a^2} & a  \end{array} \right ] -->
 
-``math
+```math
 U_x = e^{i\phi_0 Z} \prod_{k=1}^L W(a) e^{i\phi_k Z} \;\;\;\;\text{here}\;\;\;\; W(x)=\left[\begin{bmatrix} a & i\sqrt{1-a^2} \\ i\sqrt{1-a^2} & a \end{bmatrix} \right]
-``
+```
 
 <!-- <center>
 <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20U_x%20%3D%20e%5E%7Bi%5Cphi_0%20Z%7D%20%5Cprod_%7Bk%3D1%7D%5EL%20W%28a%29%20e%5E%7Bi%5Cphi_k%20Z%7D%20%7E%7E%7E%7E%7B%5Crm%20where%7D%20%7E%7E%7E%20W%28a%29%3D%5Cleft%5B%20%5Cbegin%7Barray%7D%7Bcc%7D%20a%20%26%20i%5Csqrt%7B1-a%5E2%7D%20%5C%5C%20i%5Csqrt%7B1-a%5E2%7D%20%26%20a%20%5Cend%7Barray%7D%20%5Cright%20%5D" />
