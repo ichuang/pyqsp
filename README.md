@@ -19,7 +19,7 @@ Specifically, in the Wx convention, the QSP operation sequence is:
 <!-- U_x = e^{i\phi_0 Z} \prod_{k=1}^L W(a) e^{i\phi_k Z} ~~~~{\rm where} ~~~ W(x)=\left[ \begin{array}{cc} a & i\sqrt{1-a^2} \\ i\sqrt{1-a^2} & a  \end{array} \right ] -->
 
 ```math
-U_x = e^{i\phi_0 Z} \prod_{k=1}^L W(a) e^{i\phi_k Z} \;\;\;\;\text{here}\;\;\;\; W(x)=\left[\begin{bmatrix} a & i\sqrt{1-a^2} \\ i\sqrt{1-a^2} & a \end{bmatrix} \right]
+U_x = e^{i\phi_0 Z} \prod_{k=1}^L W(a) e^{i\phi_k Z} \;\;\;\;\text{here}\;\;\;\; W(x)= \begin{bmatrix} a & i\sqrt{1-a^2} \\ i\sqrt{1-a^2} & a \end{bmatrix}
 ```
 
 <!-- <center>
@@ -28,23 +28,31 @@ U_x = e^{i\phi_0 Z} \prod_{k=1}^L W(a) e^{i\phi_k Z} \;\;\;\;\text{here}\;\;\;\;
 
 And in the $W_z$ convention, the QSP operation sequence is:
 
+```math
+U_z = e^{i\phi_0 X} \prod_{k=1}^L W(a) e^{i\phi_k X} \;\;\;\;\text{here}\;\;\;\; W(a)=\begin{bmatrix} a + i\sqrt{1-a^2} & 0 \\ 0 & a - i\sqrt{1-a^2} \end{bmatrix}
+```
+
 <!-- U_z = e^{i\phi_0 X} \prod_{k=1}^L W(a) e^{i\phi_k X} ~~~~{\rm where} ~~~ W(a)=\left[ \begin{array}{cc} a + i\sqrt{1-a^2} & 0 \\ 0 & a - i\sqrt{1-a^2}  \end{array} \right ] -->
 
-<center>
+<!-- <center>
 <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20U_z%20%3D%20e%5E%7Bi%5Cphi_0%20X%7D%20%5Cprod_%7Bk%3D1%7D%5EL%20W%28a%29%20e%5E%7Bi%5Cphi_k%20X%7D%20%7E%7E%7E%7E%7B%5Crm%20where%7D%20%7E%7E%7E%20W%28a%29%3D%5Cleft%5B%20%5Cbegin%7Barray%7D%7Bcc%7D%20a%20&plus;%20i%5Csqrt%7B1-a%5E2%7D%20%26%200%20%5C%5C%200%20%26%20a%20-%20i%5Csqrt%7B1-a%5E2%7D%20%5Cend%7Barray%7D%20%5Cright%20%5D" />
-</center>
+</center> -->
 
 They are related by a Hadamard transform:
 
 <!-- U_x = H U_z H -->
 
-<center>
+```math
+U_x = H U_z H
+```
+
+<!-- <center>
 <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20U_x%20%3D%20H%20U_z%20H" />
-</center>
+</center> -->
 
 The Wz convention is convenient for and employed in [Laurent polynomial formulations of QSP](https://arxiv.org/abs/2003.02831), whereas the Wx convention is more traditional, e.g. as employed in [quantum singular value transform](https://arxiv.org/abs/1806.01838) applications of QSP.
 
-This package can generate QSP phase angles for both conventions (whereas earlier code only handled the Wz convention).  The challenge is that if one wants a certain polynomial  <!-- P_x(a) = \langle 0|U_x|0\rangle --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_x%28a%29%20%3D%20%5Clangle%200%7CU_x%7C0%5Crangle"/> in the Wx convention, one cannot just use the phases generated for this polynomial in the Wz convention.  Instead, first the Q_x(a) corresponding to P_x(a) is needed to complete the full U_x.  This then gives <!-- P_z(a) = \langle 0|U_z|0\rangle = P_x(a) + Q_x(a) --> <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_z%28a%29%20%3D%20%5Clangle%200%7CU_z%7C0%5Crangle%20%3D%20P_x%28a%29%20&plus;%20Q_x%28a%29" />.  Computing the QSP phases for P_z(a) in the Wz convention then gives the desired QSP phases for P_x(a) in the Wx convention, if suitable care is taken with respect to the Q(a) polynomial.
+This package can generate QSP phase angles for both conventions (whereas earlier code only handled the Wz convention).  The challenge is that if one wants a certain polynomial $P_x(a) = \langle 0|U_x|0\rangle$<!-- P_x(a) = \langle 0|U_x|0\rangle --> <!-- <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_x%28a%29%20%3D%20%5Clangle%200%7CU_x%7C0%5Crangle"/>  --> in the Wx convention, one cannot just use the phases generated for this polynomial in the Wz convention. Instead, first the Q_x(a) corresponding to P_x(a) is needed to complete the full U_x. This then gives $P_z(a) = \langle 0|U_z|0\rangle = P_x(a) + Q_x(a)$ <!-- P_z(a) = \langle 0|U_z|0\rangle = P_x(a) + Q_x(a) --> <!-- <img src="https://latex.codecogs.com/svg.latex?%5Clarge%20P_z%28a%29%20%3D%20%5Clangle%200%7CU_z%7C0%5Crangle%20%3D%20P_x%28a%29%20&plus;%20Q_x%28a%29" /> -->. Computing the QSP phases for P_z(a) in the Wz convention then gives the desired QSP phases for P_x(a) in the Wx convention, if suitable care is taken with respect to the Q(a) polynomial.
 
 In addition to specifying the signal rotation operator W and the signal processing operator phase shifts, the QSP signal basis must also be specified.  In this code, the default basis is |+>, but the code also allows the |0> basis to be used (when using tensorflow optimization to generate the phase angles).  See the "--measurement" option.
 
