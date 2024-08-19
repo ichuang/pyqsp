@@ -190,6 +190,11 @@ def PlotQSPResponse(
     else:
         plt.ylim([-1.5 * ymax, 1.5 * ymax])
 
+    # Remove unecessary axes.
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
     if show:
         plt.show()
 
