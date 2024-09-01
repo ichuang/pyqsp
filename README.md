@@ -2,11 +2,13 @@
 
 ![test workflow](https://github.com/ichuang/pyqsp/actions/workflows/run_tests.yml/badge.svg)
 
-<!-- *TODO: add some symbols for the main headings, add a title that matches the title of the repo, and overall remove extraneous lists of outputs and inputs outside of a dedicated example section.* -->
+<!-- *TODO: add some symbols for the main headings, add a title that matches the title of the repo, and overall remove extraneous lists of outputs and inputs outside of a dedicated example section.*
+
+*Additionally, find ways to center figures, replace these figures with updated ones in better formatting, and possibly get things to play nice with dark mode, etc.* -->
 
 ## Introduction
 
-[Quantum signal processing](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.118.010501) (QSP) is a flexible quantum algorithm subsuming Hamiltonian simulation, quantum linear systems solvers, amplitude amplification, and many other common quantum algorithms. Moreover, for each of these applications, QSP often exhibits state-of-the-art space and time complexity, with comparatively simple analysis. QSP and its related algorithms, e.g., [Quantum singular value transformation](PAPERLINKHERE) (QSVT), using basic alternating circuit ansätze originally inspired by composite pulse techniques in NMR, permit one to *transform the spectrum of linear operators by near arbitrary polynomial functions*, with the aforementioned good numerical properties and simple analytic treatment.
+[Quantum signal processing](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.118.010501) (QSP) is a flexible quantum algorithm subsuming Hamiltonian simulation, quantum linear systems solvers, amplitude amplification, and many other common quantum algorithms. Moreover, for each of these applications, QSP often exhibits state-of-the-art space and time complexity, with comparatively simple analysis. QSP and its related algorithms, e.g., [Quantum singular value transformation](https://arxiv.org/abs/1806.01838) (QSVT), using basic alternating circuit ansätze originally inspired by composite pulse techniques in NMR, permit one to *transform the spectrum of linear operators by near arbitrary polynomial functions*, with the aforementioned good numerical properties and simple analytic treatment.
 
 In their most basic forms, QSP/QSVT give a recipe for a desired spectral transformation of a unitary[^1] $U$, requiring access to an auxiliary qubit, a controlled version of $U$, and single-qubit rotations on the auxiliary qubit. A standard application of QSP/QSVT might look like the following:
 - Given a function one wants to apply to the spectrum of a unitary, classically generate a (Laurent) polynomial that suitably approximates this function over a desired spectral range.
@@ -260,8 +262,7 @@ optional arguments:
 
 ## Citing this repository
 
-To cite this repository please include a reference to [our paper](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040203), [Chao et al.](https://github.com/alibaba-edu/angle-sequence), and [Efficient phase-factor evaluation in quantum signal processing
-(https://arxiv.org/abs/2002.11649).
+To cite this repository please include a reference to [our paper](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040203), [Chao et al.](https://github.com/alibaba-edu/angle-sequence), and [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649).
 
 > :round_pushpin: A full, bibTeX-formatted list of references can be found [in this plaintext file](https://github.com/ichuang/pyqsp/blob/master/CITATION).
 
