@@ -128,17 +128,17 @@ This last example also shows how an arbitrary function can be specified (using a
 
 > :warning: The code is structured such that TensorFlow is not imported by default, as its dependencies, size, and overall use have become cumbersome for most applications. If `qsp_model` and its derived methods are used, then TensorFlow is required. Currently tests for this module have also been silenced, and TensorFlow dependent functionality is not being actively maintained.
 
-### Package requirements
+## Package requirements
 
 This package can be run entirely without TensorFlow if the `qsp_model` code is not used.  If `qsp_model` is desired, then also install the requirements specified in [tf_requirements.txt](https://github.com/ichuang/pyqsp/blob/master/tf_requirements.txt). Otherwise, the requirements given in [base_requirements.txt](https://github.com/ichuang/pyqsp/blob/master/base_requirements.txt) are sufficient.
 
-### Unit tests
+## Unit tests
 
 A series of unit tests is also provided. These can be run using `python setup.py test`.
 
 As the `qsp_model` code depends on having TensorFlow installed, the unit tests for this code take a while; as such they are turned off by default. To enable unit tests for this code, un-comment the corresponding file `test/test_qsp_models.py` after running `export PYQSP_TEST_QSP_MODELS=1`. The `qsp_model` code unit tests can be run by themselves, after un-commenting the file, using `python setup.py test -s pyqsp.test.test_qsp_models`.
 
-### Programmatic usage
+## Programmatic usage
 
 To find the QSP angle sequence corresponding to a real Laurent polynomial $A(\tilde{w}) = \sum_{i=-n}\^n a_i\tilde{w}^i$, we can run:
 
@@ -152,7 +152,7 @@ To find the QSP angle sequence corresponding to a real (non-Laurent) polynomial 
     ang_seq = QuantumSignalProcessingPhases([a_{0}, a_{1}, ..., a_n], signal_operator="Wx")
     print(ang_seq)
 
-By default, `QuantumSignalProcessingPhases` uses the `laurent` method, which is typically quite fast, but can become unstable for high-degree polynomials due to roundoff errors, requiring some randomization when completing the polynomials. `QuantumSignalProcessingPhases` can also be instructed to use the `tf` method, which employs TensorFlow with a Keras model to find phases by optimization. This stably finds very high-quality solutions, but can be slow, particularly compared with the `laurent` method. We can run this method using:
+By default, `QuantumSignalProcessingPhases` uses the `laurent` method, which is typically quite fast, but can become unstable for high-degree polynomials due to roundoff errors, requiring some randomization. `QuantumSignalProcessingPhases` can also be instructed to use the `tf` method, which employs TensorFlow with a Keras model to find phases by optimization. This stably finds very high-quality solutions, but can be slow, particularly compared with the `laurent` method. We can run this method using:
 
     ang_seq = QuantumSignalProcessingPhases(poly, signal_operator="Wx", method="tf")
 
@@ -165,9 +165,50 @@ We can also plot the response given by a given QSP angle sequence, e.g. using:
 
     pyqsp.response.PlotQSPResponse(ang_seq, target=poly, signal_operator="Wx")
 
+### Recent updates to phase-finding methods (09/2024)
+
 > :construction: Here we provide some discussion of the recently added (as of `09/01/2024`) method for computing QSP phases using iterative methods for symmetric QSP protocols.
+
+<!-- Currently in progress. -->
+
+Newly added methods related to the theory of symmetric quantum signal processing allow one to quickly determine, by an iterative quasi-Newton method, the phases corresponding to useful classes of functions entirely subsuming those discussed previously. These methods are double-precision limited, numerically stable, and fast even for high-degree polynomials. Currently these `symmetric_qsp` methods are contained in `pyqsp/sym_qsp_opt.py`, and we have prepared a temporary plotting module within `pyqsp/sym_qsp_plotting.py` which can be run by itself with `python sym_qsp_plotting.py` to generate some common examples and illustrate common calling/plotting patterns.
+
+For instance, the current file returns approximations to cosine, sine, and a step function, of which we reproduce the first and third plots below.
+
+![QSP response function trigonometric cosine](https://github.com/ichuang/pyqsp/blob/master/docs/ex_cosine_approximation.png)
+
+As the quality of the approximation is quite high, causing the three intended plots to superpose, we include a logarithmic plot of the pairwise difference between the plotted values, indicating near-machine-precision limited performance.
+
+![QSP response function for step function](https://github.com/ichuang/pyqsp/blob/master/docs/ex_step_approximation.png)
+
+As in the case of trigonometric cosine, the step function's approximation is also excellent, and far more forgiving in its generation than with the earlier `laurent` method.
+
+> :round_pushpin: The final plot given above is generated in a fairly simple way, but relies on a few, user-programmable inputs which we discuss with a subsection of the code given in `pyqsp/sym_qsp_plotting.py` below. The code given here is prefaced in the original file by proper imports, and the QSP phases generated by the Newton solver are used to generate the plots with further methods.
 >
-> Chebyshev interpolation (how to choose a good number of points) and chebyshev basis choice reasons.
+> :caution: Note that the arguments `chebyshev_basis` (a Boolean) and `cheb_samples` are both used here. The `chebyshev_basis` flag ensures that the behind-the-scenes optimization methods used in finding polynomial approximations work in the more stable Chebyshev basis, and that Chebyshev basis coefficients are returned. The `cheb_samples` argument chooses the number of Chebyshev node interpolation points with which this classical fit is computed; to prevent aliasing issues *it is best to choose `cheb_samples` to be greater than `degree`, which specifies the degree of the polynomial approximant*. Here `delta` scales as the approximate inverse gap between the regions where the desired function takes the extreme values 1 and -1.
+
+```python
+# Generate Chebyshev coefs for approx sign function.
+pg = poly.PolySign()
+pcoefs = pg.generate(
+        degree=161,
+        delta=25,
+        chebyshev_basis=True, 
+        cheb_samples=250)
+pcoefs = pcoefs.coef
+
+# Instantiate anonymous function using generated coefs.
+sign_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
+
+# Slice out non-trivial coefficients; here degree=161, which has parity 1.
+parity = 1
+coef = pcoefs[parity::2]
+
+# Iteratively optimize QSP protocol phases using Newton solver.
+(phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=1e-12)
+```
+
+This as well as many other polynomial families given in `pyqsp/poly.py` allow for the same `chebyshev_basis` and `cheb_samples` arguments, and can generate the same `pcoefs` results, which can be sliced according to parity and fed as an optimization target into `sym_qsp_opt.newton_Solver`, which implicitly generates and optimizes a `SymmetricQSPProtocol` object, up to the desired `crit` uniform maximum error.
 
 ## Command line usage
 
