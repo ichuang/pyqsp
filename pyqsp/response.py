@@ -188,7 +188,8 @@ def PlotQSPResponse(
     if plot_tight_y:
         plt.ylim([-0.1, 1.1 * ymax])
     else:
-        plt.ylim([-1.5 * ymax, 1.5 * ymax])
+        # plt.ylim([-1.5 * ymax, 1.5 * ymax])
+        plt.ylim([-1.25, 1.25])
 
     # Remove unecessary axes.
     ax = plt.gca()
