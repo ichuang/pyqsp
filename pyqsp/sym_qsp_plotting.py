@@ -223,7 +223,7 @@ def main():
 
     # Generate simultaneous plots.
     fig, axs = plt.subplots(2,sharex=True)
-    fig.suptitle('Approximating cosine with QSP to machine precision')
+    fig.suptitle('Approximating sign with QSP to machine precision')
 
     # Standard plotting of relevant components.
     axs[0].plot(samples, im_vals, 'r', label="QSP imag poly")
