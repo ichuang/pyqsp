@@ -173,7 +173,11 @@ Newly added methods related to the theory of symmetric quantum signal processing
 
 For instance, the current file returns approximations to cosine, sine, and a step function, of which we reproduce the first and third plots below.
 
-![QSP response function approximating trigonometric cosine](https://github.com/ichuang/pyqsp/blob/master/docs/ex_cosine_approximation.png)
+<p align="center">
+    <img src="https://github.com/ichuang/pyqsp/blob/master/docs/ex_cosine_approximation.png" alt="QSP response function approximating trigonometric cosine" width="75%"/>  
+</p>
+
+<!-- ![QSP response function approximating trigonometric cosine](https://github.com/ichuang/pyqsp/blob/master/docs/ex_cosine_approximation.png) -->
 
 As the quality of the approximation is quite high, causing the three intended plots to superpose, we include a logarithmic plot of the pairwise difference between the plotted values, indicating near-machine-precision limited performance.
 
