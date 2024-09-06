@@ -45,7 +45,7 @@ Examples:
 
     pyqsp --poly=-1,0,2 poly2angles
     pyqsp --poly=-1,0,2 --plot poly2angles
-    pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot  poly2angles
+    pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot poly2angles
     pyqsp --plot --tau 10 hamsim
     pyqsp --plot --tolerance=0.01 --seqargs 3 invert
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
@@ -60,6 +60,8 @@ Examples:
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
     pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
+
+    ## Currently deprecated: pyqsp --plot --cosine=1.0, 1e-12 ##
 
 """.format(version)
 
@@ -108,7 +110,7 @@ Examples:
         action="store_true")
     parser.add_argument(
         "--poly",
-        help="comma delimited list of floating-point coeficients for polynomial, as const, a, a^2, ...",
+        help="comma delimited list of floating-point coefficients for polynomial, as const, a, a^2, ...",
         action="store",
         type=float_list)
     parser.add_argument(
@@ -141,7 +143,7 @@ Examples:
         type=float_list)
     parser.add_argument(
         "--polyname",
-        help="name of polynomial generate using the 'poly' command, e.g. 'sign'",
+        help="name of polynomial generated using the 'poly' command, e.g. 'sign'",
         type=str,
         default=None)
     parser.add_argument(
@@ -214,7 +216,7 @@ Examples:
         default=5000)
     parser.add_argument(
         "--npts-theta",
-        help="number of discretized values of theta to use in tensorflow optimization",
+        help="number of discretized values of theta to use in TensorFlow optimization",
         type=int,
         default=30)
 
@@ -243,7 +245,7 @@ Examples:
         coefs = args.poly
         if not coefs:
             print(
-                f"[pyqsp.main] must specify polynomial coeffients using --poly, e.g. --poly -1,0,2")
+                f"[pyqsp.main] must specify polynomial coefficients using --poly, e.g. --poly -1,0,2")
             sys.exit(0)
         if isinstance(coefs, str):
             coefs = list(map(float, coefs.split(",")))
@@ -271,7 +273,7 @@ Examples:
                 phiset,
                 target=lambda x: scale * np.cos(args.seqargs[0] * x),
                 signal_operator="Wx",
-                title="Hamiltonian Simultation (Cosine)",
+                title="Hamiltonian Simulation (Cosine)",
                 **plot_args)
 
         pg = pyqsp.poly.PolySineTX()
@@ -287,7 +289,7 @@ Examples:
                 phiset,
                 target=lambda x: scale * np.sin(args.seqargs[0] * x),
                 signal_operator="Wx",
-                title="Hamiltonian Simultation (Sine)",
+                title="Hamiltonian Simulation (Sine)",
                 **plot_args)
 
     elif args.cmd == "fpsearch":

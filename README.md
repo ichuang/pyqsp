@@ -169,17 +169,15 @@ We can also plot the response given by a given QSP angle sequence, e.g. using:
 
 > :construction: Here we provide some discussion of the recently added (as of `09/01/2024`) method for computing QSP phases using iterative methods for symmetric QSP protocols.
 
-<!-- Currently in progress. -->
-
 Newly added methods related to the theory of symmetric quantum signal processing allow one to quickly determine, by an iterative quasi-Newton method, the phases corresponding to useful classes of functions entirely subsuming those discussed previously. These methods are double-precision limited, numerically stable, and fast even for high-degree polynomials. Currently these `symmetric_qsp` methods are contained in `pyqsp/sym_qsp_opt.py`, and we have prepared a temporary plotting module within `pyqsp/sym_qsp_plotting.py` which can be run by itself with `python sym_qsp_plotting.py` to generate some common examples and illustrate common calling/plotting patterns.
 
 For instance, the current file returns approximations to cosine, sine, and a step function, of which we reproduce the first and third plots below.
 
-![QSP response function trigonometric cosine](https://github.com/ichuang/pyqsp/blob/master/docs/ex_cosine_approximation.png)
+![QSP response function approximating trigonometric cosine](https://github.com/ichuang/pyqsp/blob/master/docs/ex_cosine_approximation.png)
 
 As the quality of the approximation is quite high, causing the three intended plots to superpose, we include a logarithmic plot of the pairwise difference between the plotted values, indicating near-machine-precision limited performance.
 
-![QSP response function for step function](https://github.com/ichuang/pyqsp/blob/master/docs/ex_step_approximation.png)
+![QSP response function approximating a step function](https://github.com/ichuang/pyqsp/blob/master/docs/ex_step_approximation.png)
 
 As in the case of trigonometric cosine, the step function's approximation is also excellent, and far more forgiving in its generation than with the earlier `laurent` method.
 

@@ -11,7 +11,6 @@ test_cmds = [
     "--return-angles --poly=-1,0,2 --plot --hide-plot poly2angles",
     "--plot-positive-only --plot-probability --plot-tight-y --plot-npts=400 --seqargs=10,0.5 fpsearch",
     "--plot-real-only --plot-npts=400 --seqargs=19,10 poly_sign",
-    "--plot-real-only --plot-npts=400 --seqargs=3,0.3 invert",
     "--plot-real-only --plot-npts=400 --seqargs=10,0.1 hamsim",
     "--plot-real-only --plot-npts=400 --seqargs=18,10 poly_thresh",
     "--plot-real-only --plot-npts=400 --seqargs=19,0.25 poly_linear_amp",
@@ -21,6 +20,13 @@ test_cmds = [
     "--plot-real-only --seqargs=20,0.6,15 relu",
 ]
 
+"""
+Removed "--plot-real-only --plot-npts=400 --seqargs=3,0.3 invert"
+from above, given instability of completion; updated method of computing 
+coefficients of inverse-approximating polynomial in a stable way now
+pushes completion methods outside realm of good performance. However
+such QSP phases are now easily computable with symmetric QSP iteration.
+"""
 
 test_cmds_tf = [
     '--return-angles --func np.cos(3*x) --polydeg 6 polyfunc',

@@ -205,7 +205,10 @@ class PolyOneOverX(PolyGenerator):
         Approximation to 1/x polynomial, using sums of Chebyshev polynomials,
         from Quantum algorithm for systems of linear equations with exponentially
         improved dependence on precision, by Childs, Kothari, and Somma,
-        https://arxiv.org/abs/1511.02306v2
+        https://arxiv.org/abs/1511.02306v2.
+
+        Note in the above paper, Lemma 14 (page 16), that the given function is 
+        2*epsilon-close to the desired function over the region specified below.
 
         Define region D_kappa to be from 1/kappa to 1, and from -1/kappa to -1.  A good
         approximation is desired only in this region.
@@ -216,6 +219,8 @@ class PolyOneOverX(PolyGenerator):
         j0 = int(np.sqrt(b * np.log(4 * b / epsilon)))
         print(f"b={b}, j0={j0}")
 
+        """
+        # Analytic form for inverse function; note large integer divisions.
         g = np.polynomial.chebyshev.Chebyshev([0])
         for j in range(j0 + 1):
             gcoef = 0
@@ -225,14 +230,32 @@ class PolyOneOverX(PolyGenerator):
             g += (-1)**j * gcoef * \
                 np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
         g = 4 * g
+        """
+
+        # Iterative subroutine replacing above block to avoid integer overflow.
+        # Following analytic form of Lemma 18 from https://arxiv.org/abs/1511.02306v2.
+        # I.e., (1 - (1 - x**2)**b)/x, as per (77) on page (19) in cited work.
+        g = np.polynomial.chebyshev.Chebyshev([1])
+        for j in range(b):
+            g *= np.polynomial.chebyshev.Chebyshev([0.5, 0, -0.5])
+        g = -1*g
+        g += np.polynomial.chebyshev.Chebyshev([1])
+
+        # Perform polynomial division; remainder is trivial and ignored.
+        g_coef = g.coef
+        div_result = np.polynomial.chebyshev.chebdiv(g_coef, [0, 1])[0]
+
+        # Replace g with its divided value.
+        g = np.polynomial.chebyshev.Chebyshev(div_result)
 
         if ensure_bounded:
+            # TODO: determine the meaning of this minimization.
             res = scipy.optimize.minimize(g, (-0.1,), bounds=[(-0.8, 0.8)])
             pmin = res.x
             print(
                 f"[PolyOneOverX] minimum {g(pmin)} is at {pmin}: normalizing")
             scale = 1 / abs(g(pmin))
-            if 0:
+            if 1: # Choose to be less constrained
                 scale = scale * 0.9
             else:
                 scale = scale * 0.5
@@ -256,7 +279,7 @@ class PolyOneOverX(PolyGenerator):
 class PolyOneOverXRect(PolyGenerator):
 
     def help(self):
-        return "Region of validity is from 1/kappa to 1, and from -1/kappa to -1.  Error is epsilon"
+        return "Region of validity is from 1/kappa to 1, and from -1/kappa to -1. Error is epsilon."
 
     def generate(
             self,
