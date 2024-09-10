@@ -8,7 +8,7 @@ from pyqsp.decomposition import angseq
 from pyqsp.LPoly import LAlg, LPoly
 from pyqsp.poly import StringPolynomial, TargetPolynomial
 from pyqsp.response import ComputeQSPResponse
-
+from pyqsp.sym_qsp_opt import *
 
 class AngleFindingError(Exception):
     """Raised when angle finding step fails."""
@@ -98,6 +98,7 @@ def QuantumSignalProcessingPhases(
         measurement=None,
         tolerance=1e-6,
         method="laurent",
+        chebyshev_basis=False,
         **kwargs):
     """
     Generate QSP phase angles for a given polynomial.
@@ -139,46 +140,74 @@ def QuantumSignalProcessingPhases(
         return QuantumSignalProcessingPhasesWithTensorflow(poly,
                                                            measurement=measurement,
                                                            **kwargs)
-    elif not method == "laurent":
-        raise ValueError(f"Invalid method {method}")
+    elif method == "laurent":
+        model = (signal_operator, measurement)
 
-    model = (signal_operator, measurement)
+        # Perform completion
+        if model in {("Wx", "x"), ("Wz", "z")}:
+            # Capitalization: eps/2 amount of error budget is put to the highest
+            # power for sake of numerical stability.
+            poly = suc * \
+                (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
 
-    # Perform completion
-    if model in {("Wx", "x"), ("Wz", "z")}:
-        # Capitalization: eps/2 amount of error budget is put to the highest
-        # power for sake of numerical stability.
-        poly = suc * \
-            (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
+            lcoefs = poly2laurent(poly.coef)
+            lalg = completion_from_root_finding(lcoefs, coef_type="F")
+        elif model == ("Wx", "z"):
+            lalg = completion_from_root_finding(poly.coef, coef_type="P")
+        else:
+            raise ValueError(
+                "Invalid model: {}".format(str(model))
+            )
 
-        lcoefs = poly2laurent(poly.coef)
-        lalg = completion_from_root_finding(lcoefs, coef_type="F")
-    elif model == ("Wx", "z"):
-        lalg = completion_from_root_finding(poly.coef, coef_type="P")
+        # Decomposition phase
+        phiset = angseq(lalg)
+
+        # Verify by reconstruction
+        adat = np.linspace(-1., 1., 100)
+        response = ComputeQSPResponse(
+            adat,
+            phiset,
+            signal_operator=signal_operator,
+            measurement=measurement)["pdat"]
+        expected = poly(adat)
+
+        max_err = np.max(np.abs(response - expected))
+        if max_err > tolerance:
+            raise AngleFindingError(
+                "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
+
+        return phiset
+
+    # New branch for third, symmetric QSP based phase-finding method.
+    elif method == "sym_qsp":
+        # As with above, we need to have an additional flag ensuring whether we're in the Chebhyshev basis or not; we restrict this method to the Chebyshev basis exclusively (when called).
+        coefs = poly.coef
+
+        """
+        Note that the above currently assumes we've been given a Polynomial object of the Chebyshev sub-type. In general we should have a Chebyshev flag and an outer conditioning loop (similar to what already exists) that wraps everything in the proper Polynomial subclass type.
+        """
+
+        # Check that the (non-reduced) phases have definite parity.
+        is_even = np.max(np.abs(coefs[0::2])) > 1e-8
+        is_odd = np.max(np.abs(coefs[1::2])) > 1e-8
+
+        # We could allow for the zero polynomial, but choose not to.
+        if (is_even and is_odd) or (not is_even and not is_odd):
+            raise AngleFindingError(
+                "Polynomial must have definite parity and be non-zero: {}".format(str(pcoefs)))
+
+        # Set parity directly, and reduce Chebyshev coefs.
+        parity = 0 if is_even else 1
+        reduced_coefs = coefs[parity::2]
+
+        # Call main method, currently with `crit` hardcoded.
+        (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(reduced_coefs, parity, crit=1e-12)
+
+        # For minimal working method, just return phases
+        return phases
+
     else:
-        raise ValueError(
-            "Invalid model: {}".format(str(model))
-        )
-
-    # Decomposition phase
-    phiset = angseq(lalg)
-
-    # Verify by reconstruction
-    adat = np.linspace(-1., 1., 100)
-    response = ComputeQSPResponse(
-        adat,
-        phiset,
-        signal_operator=signal_operator,
-        measurement=measurement)["pdat"]
-    expected = poly(adat)
-
-    max_err = np.max(np.abs(response - expected))
-    if max_err > tolerance:
-        raise AngleFindingError(
-            "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
-
-    return phiset
-
+        raise ValueError(f"Invalid method {method}")
 
 def QuantumSignalProcessingPhasesWithTensorflow(
         poly,
