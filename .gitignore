@@ -7,5 +7,7 @@ dist
 OLD
 NOTES-*
 local_README.md
+temp_requirements.txt
 
 qsp/
+pyqsp_venv/
