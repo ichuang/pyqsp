@@ -5,7 +5,6 @@ from scipy.interpolate import approximate_taylor_polynomial
 
 # -----------------------------------------------------------------------------
 
-
 class StringPolynomial:
     '''
     Representation of a polynomial using a python string which specifies a numpy function,
@@ -38,7 +37,6 @@ class StringPolynomial:
 
 # -----------------------------------------------------------------------------
 
-
 class TargetPolynomial(np.polynomial.Polynomial):
     '''
     Polynomial with ideal target
@@ -54,7 +52,6 @@ class TargetPolynomial(np.polynomial.Polynomial):
         super().__init__(*args, **kwargs)
 
 # -----------------------------------------------------------------------------
-
 
 class PolyGenerator:
     '''
@@ -78,7 +75,6 @@ class PolyGenerator:
         return [0, 0]
 
 # -----------------------------------------------------------------------------
-
 
 class PolyCosineTX(PolyGenerator):
 
@@ -132,6 +128,7 @@ class PolyCosineTX(PolyGenerator):
                 return pcoefs
         return g
 
+# -----------------------------------------------------------------------------
 
 class PolySineTX(PolyGenerator):
 
@@ -187,7 +184,6 @@ class PolySineTX(PolyGenerator):
 
 # -----------------------------------------------------------------------------
 
-
 class PolyOneOverX(PolyGenerator):
 
     def help(self):
@@ -207,7 +203,7 @@ class PolyOneOverX(PolyGenerator):
         improved dependence on precision, by Childs, Kothari, and Somma,
         https://arxiv.org/abs/1511.02306v2.
 
-        Note in the above paper, Lemma 14 (page 16), that the given function is 
+        Note in the above paper, Lemma 14 (page 16), that the given function is
         2*epsilon-close to the desired function over the region specified below.
 
         Define region D_kappa to be from 1/kappa to 1, and from -1/kappa to -1.  A good
@@ -275,6 +271,7 @@ class PolyOneOverX(PolyGenerator):
 
         return g
 
+# -----------------------------------------------------------------------------
 
 class PolyOneOverXRect(PolyGenerator):
 
@@ -314,7 +311,6 @@ class PolyOneOverXRect(PolyGenerator):
         else:
             return pcoefs
 
-
 # -----------------------------------------------------------------------------
 
 """
@@ -342,7 +338,7 @@ class PolyTaylorSeries(PolyGenerator):
             cheb_samples=20):
         '''
         If chebyshev_basis is True:
-            Return numpy Chebyshev approximation for func, using numpy methods for Chebyshev approximation of specified degree. 
+            Return numpy Chebyshev approximation for func, using numpy methods for Chebyshev approximation of specified degree.
             We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
 
         If chebyshev_basis is False:
@@ -368,21 +364,21 @@ class PolyTaylorSeries(PolyGenerator):
                 scale = scale * max_scale
                 print(f"[PolyTaylorSeries] (Cheb) max {scale} is at {pmax}: normalizing")
                 cheb_poly = scale * cheb_poly
-            
-            # Determine average error on interval and print. 
+
+            # Determine average error on interval and print.
             adat = np.linspace(-1, 1, npts)
             pdat = cheb_poly(adat)
             edat = func(adat)
             avg_err = abs(edat - pdat).mean()
             print(
                 f"[PolyTaylorSeries] (Cheb) average error = {avg_err} in the domain [-1, 1] using degree {degree}")
-            
+
             if ensure_bounded and return_scale:
                 return cheb_poly, scale
             else:
                 return cheb_poly
 
-        else: 
+        else:
             the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
             the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
             if ensure_bounded:
@@ -406,7 +402,6 @@ class PolyTaylorSeries(PolyGenerator):
                 return the_poly
 
 # -----------------------------------------------------------------------------
-
 
 class PolySign(PolyTaylorSeries):
 
@@ -460,6 +455,7 @@ class PolySign(PolyTaylorSeries):
         else:
             return TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
 
+# -----------------------------------------------------------------------------
 
 class PolyThreshold(PolyTaylorSeries):
 
@@ -515,6 +511,7 @@ class PolyThreshold(PolyTaylorSeries):
         else:
             return pcoefs
 
+# -----------------------------------------------------------------------------
 
 class PolyPhaseEstimation(PolyTaylorSeries):
 
@@ -570,6 +567,7 @@ class PolyPhaseEstimation(PolyTaylorSeries):
         else:
             return pcoefs
 
+# -----------------------------------------------------------------------------
 
 class PolyRect(PolyTaylorSeries):
 
@@ -632,7 +630,6 @@ class PolyRect(PolyTaylorSeries):
 
 # -----------------------------------------------------------------------------
 
-
 class PolyLinearAmplification(PolyTaylorSeries):
 
     def help(self):
@@ -687,9 +684,7 @@ class PolyLinearAmplification(PolyTaylorSeries):
         else:
             return pcoefs
 
-
 # -----------------------------------------------------------------------------
-
 
 class PolyGibbs(PolyTaylorSeries):
     '''
@@ -743,7 +738,6 @@ class PolyGibbs(PolyTaylorSeries):
             return TargetPolynomial(pcoefs, target=lambda x: gibbs(x))
 
 # -----------------------------------------------------------------------------
-
 
 class PolyEigenstateFiltering(PolyTaylorSeries):
     '''
@@ -804,7 +798,6 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
 
 # -----------------------------------------------------------------------------
 
-
 class PolyRelu(PolyTaylorSeries):
     '''
     Relu function
@@ -848,6 +841,7 @@ class PolyRelu(PolyTaylorSeries):
         else:
             return pcoefs
 
+# -----------------------------------------------------------------------------
 
 class PolySoftPlus(PolyTaylorSeries):
     '''
@@ -903,7 +897,6 @@ class PolySoftPlus(PolyTaylorSeries):
             return pcoefs
 
 # -----------------------------------------------------------------------------
-
 
 polynomial_generators = {'invert': PolyOneOverX,
                          'poly_sign': PolySign,

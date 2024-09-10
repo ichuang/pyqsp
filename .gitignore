@@ -6,5 +6,6 @@ build
 dist
 OLD
 NOTES-*
+local_README.md
 
 qsp/

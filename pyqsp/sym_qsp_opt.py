@@ -3,9 +3,14 @@ import numpy as np
 class SymmetricQSPProtocol:
 
     def __init__(self, reduced_phases=[], parity=None, target_poly=None):
-        
+
         """
-        Initialize a symmetric QSP protocol in terms of its reduced phases and parity, following the convention of Dong, Lin, Ni, & Wang in (https://arxiv.org/pdf/2307.12468). For even (0) parity, the central phase is split in half across the initial position of the reduced phases, while for odd (1) parity, the reduced phase list is mirrored and concatenated with itself.
+        Initialize a symmetric QSP protocol in terms of its reduced phases
+        and parity, following the convention of Dong, Lin, Ni, & Wang in
+        (https://arxiv.org/pdf/2307.12468). For even (0) parity, the central
+        phase is split in half across the initial position of the reduced
+        phases, while for odd (1) parity, the reduced phase list is mirrored
+        and concatenated with itself.
         """
 
         self.reduced_phases = np.array(reduced_phases)
@@ -33,7 +38,7 @@ class SymmetricQSPProtocol:
             # Otherwise, instantiate all to null. We could also throw an error here.
             self.full_phases = None
             self.poly_deg = None
-        
+
         # Currently vestigial, but can eventually allow for immediate self-optimization upon instantiation with target poly of proper dimension.
         if target_poly:
             self.target_poly = target_poly
@@ -120,12 +125,18 @@ class SymmetricQSPProtocol:
 
     def gen_jacobian(self):
         """
-        Following the structure and conventions of `F_Jacobian.m' in QSPPACK, which in turn follows the conventions of Alg 3.2 in (https://arxiv.org/pdf/2307.12468). Compute the Jacobian matrix of the overall loss function (difference between desired matrix element implicit in gen_poly_jacobian_components and the achieved matrix element at the Chebyshev nodes of order len(reduced_phases)) against the reduced QSP phases.
+        Following the structure and conventions of `F_Jacobian.m' in QSPPACK,
+        which in turn follows the conventions of Alg 3.2 in
+        (https://arxiv.org/pdf/2307.12468). Compute the Jacobian matrix of the
+        overall loss function (difference between desired matrix element
+        implicit in gen_poly_jacobian_components and the achieved matrix
+        element at the Chebyshev nodes of order len(reduced_phases)) against
+        the reduced QSP phases.
         """
 
         d = len(self.reduced_phases)
         dd = 2*d
-        
+
         # Anonymous function to generate columns.
         f = lambda x: self.gen_poly_jacobian_components(x)
 
@@ -145,7 +156,7 @@ class SymmetricQSPProtocol:
         M = np.fft.fft(M,axis=0)
         M = np.copy(np.real(M[0:dd+1,:]))
 
-        # Double initial element and rescale matrix. 
+        # Double initial element and rescale matrix.
         M[1:-1,:] = np.copy(M[1:-1,:]*2)
         M = M/(2*dd)
 
@@ -157,12 +168,17 @@ class SymmetricQSPProtocol:
 
     def gen_poly_jacobian_components(self, a):
         """
-        Following the structure and conventions of `QSPGetPimDeri_sym_real.m' in QSPPACK, which in turn follows the conventions of Alg 3.3 in (https://arxiv.org/pdf/2307.12468). Compute individual columns of the overall jacobian at a given scalar signal a by direct computation of the product of QSP signal and phase unitaries composing the derivative of the unitary with respect to each reduced phase index.
+        Following the structure and conventions of `QSPGetPimDeri_sym_real.m'
+        in QSPPACK, which in turn follows the conventions of Alg 3.3 in
+        (https://arxiv.org/pdf/2307.12468). Compute individual columns of the
+        overall jacobian at a given scalar signal a by direct computation of
+        the product of QSP signal and phase unitaries composing the derivative
+        of the unitary with respect to each reduced phase index.
         """
 
         n = len(self.reduced_phases)
         t = np.arccos(a)
-        
+
         B = np.array([
             [np.cos(2*t), 0, -1*np.sin(2*t)],
             [0, 1, 0],
@@ -171,14 +187,14 @@ class SymmetricQSPProtocol:
 
         # Fix the final row of L.
         L[n-1,:] = np.array([0,1,0])
-        
+
         # Modify range parameters to update rows from n-2 to 0.
         for k in range(n-2,-1,-1):
             L[k,:] = np.copy(L[k+1,:]) @ np.array([
-                [np.cos(2*self.reduced_phases[k+1]), -1*np.sin(2*self.reduced_phases[k+1]), 0], 
-                [np.sin(2*self.reduced_phases[k+1]), np.cos(2*self.reduced_phases[k+1]), 0], 
+                [np.cos(2*self.reduced_phases[k+1]), -1*np.sin(2*self.reduced_phases[k+1]), 0],
+                [np.sin(2*self.reduced_phases[k+1]), np.cos(2*self.reduced_phases[k+1]), 0],
                 [0, 0, 1]]) @ B
-        
+
         R = np.zeros((3, n))
 
         # Fix the initial column of R depending on parity.
@@ -194,7 +210,7 @@ class SymmetricQSPProtocol:
                 [np.sin(2*self.reduced_phases[k-1]), np.cos(2*self.reduced_phases[k-1]), 0],
                 [0, 0, 1]]) @ np.copy(R[:,k-1]))
 
-        y = np.zeros((1,n+1)) 
+        y = np.zeros((1,n+1))
 
         # Finally, update y according to L, R.
         for k in range(n):
@@ -212,9 +228,14 @@ class SymmetricQSPProtocol:
 
 def newton_Solver(coef, parity, **kwargs):
     """
-        External method for performing Newton iteration with respect to some target polynomial, maxiter, and accuracy.
+        External method for performing Newton iteration with respect to
+        some target polynomial, maxiter, and accuracy.
 
-        If there are methods in original package for computing a bounded polynomial approximation, these can be used to generate a target function (n.b., in the Chebyshev basis, with zero-components due to definite parity removed, from low to high order!), which can then be passed to the Jacobian computation of the symmetric QSP class.
+        If there are methods in original package for computing a
+        bounded polynomial approximation, these can be used to generate
+        a target function (n.b., in the Chebyshev basis, with zero-components
+        due to definite parity removed, from low to high order!), which can
+        then be passed to the Jacobian computation of the symmetric QSP class.
     """
 
     if 'crit' in kwargs:
@@ -226,13 +247,13 @@ def newton_Solver(coef, parity, **kwargs):
         maxiter = kwargs['maxiter']
     else:
         maxiter = 1e5
-    
+
     # Currently deprecated, but real and imaginary parts can be alternately targeted by flipping overall sign of coef.
     # # targetPre = True
     # # Determines if targeting real or imaginary component.
     # if targetPre:
     #     coef = -1*coef
-    
+
     # Set an initial guess for the reduced phases which is approximately correct locally around the origin.
     reduced_phases = coef/2
 
@@ -261,9 +282,6 @@ def newton_Solver(coef, parity, **kwargs):
             break
         if err < crit:
             print("Stop criteria satisfied.\n")
-            break    
+            break
 
     return (qsp_seq_opt.reduced_phases, err, curr_iter, qsp_seq_opt)
-
-
-

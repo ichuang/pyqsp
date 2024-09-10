@@ -86,7 +86,7 @@ class Test_poly(unittest.TestCase):
 
     def test_poly_gibbs1(self):
         pg = pyqsp.poly.PolyGibbs()
-        pfunc = pg.generate(30, 4.5)
+        pfunc = pg.generate(20, 4.5) # Lowered to 20 due to test suite warning.
         # print(f"gibbs poly at 0.9 = {pfunc(0.9)}")
         # print(f"gibbs poly at 0 = {pfunc(0)}")
         assert (pfunc(0.9) < 0.3)

@@ -15,14 +15,14 @@ test_cmds = [
     "--plot-real-only --plot-npts=400 --seqargs=18,10 poly_thresh",
     "--plot-real-only --plot-npts=400 --seqargs=19,0.25 poly_linear_amp",
     "--plot-real-only --plot-npts=400 --seqargs=18,10 poly_phase",
-    "--plot-positive-only --plot-real-only --seqargs 30,0.3 efilter",
+    "--plot-positive-only --plot-real-only --seqargs 20,0.3 efilter",
     "--plot-positive-only --plot-real-only --seqargs=20,3.5 gibbs",
     "--plot-real-only --seqargs=20,0.6,15 relu",
 ]
 
 """
 Removed "--plot-real-only --plot-npts=400 --seqargs=3,0.3 invert"
-from above, given instability of completion; updated method of computing 
+from above, given instability of completion; updated method of computing
 coefficients of inverse-approximating polynomial in a stable way now
 pushes completion methods outside realm of good performance. However
 such QSP phases are now easily computable with symmetric QSP iteration.

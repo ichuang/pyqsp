@@ -2,10 +2,8 @@ import glob
 
 from setuptools import setup
 
-
 def findfiles(pat):
     return [x for x in glob.glob('share/' + pat)]
-
 
 data_files = [
 ]

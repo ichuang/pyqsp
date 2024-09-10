@@ -1,0 +1,2 @@
+[console_scripts]
+pyqsp = pyqsp.main:CommandLine
