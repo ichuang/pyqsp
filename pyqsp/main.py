@@ -512,24 +512,24 @@ Examples:
     # TODO: beyond just including the symbolic run below, we should also permit for including interpolatory data that can be fit to and rescaled; see how this is handled with current methods, and adjust.
 
     # New option added to support general Chebyshev interpolation
-    elif args.cmd == "polychebfunc":
-        if (not args.func) or (not args.polydeg):
-            print(f"Must specify --func and --polydeg")
-            return
-        # qspp_args['method'] = 'tf' # Currently deprecated, but we should eventually be able to permit a call to the main QuantumSignalProcessingPhases routine (barring some new forbidden choices of measurement axis, etc.) using the 'symmetric_qsp' flag.
-        #
-        # poly = StringPolynomial(args.func, args.polydeg) # This will be replaced with evaluation and interpolation of the symbolic function over some set of chebyshev nodes scaled to be sufficiently large compared to the --polydeg parameter included.
-        #
-        # phiset = # Generate phi-set by running sym_qsp protocol.
-        # If plotting enabled, run with additional option that allows for determining error also.
-        if args.plot:
-            response.PlotQSPResponse(
-                phiset,
-                target=poly,
-                signal_operator="Wx",
-                measurement=args.measurement,
-                title=args.title,
-                **plot_args)
+    # elif args.cmd == "polychebfunc":
+    #     if (not args.func) or (not args.polydeg):
+    #         print(f"Must specify --func and --polydeg")
+    #         return
+    #     # qspp_args['method'] = 'tf' # Currently deprecated, but we should eventually be able to permit a call to the main QuantumSignalProcessingPhases routine (barring some new forbidden choices of measurement axis, etc.) using the 'symmetric_qsp' flag.
+    #     #
+    #     # poly = StringPolynomial(args.func, args.polydeg) # This will be replaced with evaluation and interpolation of the symbolic function over some set of chebyshev nodes scaled to be sufficiently large compared to the --polydeg parameter included.
+    #     #
+    #     # phiset = # Generate phi-set by running sym_qsp protocol.
+    #     # If plotting enabled, run with additional option that allows for determining error also.
+    #     if args.plot:
+    #         response.PlotQSPResponse(
+    #             phiset,
+    #             target=poly,
+    #             signal_operator="Wx",
+    #             measurement=args.measurement,
+    #             title=args.title,
+    #             **plot_args)
 
     elif args.cmd == "polyfunc":
         if (not args.func) or (not args.polydeg):
