@@ -2,13 +2,19 @@ import time
 
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
+from numpy.polynomial.chebyshev import Chebyshev
+
+# TODO: add a Chebyshev import here, which is flip-flopped according to the option given to the main phase-finding method; there should never be a way that we confuse these two paths, which might require entirely deprecating one.
 
 from pyqsp.completion import completion_from_root_finding
 from pyqsp.decomposition import angseq
 from pyqsp.LPoly import LAlg, LPoly
 from pyqsp.poly import StringPolynomial, TargetPolynomial
 from pyqsp.response import ComputeQSPResponse
+
 from pyqsp.sym_qsp_opt import *
+# TODO: Determine eventually why this import is not wrt pyqsp.
+# import sym_qsp_opt
 
 class AngleFindingError(Exception):
     """Raised when angle finding step fails."""
@@ -89,7 +95,6 @@ def poly2laurent(pcoefs):
 
     return lcoefs
 
-
 def QuantumSignalProcessingPhases(
         poly,
         eps=1e-4,
@@ -122,10 +127,26 @@ def QuantumSignalProcessingPhases(
         sequence to specified tolerance.
         ValueError: Raised if invalid model (or method) is specified.
     """
-    if isinstance(poly, np.ndarray) or isinstance(poly, list):
-        poly = Polynomial(poly)
-    elif isinstance(poly, TargetPolynomial):
-        poly = Polynomial(poly.coef)
+
+    # Depending on the chebyshev_basis flag, convert coefficient list if provided to Polynomial/Chebyshev object.
+    if not chebyshev_basis:
+        if isinstance(poly, np.ndarray) or isinstance(poly, list):
+            poly = Polynomial(poly)
+        # For TargetPolynomial class, cast back to parent object.
+        elif isinstance(poly, Polynomial):
+            poly = Polynomial(poly.coef)
+        else:
+            raise ValueError(
+                f"Must provide coefficient list/array, or Polynomial object.")
+    else:
+        # TODO: Currently TargetPolynomial is not handled in the Chebyshev basis; we can choose to accommodate this or not.
+        if isinstance(poly, np.ndarray) or isinstance(poly, list):
+            poly = Chebyshev(poly)
+        elif isinstance(poly, Chebyshev):
+            pass
+        else:
+            raise ValueError(
+                f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
 
     if measurement is None:
         if signal_operator == "Wx":
@@ -180,12 +201,14 @@ def QuantumSignalProcessingPhases(
 
     # New branch for third, symmetric QSP based phase-finding method.
     elif method == "sym_qsp":
-        # As with above, we need to have an additional flag ensuring whether we're in the Chebhyshev basis or not; we restrict this method to the Chebyshev basis exclusively (when called).
-        coefs = poly.coef
+        # This method requires working in the Chebyshev basis.
+        if not chebyshev_basis:
+            raise ValueError("Working with `sym_qsp` requires setting chebyshev_basis to True.")
+        else:
+            pass
 
-        """
-        Note that the above currently assumes we've been given a Polynomial object of the Chebyshev sub-type. In general we should have a Chebyshev flag and an outer conditioning loop (similar to what already exists) that wraps everything in the proper Polynomial subclass type.
-        """
+        # Gather coefficients from pre-converted Chebyshev object above.
+        coefs = poly.coef
 
         # Check that the (non-reduced) phases have definite parity.
         is_even = np.max(np.abs(coefs[0::2])) > 1e-8
@@ -196,15 +219,20 @@ def QuantumSignalProcessingPhases(
             raise AngleFindingError(
                 "Polynomial must have definite parity and be non-zero: {}".format(str(pcoefs)))
 
-        # Set parity directly, and reduce Chebyshev coefs.
+        # Set parity, and reduce Chebyshev coefs accordingly.
         parity = 0 if is_even else 1
         reduced_coefs = coefs[parity::2]
 
         # Call main method, currently with `crit` hardcoded.
         (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(reduced_coefs, parity, crit=1e-12)
 
-        # For minimal working method, just return phases
-        return phases
+        """
+        Note that this method currently ignores choice of signal,
+        measurement, and eps, suc, tolerance. These can eventually be matched with the known internal parameters for the sym_qsp method, but many of them are instroduced for numerical stability in root finding methods, which are deprecated here.
+        """
+
+        # For now, return reduced and full phases
+        return (qsp_seq_opt.full_phases, phases, parity)
 
     else:
         raise ValueError(f"Invalid method {method}")

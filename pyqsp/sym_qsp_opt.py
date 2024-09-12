@@ -83,7 +83,7 @@ class SymmetricQSPProtocol:
             # Set the overall degree of P.
             self.poly_deg = len(self.full_phases) - 1
         else:
-            # Otherwise, instantiate all to null. We could also throw an error here.
+            # TODO: Otherwise, instantiate all to null. We could also throw an error here.
             self.full_phases = None
             self.poly_deg = None
 
