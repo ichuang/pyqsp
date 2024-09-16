@@ -12,7 +12,7 @@ from pyqsp.LPoly import LAlg, LPoly
 from pyqsp.poly import StringPolynomial, TargetPolynomial
 from pyqsp.response import ComputeQSPResponse
 
-from pyqsp.sym_qsp_opt import *
+from pyqsp.sym_qsp_opt import newton_solver
 # TODO: Determine eventually why this import is not wrt pyqsp.
 # import sym_qsp_opt
 
@@ -143,6 +143,7 @@ def QuantumSignalProcessingPhases(
         if isinstance(poly, np.ndarray) or isinstance(poly, list):
             poly = Chebyshev(poly)
         elif isinstance(poly, Chebyshev):
+            # Currently, there should be no sub-class that we have to cast from in this branch.
             pass
         else:
             raise ValueError(
@@ -224,11 +225,27 @@ def QuantumSignalProcessingPhases(
         reduced_coefs = coefs[parity::2]
 
         # Call main method, currently with `crit` hardcoded.
-        (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(reduced_coefs, parity, crit=1e-12)
+        (phases, err, total_iter, qsp_seq_opt) = newton_solver(reduced_coefs, parity, crit=1e-12)
 
         """
         Note that this method currently ignores choice of signal,
         measurement, and eps, suc, tolerance. These can eventually be matched with the known internal parameters for the sym_qsp method, but many of them are instroduced for numerical stability in root finding methods, which are deprecated here.
+
+        TODO: we also need to provide an internal check for good
+        agreement with the requested polynomial.
+
+        adat = np.linspace(-1., 1., 100)
+        response = ComputeQSPResponse(
+            adat,
+            phiset,
+            signal_operator=signal_operator,
+            measurement=measurement)["pdat"]
+        expected = poly(adat)
+
+        max_err = np.max(np.abs(response - expected))
+        if max_err > tolerance:
+            raise AngleFindingError(
+                "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
         """
 
         # For now, return reduced and full phases

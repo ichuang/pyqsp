@@ -14,7 +14,7 @@ from pyqsp import sym_qsp_opt, poly
 """
     A series of unit tests for optimization subroutines for symmetric QSP phases, based on the algorithms presented in "Efficient phase-factor evaluation in quantum signal processing" of Dong, Meng, Whaley, and Lin (https://arxiv.org/abs/2002.11649), and "Robust iterative method for symmetric quantum signal processing in all parameter regimes" by Dong, Lin, Ni, Wang (https://arxiv.org/abs/2307.12468).
 
-    Some of the companion modules invoked in these tests reimplement basic functionality already provided by the pyqsp package (e.g., in response.py). However, given the important parity requirements required by [DMWL20], as well as slightly different numerical requirements, we try to limit dependencies between these modules as much as is reasonable. 
+    Some of the companion modules invoked in these tests reimplement basic functionality already provided by the pyqsp package (e.g., in response.py). However, given the important parity requirements required by [DMWL20], as well as slightly different numerical requirements, we try to limit dependencies between these modules as much as is reasonable.
 
     Run with: pytest pyqsp/test/test_sym_qsp_optimization.py
     Or alt: python -m unittest pyqsp/test/test_sym_qsp_optimization.py
@@ -48,7 +48,7 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0],parity=1)
         samples = [0, 0.5, 1]
         qsp_unitary = qsp_protocol.gen_unitary(samples)
-        
+
         # Check that the third Chebyshev polynomial is evaluated.
         assert len(qsp_protocol.full_phases) == 4
         (s0, s1, s2) = (qsp_unitary[0], qsp_unitary[1], qsp_unitary[2])
@@ -135,8 +135,8 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         coef = np.array([0.2,0.1,0.3])
         parity = 0
 
-        (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity)
-        
+        (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_solver(coef, parity)
+
         print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
         assert (np.abs(err) < 1e-3)
@@ -157,7 +157,7 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 
         # Optimize for the desired function using Newton solver.
         crit=1e-12
-        (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=crit)
+        (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_solver(coef, parity, crit=crit)
 
         # Generate samples over which to analyze approximation.
         num_samples = 200
@@ -167,7 +167,7 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         qsp_im_vals = np.array(qsp_seq_opt.gen_response_im(samples))
         approx_vals = np.array(list(map(approx_fun, samples)))
         true_vals = np.array(list(map(true_fun, samples)))
-        
+
         # Compute 1-norm of diff between approx and true, and qsp and approx.
         approx_to_true_err = np.linalg.norm(np.abs(true_vals - approx_vals),ord=1)
         qsp_to_approx_err = np.linalg.norm(np.abs(approx_vals - qsp_im_vals),ord=1)
@@ -216,14 +216,3 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         # Take the one norm of the difference and assure small.
         diff = np.linalg.norm(np.abs(exp_value - evaluation), ord=1)
         assert (diff < 10-6)
-
-
-
-
-
-
-
-
-
-
-

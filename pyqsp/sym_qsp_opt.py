@@ -226,7 +226,7 @@ class SymmetricQSPProtocol:
 
         return y
 
-def newton_Solver(coef, parity, **kwargs):
+def newton_solver(coef, parity, **kwargs):
     """
         External method for performing Newton iteration with respect to
         some target polynomial, maxiter, and accuracy.

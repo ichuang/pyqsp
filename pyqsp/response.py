@@ -2,10 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.linalg
 
-
 class ResponseError(Exception):
     pass
-
 
 def ComputeQSPResponse(
         adat,
@@ -86,7 +84,6 @@ def ComputeQSPResponse(
            'phiset': phiset,
            }
     return ret
-
 
 def PlotQSPResponse(
         phiset,
@@ -198,7 +195,6 @@ def PlotQSPResponse(
 
     if show:
         plt.show()
-
 
 def PlotQSPPhases(phiset, show=True):
     """

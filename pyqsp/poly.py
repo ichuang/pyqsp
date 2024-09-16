@@ -349,6 +349,7 @@ class PolyTaylorSeries(PolyGenerator):
         if chebyshev_basis:
             # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.
             samples = np.polynomial.chebyshev.chebpts1(cheb_samples)
+            scale = 1.0 # Binding variable.
 
             vals = np.array(list(map(func, samples)))
             # Generate cheb fit for function.
