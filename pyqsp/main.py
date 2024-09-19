@@ -537,7 +537,7 @@ Examples:
             return_scale=True,
             max_scale=0.9,
             chebyshev_basis=True,
-            cheb_samples=4*args.polydeg) # Set larger to prevent aliasing
+            cheb_samples=2*args.polydeg) # Set larger than polydeg to prevent aliasing.
 
         # Modify choice of method globally.
         qspp_args['method'] = 'sym_qsp'

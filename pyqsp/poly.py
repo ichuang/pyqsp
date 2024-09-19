@@ -359,11 +359,19 @@ class PolyTaylorSeries(PolyGenerator):
 
             # Determine maximum over interval and rescale.
             if ensure_bounded:
-                res = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
-                pmax = res.x
-                scale = 1 / abs(cheb_poly(pmax))
+                # Minimize polynomial and negative of polynomial to find overall bound on absolute value.
+                res_1 = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
+                res_2 = scipy.optimize.minimize(cheb_poly, (0.1,), bounds=[(-1, 1)])
+                pmax_1 = res_1.x
+                pmax_2 = res_2.x
+
+                # Generate arrays and max indices to report findings.
+                arg_array = np.array([pmax_1, pmax_2])
+                max_index = np.argmin([1 / abs(cheb_poly(pmax_1)), 1 / abs(cheb_poly(pmax_2))])
+                scale = np.min([1 / abs(cheb_poly(pmax_1)), 1 / abs(cheb_poly(pmax_2))])
+
                 scale = scale * max_scale
-                print(f"[PolyTaylorSeries] (Cheb) max {scale} is at {pmax}: normalizing")
+                print(f"[PolyTaylorSeries] (Cheb) max {scale} is at {arg_array[max_index]}: normalizing")
                 cheb_poly = scale * cheb_poly
 
             # Determine average error on interval and print.
@@ -383,13 +391,25 @@ class PolyTaylorSeries(PolyGenerator):
             the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
             the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
             if ensure_bounded:
-                res = scipy.optimize.minimize(-the_poly, (0.1,), bounds=[(-1, 1)])
-                pmax = res.x
-                scale = 1 / abs(the_poly(pmax))
+                # Deprecated (and incorrect) maximum finding method.
+                # res = scipy.optimize.minimize(-the_poly, (0.1,), bounds=[(-1, 1)])
+                # pmax = res.x
+                # scale = 1 / abs(the_poly(pmax))
+
+                res_1 = scipy.optimize.minimize(-1*the_poly, (0.1,), bounds=[(-1, 1)])
+                res_2 = scipy.optimize.minimize(the_poly, (0.1,), bounds=[(-1, 1)])
+                pmax_1 = res_1.x
+                pmax_2 = res_2.x
+
+                # Generate arrays and max indices to report findings.
+                arg_array = np.array([pmax_1, pmax_2])
+                max_index = np.argmin([1 / abs(the_poly(pmax_1)), 1 / abs(the_poly(pmax_2))])
+                scale = np.min([1 / abs(the_poly(pmax_1)), 1 / abs(the_poly(pmax_2))])
+
                 # use this for the new QuantumSignalProcessingWxPhases code, which
                 # employs np.polynomial.chebyshev.poly2cheb(pcoefs)
                 scale = scale * max_scale
-                print(f"[PolyTaylorSeries] max {scale} is at {pmax}: normalizing")
+                print(f"[PolyTaylorSeries] max {scale} is at {arg_array[max_index]}: normalizing")
                 the_poly = scale * the_poly
             adat = np.linspace(-1, 1, npts)
             pdat = the_poly(adat)

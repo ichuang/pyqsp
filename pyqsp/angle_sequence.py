@@ -167,8 +167,7 @@ def QuantumSignalProcessingPhases(
 
         # Perform completion
         if model in {("Wx", "x"), ("Wz", "z")}:
-            # Capitalization: eps/2 amount of error budget is put to the highest
-            # power for sake of numerical stability.
+            # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
             poly = suc * \
                 (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
 
