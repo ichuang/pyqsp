@@ -218,7 +218,7 @@ def QuantumSignalProcessingPhases(
         # We could allow for the zero polynomial, but choose not to.
         if (is_even and is_odd) or (not is_even and not is_odd):
             raise AngleFindingError(
-                "Polynomial must have definite parity and be non-zero: {}".format(str(pcoefs)))
+                "Polynomial must have definite parity and be non-zero: {}".format(str(coefs)))
 
         # Set parity, and reduce Chebyshev coefs accordingly.
         parity = 0 if is_even else 1
@@ -231,7 +231,7 @@ def QuantumSignalProcessingPhases(
         Note that this method currently ignores choice of signal,
         measurement, and eps, suc, tolerance. These can eventually be matched with the known internal parameters for the sym_qsp method, but many of them are instroduced for numerical stability in root finding methods, which are deprecated here.
 
-        TODO: we also need to provide an internal check for good
+        TODO: we can also provide an internal check for good
         agreement with the requested polynomial.
 
         adat = np.linspace(-1., 1., 100)
@@ -248,7 +248,7 @@ def QuantumSignalProcessingPhases(
                 "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
         """
 
-        # For now, return reduced and full phases
+        # For now, return reduced, full phases, and parity together.
         return (qsp_seq_opt.full_phases, phases, parity)
 
     else:

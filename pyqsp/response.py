@@ -9,7 +9,8 @@ def ComputeQSPResponse(
         adat,
         phiset,
         signal_operator="Wx",
-        measurement=None):
+        measurement=None,
+        sym_qsp=False):
     """
     Compute QSP response.
 
@@ -69,12 +70,21 @@ def ComputeQSPResponse(
     for phi in phiset:
         pmats.append(qsp_op(phi))
 
-    for a in adat:
-        W = sig_op(a)
-        U = pmats[0]
-        for pm in pmats[1:]:
-            U = U @ W @ pm
-        pdat.append((p_state.T @ U @ p_state)[0, 0])
+    if not sym_qsp:
+        for a in adat:
+            W = sig_op(a)
+            U = pmats[0]
+            for pm in pmats[1:]:
+                U = U @ W @ pm
+            pdat.append((p_state.T @ U @ p_state)[0, 0])
+    else:
+        # For symmetric QSP, we plot matrix element directly, rather than the amplitude according to a measurement.
+        for a in adat:
+            W = sig_op(a)
+            U = pmats[0]
+            for pm in pmats[1:]:
+                U = U @ W @ pm
+            pdat.append(U[0, 0])
 
     pdat = np.array(pdat, dtype=np.complex128)
 
@@ -99,7 +109,8 @@ def PlotQSPResponse(
         plot_positive_only=False,
         plot_real_only=False,
         plot_tight_y=False,
-        show_qsp_model_plot=False):
+        show_qsp_model_plot=False,
+        sym_qsp=False):
     """
     Plot QSP response.
 
@@ -140,7 +151,8 @@ def PlotQSPResponse(
     qspr = ComputeQSPResponse(adat,
                               phiset,
                               signal_operator=signal_operator,
-                              measurement=measurement)
+                              measurement=measurement,
+                              sym_qsp=sym_qsp)
     pdat = qspr['pdat']
     plt.figure(figsize=[8, 5])
 
@@ -174,7 +186,13 @@ def PlotQSPResponse(
         ymin = np.min(np.real(pdat))
 
     # format plot
-    plt.ylabel("response")
+
+    # Modify labels depending on plotting matrix element or amplitude
+    if not sym_qsp:
+        plt.ylabel("Response")
+    else:
+        plt.ylabel("Matrix element")
+
     plt.xlabel("a")
     plt.legend(loc="upper right")
 

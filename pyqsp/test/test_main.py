@@ -18,6 +18,7 @@ test_cmds = [
     "--plot-positive-only --plot-real-only --seqargs 20,0.3 efilter",
     "--plot-positive-only --plot-real-only --seqargs=20,3.5 gibbs",
     "--plot-real-only --seqargs=20,0.6,15 relu",
+    "--return-angles --func np.cos(3*x) --polydeg 41 sym_qsp_func",
 ]
 
 """

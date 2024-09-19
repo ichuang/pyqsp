@@ -15,13 +15,13 @@ def main():
     # Call existing methods to compute Jacobi-Anger expression for cosine.
     freq = 16
     pg = poly.PolyCosineTX()
-    
+
     # Note new argument to use Chebyshev basis.
     pcoefs = pg.generate(tau=freq, epsilon=1e-12, chebyshev_basis=True)
-    
+
     # Generate anonymous function (approx to cosine) using pcoefs.
     cos_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
-    
+
     # Initialize definite parity coefficients, and slice out nontrivial ones.
     parity = 0
     coef = pcoefs[parity::2]
@@ -30,7 +30,7 @@ def main():
     true_fun = lambda x: 0.5*np.cos(freq*x)
 
     # Optimize to the desired function using Newton solver.
-    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=1e-12)    
+    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_solver(coef, parity, crit=1e-12)
     print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
     # Plot achieved versus desired function over samples.
@@ -90,13 +90,13 @@ def main():
     # Call existing methods to compute Jacobi-Anger expression for sine.
     freq = 16
     pg = poly.PolySineTX()
-    
+
     # Note new argument to use Chebyshev basis.
     pcoefs = pg.generate(tau=freq, epsilon=1e-12, chebyshev_basis=True)
-    
+
     # Generate anonymous function (approx to cosine) using pcoefs.
     sin_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
-    
+
     # Initialize definite parity coefficients, and slice out nontrivial ones.
     full_coef = pcoefs
     parity = 1
@@ -106,7 +106,7 @@ def main():
     true_fun = lambda x: 0.5*np.sin(freq*x)
 
     # Optimize to the desired function using Newton solver.
-    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=1e-12)    
+    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_solver(coef, parity, crit=1e-12)
     print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
     # Plot achieved versus desired function over samples.
@@ -165,24 +165,24 @@ def main():
 
     # Generate inverse polynomial approximation
     pg = poly.PolyOneOverX()
-    
+
     # Underlying parameters of inverse approximation.
     # We use return_scale=True for ease of plotting correct desired function.
     kappa=5
     epsilon=0.01
     pcoefs, scale = pg.generate(kappa=kappa, epsilon=epsilon, chebyshev_basis=True, return_scale=True)
-    
+
     # Generate anonymous approximation and ideal function for scaled reciprocal.
     inv_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
     ideal_fun = lambda x: scale*np.reciprocal(x)
-    
+
     # Using odd parity and instantiating desired coefficeints.
     parity = 1
     coef = pcoefs[parity::2]
 
     # Optimize to the desired function using Newton solver.
     crit = 1e-12
-    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=crit)    
+    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_solver(coef, parity, crit=crit)
     print("phase len: %s\nerror: %s\niter: %s\n"%(str(len(phases)), str(err), str(total_iter)))
 
     # Generate samples for plotting.
@@ -194,7 +194,7 @@ def main():
 
     # Grab im part of QSP unitary top-left matrix element.
     im_vals = np.array(qsp_seq_opt.gen_response_im(samples))
-    
+
     # Generate plotted values.
     approx_vals = np.array(list(map(inv_fun, samples)))
     # NOTE: For some reason this map casts to have an additional dimension.
@@ -211,11 +211,11 @@ def main():
     # Plot difference between two on log-plot
     diff = np.abs(im_vals - approx_vals)
     approx_diff = np.abs(ideal_vals - approx_vals)
-    
+
     # Plot QSP output polynomial versus desired polynomial, and error bound.
     axs[1].plot(samples, diff, 'r', label="Approx vs QSP")
     axs[1].plot(samples, [crit]*len(samples), 'y', label="QSP error limit")
-    
+
     # Plot approximation versus ideal function, and error bound.
     axs[1].plot(samples, approx_diff, 'g', label="Approx vs ideal")
     axs[1].plot(samples, [epsilon]*len(samples), 'b', label="Approx error limit")
@@ -251,20 +251,20 @@ def main():
     # Call existing methods to compute approximation to rect.
     freq = 16
     pg = poly.PolySign()
-    
+
     # TODO: note that definition of PolySign has been changed to return bare pcoefs and not TargetPolynomial
     pcoefs, scale = pg.generate(
             degree=161,
             delta=25,
-            chebyshev_basis=True, 
+            chebyshev_basis=True,
             cheb_samples=250,
             return_scale=True)
     # Cast from TargetPolynomial class bare Chebyshev coefficients if not using return_scale.
     # pcoefs = pcoefs.coef
-    
+
     # Generate anonymous function (approx to cosine) using pcoefs.
     sign_fun = lambda x: np.polynomial.chebyshev.chebval(x, pcoefs)
-    
+
     # Initialize definite parity coefficients, and slice out nontrivial ones.
     parity = 1
     bare_coefs = pcoefs
@@ -274,7 +274,7 @@ def main():
     true_fun = lambda x: scale * scipy.special.erf(x * 20)
 
     # Optimize to the desired function using Newton solver.
-    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=1e-12)    
+    (phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_solver(coef, parity, crit=1e-12)
     print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
     # Plot achieved versus desired function over samples.

@@ -10,13 +10,10 @@ import pyqsp
 from pyqsp import angle_sequence, response
 from pyqsp.phases import phase_generators
 
-# TODO: create a function within pyqsp.poly that computes interpolants of desired functions up to a given degree; these are rescaled by a computed value if they need to be (with an announced flag) or otherwise left alone and fed to later methods. We also need to check these for parity, which can be done at compute time, again cleaning things up-stream.
-
 from pyqsp.poly import (StringPolynomial, TargetPolynomial,
                         polynomial_generators, PolyTaylorSeries)
 
 # -----------------------------------------------------------------------------
-
 
 class VAction(argparse.Action):
     def __call__(self, parser, args, values, option_string=None):
@@ -44,6 +41,7 @@ Commands:
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
     polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf)
+    sym_qsp_func    - generate QSP phase angles for the specified --func and --polydeg using symmetric QSP iterative method. Note that the desired polynomial is automatically scaled, and appears as the imaginary part of the top-left unitary matrix element in the standard basis.
     response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
 
 Examples:
@@ -512,23 +510,25 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(phiset, signal_operator="Wx", **plot_args)
 
-    # TODO: Given some polymorphism in the options below, we should be able to call something like `pyqsp --plot --func "np.cos(3*x)" --polydeg 6 sym_qsp_func` and have this thing spit out a plot and a series of phases.
-    #
-    # New option added to support general Chebyshev interpolation
+    # New --sym_qsp_func option added to support general Chebyshev interpolation, in parallel with usage of --polyfunc
     elif args.cmd == "sym_qsp_func":
         if (not args.func) or (not args.polydeg):
             print(f"Must specify --func and --polydeg")
             return
 
-        # TODO: Currently test with hardcoded polynomial, as the use of StringPolynomial is restricted only to the tensorflow case; we will need a secondary method, most likely in poly.py, which returns the proper interpolating polynomial, given an evaluatable expression.
+        # Try to cast string as function; if no immediate error thrown at 0.5, generate anonymous function for later use.
+        try:
+            ret = eval(args.func, globals(), {'x': 0.5})
+        except Exception as err:
+            raise ValueError(
+                f"Invalid function specifciation, failed to evaluate at x=0.5, err={err}")
 
-        # poly = Chebyshev([0, 0, 0, 0, 0, 1])
+        # Generate anonymous function evaluated at x.
+        func = lambda x: eval(args.func, globals(), {'x': x})
 
-        # NOTE TEMPORARY HARDCODED FUNC HERE AND IN CALL BELOW.
-        func = lambda x: np.cos(3*x)
+        # Note that the polynomial is renormalized once according to its maximum magnitude (both up and down), and then again according to specified scale in a multiplicative way. We ought to be able to specify this, or at least return the metadata.
 
-        # TODO: Note that the polynomial is renormalized once according to its maximum magnitude, and then again according to specified scale in a multiplicative way.
-        # TODO: note that QuantumSignalProcessingPhases will determine if the parity is not definite, allowing us to use this method raw.
+        # Note that QuantumSignalProcessingPhases will determine if the parity is not definite, allowing us to use below method raw.
         base_poly = PolyTaylorSeries()
         poly, scale = base_poly.taylor_series(
             func=func,
@@ -537,7 +537,7 @@ Examples:
             return_scale=True,
             max_scale=0.9,
             chebyshev_basis=True,
-            cheb_samples=50)
+            cheb_samples=4*args.polydeg) # Set larger to prevent aliasing
 
         # Modify choice of method globally.
         qspp_args['method'] = 'sym_qsp'
@@ -548,12 +548,13 @@ Examples:
             chebyshev_basis=True,
             **qspp_args)
 
-        # TODO: determine which measurement, signal operator, re and im parts, and target functions are being used so that everything matches in the Chebyshev picture.
+        # Finally, if plotting called for, plot while passing 'sym_qsp' flag.
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
                 target=poly,
                 signal_operator="Wx",
+                sym_qsp=True,
                 **plot_args)
 
     elif args.cmd == "polyfunc":
