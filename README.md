@@ -13,7 +13,8 @@ In their most basic forms, QSP/QSVT give a recipe for a desired spectral transfo
 - Having computed a good polynomial approximation, and checking that it obeys certain mild conditions, use one among many efficient *classical* algorithms to compute the sequence of single-qubit rotations (the *QSP phases*) interspersing applications of the controlled unitary (the *QSP signal*) corresponding to the polynomial approximation.
 - Run the corresponding sequence of gates as a quantum circuit, interleaving QSP signals and phases, followed by a measurement in a chosen basis.
 
-> :warning: The theory of QSP is not only under active development, but comprises multiple subtly different conventions, each of which can use different terminology compared the barebones outline given here. These included conventions for how the *signal* is encoded, how the *phases* are applied, the basis to measure in, whether one desires to transform eigenvalues or singular values, whether the classical algorithm to find these phases is exact or iterative, and so on.
+> [!NOTE]
+> The theory of QSP is not only under active development, but comprises multiple subtly different conventions, each of which can use different terminology compared the barebones outline given here. These included conventions for how the *signal* is encoded, how the *phases* are applied, the basis to measure in, whether one desires to transform eigenvalues or singular values, whether the classical algorithm to find these phases is exact or iterative, and so on.
 >
 > Regardless, the basic scheme of QSP and QSVT is relatively fixed: given a specific circuit ansatz and a theory for the polynomial transformations achievable for that ansatz, generate those conditions and algorithms relating the *achieved function* and *circuit parameterization*. Understanding the bidirectional map between phases and polynomial transforms, as well as the efficiency of loading linear systems into quantum processes, constitutes most of the theory of these algorithms.
 
@@ -73,7 +74,7 @@ For many people tinkering with QSP, especially in experimental contexts, their w
 4. Using the `sym_qsp` method, compute QSP phases whose unitary has the desired function as $\Im(\langle 0|U|0 \rangle)$.
 5. Plot target and achieved functions to visualize result.
 
-[^2]: For our purpose we are actually computing a *Chebyshev interpolant*, not an approximation or Taylor series. This functionality is folded into the `PolyTaylorSeries` class by enabling the `chebyshev_basis=True`{:.python} flag. While for high-precision applications the difference is important, for most use-cases, and piecewise-continuous target functions, the same degree approximation will have uniform error between cases differing by a constant. For a pleasant, engaging introduction to this topic, see [Approximation Theory and Approximation Practice](https://epubs.siam.org/doi/10.1137/1.9781611975949), which can be found as a PDF in various locations.
+[^2]: For our purpose we are actually computing a *Chebyshev interpolant*, not an approximation or Taylor series. This functionality is folded into the `PolyTaylorSeries` class by enabling the `chebyshev_basis=True` flag. While for high-precision applications the difference is important, for most use-cases, and piecewise-continuous target functions, the same degree approximation will have uniform error between cases differing by a constant. For a pleasant, engaging introduction to this topic, see [Approximation Theory and Approximation Practice](https://epubs.siam.org/doi/10.1137/1.9781611975949), which can be found as a PDF in various locations.
 
 ```python
 # Import relevant modules and methods.
