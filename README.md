@@ -20,9 +20,10 @@ In their most basic forms, QSP/QSVT give a recipe for a desired spectral transfo
 This package provides such conditions and algorithms, and automatically treats a few common conventions, with options to modify the code in basic ways to encompass others. These conventions are enumerated in the recent pedagogical work [A Grand Unification of Quantum Algorithms](https://arxiv.org/abs/2105.02859), and the QSP phase-finding algorithms we treat can be broken roughly into three types:
 - :hammer: The `laurent` method employs techniques originated in [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extends code from [its attached repository](https://github.com/alibaba-edu/angle-sequence.). This method exactly computes phases by studying the properties of the desired polynomials using a divide-and-conquer approach.
 - :sparkles: The `tf` method employs TensorFlow + Keras, and finds QSP phase angles using straightforward (but sometimes slow) optimization techniques.
-- :key: The `sym_qsp` method employs an iterative, quasi-Newton technique to find QSP phases for a special, lightly-restricted sub-class of symmetrized QSP protocols. In comparison to the above two techniques, this method is almost invariably quick, numerically stable, and should suit nearly all near-term application needs. It is based off work from [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649), and Matlab implementations in the [QSPPACK repository](https://github.com/qsppack/QSPPACK).
+- :key: The `sym_qsp` method employs an iterative, quasi-Newton method to find QSP phases for a special, lightly-restricted sub-class of QSP protocols whose phases are symmetric. In comparison with the above two techniques, this method is almost invariably quick, numerically stable, and should suit most applications. It is based off work in [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649), and Matlab implementations in the [QSPPACK repository](https://github.com/qsppack/QSPPACK). See the affiliated `CITATION` file for a full list of references.
 
-> :warning: As methods for numerically handling QSP protocols have been refined, we have tried to update this repository to reflect leading methods. Along the way, we have also had to lightly deprecate older methods (which may still be in use for others). In the sections that follow, we try to give special attention to where a new user might enter to find the repository most useful.
+> [!WARNING]
+> As methods for numerically handling QSP protocols have been refined, we have tried to update this repository to reflect leading methods. Along the way, we have also had to lightly deprecate older methods (which may still be in use by others who use this repository). In the sections that follow, we try to give special attention to where a new user might begin to use this repository in the most frictionless way.
 
 ***
 
@@ -50,15 +51,68 @@ In the first convention, the resulting QSP unitary is also given a standard form
 ```math
     U_x = e^{i\phi_0 Z} \prod_{k=1}^n W(a) e^{i\phi_k Z} = \begin{bmatrix} P_x(a) & iQ_x(a)\sqrt{1-a^2} \\ i Q_x^*(a)\sqrt{1-a^2} & P_x^*(a) \end{bmatrix},
 ```
-where $P$ and $Q$ are polynomials of degree $n$ and $n-1$ respectively, with definite parity, and satisfying the condition $|p|^2 + |Q|^2(1 - a^2) = 1$ for all $a$. Evidently in a different basis the parity and degree of these polynomials may change, and moreover sometimes the substitution $a \rightarrow (b + 1/b)/2$ is made, in which case we move from polynomials over $[-1,1]$ to Laurent polynomials over the unit circle in the complex plane. Each of these choices have benefits and drawbacks, but for most initial presentations, the $U_x$ convention with polynomials over $[-1,1]$ is used.
+where $P$ and $Q$ are polynomials of degree $n$ and $n-1$ respectively, with definite parity, and satisfying the condition $|P|^2 + |Q|^2(1 - a^2) = 1$ for all $a \in [-1,1]$. Evidently in a different basis the parity and degree of these polynomials may change, and moreover sometimes the substitution $a \rightarrow (b + 1/b)/2$ is sometimes made, moving from polynomials over $[-1,1]$ to Laurent polynomials over the unit circle in the complex plane. Each of these choices has benefits and limitations, but for most initial presentations, the $U_x$ convention with polynomials over $[-1,1]$ is used.
 
 As stated, this package can generate QSP phases in both conventions. The impediment to immediately freely working between both conventions is that if one wants a certain polynomial $P_x(a) = \langle 0|U_x|0\rangle$ in the $W_x$ convention, one cannot just use the phases generated for this polynomial in the $W_z$ convention. Instead, first the $Q_x(a)$ corresponding to $P_x(a)$ is needed to complete the full $U_x$. From this one can compute $P_z(a) = \langle 0|U_z|0\rangle = P_x(a) + Q_x(a)$. Computing the QSP phases for *this* $P_z(a)$ in the $W_z$ convention yields the desired QSP phases for $P_x(a)$ in the $W_x$ convention.
 
-> :warning: In addition to specifying the signal unitary and the signal processing phase rotations, the implicit measurement basis must also be specified. In this codebase the default basis is $|\pm\rangle$ (i.e., the $X$ Pauli's eigenbasis), though the code also allows for the computational basis (e.g., when using `tf` optimization method to generate the phase angles). For information on this, see the `--measurement` option below.
+> [!WARNING]
+> In addition to specifying the signal unitary and the signal processing phase rotations, the implicit measurement basis must also be specified. In this codebase the default basis is $|\pm\rangle$ (i.e., the $X$ Pauli's eigenbasis), though the code also allows for the computational basis (e.g., when using `tf` optimization method to generate the phase angles). For information on this, see the `--measurement` option below.
 
 The guiding principle to take away from the discussion above is the following: the choice of circuit convention can change the conditions required of the achieved polynomial transforms (e.g., their parity, degree, boundary conditions, etc.). That said, the *classical* subroutines used to find good polynomial approximations remain mostly unchanged, and for most applications the restrictions on achieved functions are not crucial for performance.
 
 ## A few quick-and-dirty examples
+
+In this section we aim to teach basic use-cases for this package through a series of related examples. Given the heterogeneous research efforts in QSP, there are multiple ways to do most of the tasks laid out here. Toward this end, we break this quick-start guide into two parts: (1) a *very* short guide-within-a-guide that shows what we believe will be the most common pattern desired by a user, and (2) a more extended series of examples covering different conventions, phase-finding methods, and visualization tools illustrating the depth of the package. A full list of options and arguments can be found internal to the package, or listed in [later section of the document](#command-line-usage).
+
+### A guide within a guide
+
+For many people tinkering with QSP, especially in experimental contexts, their workflow typically involves some ideal, analytically-expressible target function for which they desire QSP phases to some moderate degree. A minimal, self-contained instance of this technique (also contained in `pyqsp/sym_qsp_min_example.py`) has the following structure:
+1. Import required modules and methods.
+2. Specify analytic target function and desired QSP protocol length.
+3. According to above, compute good polynomial approximant.[^2]
+4. Using the `sym_qsp` method, compute QSP phases whose unitary has the desired function as $\Im(\langle 0|U|0 \rangle)$.
+5. Plot target and achieved functions to visualize result.
+
+[^2]: For our purpose we are actually computing a *Chebyshev interpolant*, not an approximation or Taylor series. This functionality is folded into the `PolyTaylorSeries` class by enabling the `chebyshev_basis=True`{:.python} flag. While for high-precision applications the difference is important, for most use-cases, and piecewise-continuous target functions, the same degree approximation will have uniform error between cases differing by a constant. For a pleasant, engaging introduction to this topic, see [Approximation Theory and Approximation Practice](https://epubs.siam.org/doi/10.1137/1.9781611975949), which can be found as a PDF in various locations.
+
+```python
+# Import relevant modules and methods.
+import numpy as np
+import pyqsp
+from pyqsp import angle_sequence, response
+from pyqsp.poly import (polynomial_generators, PolyTaylorSeries)
+
+# Specify definite-parity target function for QSP.
+func = lambda x: np.cos(3*x)
+polydeg = 6 # Desired QSP protocol length.
+max_scale = 0.9 # Maximum norm (<1) for rescaling.
+
+# Within PolyTaylorSeries class, compute /Chebyshev interpolant/ up to a specified degree (using twice as many Chebyshev nodes).
+poly = PolyTaylorSeries().taylor_series(
+    func=func,
+    degree=polydeg,
+    max_scale=max_scale,
+    chebyshev_basis=True,
+    cheb_samples=2*polydeg)
+
+# Compute full phases using symmetric QSP method.
+(phiset, reduced_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+    poly,
+    method='sym_qsp',
+    chebyshev_basis=True)
+
+# Plot response according to full phases.
+response.PlotQSPResponse(
+    phiset,
+    target=poly,
+    sym_qsp=True)
+```
+
+The method specified above works well up to above `polydeg=100`, and is limited mainly by the out-of-the-box method `numpy` uses to compute Chebyshev interpolants. If the `Chebyshev` object fed into `QuantumSignalProcessingPhases` has had its coefficients computed some other way (e.g., analytically as in the approximation of the inverse function), this method can work well into the thousands of phases.
+
+<!--*TODO: INCLUDE A VERSION OF THE PLOT HERE, AFTER UPDATING PLOTTING METHODS TO SHOW ERROR, AND INCLUDE TITLES, ETC.*-->
+
+### A mélange of methods for phase finding and plotting
 
 This package includes various tools for plotting aspects of the computed QSP unitaries, many of which can be run from the command line. As an example, in the chart below the dashed line shows the target ideal polynomial QSP *response function* approximating a scaled version of $1/a$ over a sub-interval of $[-1,1]$. The dark line shows the real part of an actual response function, i.e., the matrix element $P_x(a)$, achieved by a QSP circuit with computed phases, while the blue line shows the imaginary part of the QSP response, with `n = 20` (the length of the QSP phase list less one).
 
@@ -68,7 +122,7 @@ This package includes various tools for plotting aspects of the computed QSP uni
 
 This was generated by running `pyqsp --plot --tolerance=0.01 --seqargs 3 invert`, which also spits out the the following verbose text:
 
-```
+```python
     b=30, j0=14
     [PolyOneOverX] minimum [-3.5325637] is at [-0.20530335]: normalizing
     [PolyOneOverX] bounding to 0.5
@@ -83,7 +137,7 @@ This was generated by running `pyqsp --plot --tolerance=0.01 --seqargs 3 invert`
 ```
 
 The sign function is also often useful to implement, e.g. for oblivious amplitude amplification. Running instead
-```
+```python
 pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
 ```
 yields QSP phases for a degree `19` polynomial approximation, using the error function applied to `kappa * a`, where `kappa` is `10`. This also gives a plotted response function:
@@ -93,7 +147,7 @@ yields QSP phases for a degree `19` polynomial approximation, using the error fu
 </p>
 
 A threshold function further generalizes on the sign function, e.g., as used in distinguishing eigenvalues or singular values through windowing. Running
-```
+```python
 pyqsp --plot-real-only --plot --polyargs=20,20 --polyname poly_thresh poly
 ```
 yields QSP phases for a degree `20` polynomial approximation, using two error functions applied to `kappa * 20`, with a plotted response function:
@@ -103,7 +157,7 @@ yields QSP phases for a degree `20` polynomial approximation, using two error fu
 </p>
 
 In addition to approximations to piecewise continuous functions, the smooth trigonometric functions sine and cosine functions also often appear, e.g., in Hamiltonian simulation. Running:
-```
+```python
 pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
 ```
 produces QSP phases for a degree `6` polynomial approximation of `cos(3*x)`, with the plotted response function:
@@ -130,7 +184,8 @@ This last example also shows how an arbitrary function can be specified (using a
 
 > :construction: Recent additions to this codebase exist in the same folder as the above main `*.py` files, named `sym_qsp_opt.py` and the currently exploratory `sym_qsp_plotting.py`, as well as tests for these new files in `test/test_sym_qsp_optimization.py` which is automatically run with the other tests, and might serve as a good best-practices read-through for the curious. The Chebyshev interpolation methods mentioned above have been added as internal arguments throughout `poly.py` using the `chebyshev_basis` (Boolean) flag and `cheb_samples` (positive integer) argument.
 
-> :warning: The code is structured such that TensorFlow is not imported by default, as its dependencies, size, and overall use have become cumbersome for most applications. If `qsp_model` and its derived methods are used, then TensorFlow is required. Currently tests for this module have also been silenced, and TensorFlow dependent functionality is not being actively maintained.
+> [!WARNING]
+> The code is structured such that TensorFlow is not imported by default, as its dependencies, size, and overall use have become cumbersome for most applications. If `qsp_model` and its derived methods are used, then TensorFlow is required. Currently tests for this module have also been silenced, and TensorFlow dependent functionality is not being actively maintained.
 
 ## Package requirements
 
@@ -146,19 +201,25 @@ As the `qsp_model` code depends on having TensorFlow installed, the unit tests f
 
 To find the QSP angle sequence corresponding to a real Laurent polynomial $A(\tilde{w}) = \sum_{i=-n}\^n a_i\tilde{w}^i$, we can run:
 
-    from pyqsp.angle_sequence import QuantumSignalProcessingPhases
-    ang_seq = QuantumSignalProcessingPhases([a_{-n}, a_{-n+2}, ..., a_n], signal_operator="Wz")
-    print(ang_seq)
+```python
+from pyqsp.angle_sequence import QuantumSignalProcessingPhases
+ang_seq = QuantumSignalProcessingPhases([a_{-n}, a_{-n+2}, ..., a_n], signal_operator="Wz")
+print(ang_seq)
+```
 
 To find the QSP angle sequence corresponding to a real (non-Laurent) polynomial $A(x) = \sum_{i=0}\^n a_i x^i$, we can run:
 
-    from pyqsp.angle_sequence import QuantumSignalProcessingPhases
-    ang_seq = QuantumSignalProcessingPhases([a_{0}, a_{1}, ..., a_n], signal_operator="Wx")
-    print(ang_seq)
+```python
+from pyqsp.angle_sequence import QuantumSignalProcessingPhases
+ang_seq = QuantumSignalProcessingPhases([a_{0}, a_{1}, ..., a_n], signal_operator="Wx")
+print(ang_seq)
+```
 
 By default, `QuantumSignalProcessingPhases` uses the `laurent` method, which is typically quite fast, but can become unstable for high-degree polynomials due to roundoff errors, requiring some randomization. `QuantumSignalProcessingPhases` can also be instructed to use the `tf` method, which employs TensorFlow with a Keras model to find phases by optimization. This stably finds very high-quality solutions, but can be slow, particularly compared with the `laurent` method. We can run this method using:
 
-    ang_seq = QuantumSignalProcessingPhases(poly, signal_operator="Wx", method="tf")
+```python
+ang_seq = QuantumSignalProcessingPhases(poly, signal_operator="Wx", method="tf")
+```
 
 Note that with the `tf` method, only the `Wx` signal_operator convention is supported. With this method, the polynomial can be a numpy Polynomial instance, or an instance of `pyqsp.poly.StringPolynomial`, e.g.
 
@@ -167,9 +228,42 @@ Note that with the `tf` method, only the `Wx` signal_operator convention is supp
 
 We can also plot the response given by a given QSP angle sequence, e.g. using:
 
-    pyqsp.response.PlotQSPResponse(ang_seq, target=poly, signal_operator="Wx")
+```python
+pyqsp.response.PlotQSPResponse(ang_seq, target=poly, signal_operator="Wx")
+```
 
-### Recent updates to phase-finding methods (09/2024)
+### Computing QSP phases faster with the `sym_qsp` method
+
+In the same paradigm as the above `laurent` and `tf` methods, we have also introduced the iterative phase finding algorithm discussed earlier under the `sym_qsp` method. Using this method is compatible with the original `QuantumSignalProcessingPhases` method by passing the name of the method, and setting `chebyshev_basis=True`.
+
+```python
+from pyqsp.angle_sequence import QuantumSignalProcessingPhases
+(full_phi, reduced_phi, parity) = QuantumSignalProcessingPhases(poly, method="sym_qsp", chebyshev_basis=True)
+```
+
+Note that here, unlike in the standard case, we return the full phases (analogous to `ang_seq` in the above examples), the reduced phases as used in the original reference [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649), and the polynomial parity. When using the `sym_qsp_func` option in the command line, just the full phases are returned.
+
+> [!WARNING]
+> Throughout the codebase, there are multiple conventions in which polynomials can be represented; (1) polynomials in the standard basis, (2) polynomials in the Chebyshev basis, and (3) Laurent polynomials in the standard basis.
+>
+> The `numpy` package can natively handle polynomials in the standard basis and Chebyshev basis through the `numpy.polynomial.polynomial` and `numpy.polynomial.chebyshev` packages, which can also be cast to one another with standard methods, e.g.,
+> ```python
+> ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
+> pcoefs = np.polynomial.chebyshev.cheb2poly(ccoefs)
+> ```
+> For numerical stability, however, casting between `Polynomial` and `Chebyshev` objects at high degrees is not recommended.
+>
+> As it stands, the `sym_qsp` method works exclusively in the Chebyshev basis, and performs internal checks on passed objects, and numpy support for Chebyshev polynomial optimization and analysis is thorough.
+
+Plotting is also supported with the `sym_qsp` method, again calling
+
+```python
+pyqsp.response.PlotQSPResponse(ang_seq, sym_qsp=True)
+```
+
+Note that the `sym_qsp` method is currently only supported with one oracle convention (`signal_operator="Wx"`), and the default measurement basis, as the achieved amplitude appears as the imaginary part of the top-left matrix element of the resulting unitary.
+
+### Overview of more recent updates to phase-finding methods (09/2024)
 
 > :construction: Here we provide some discussion of the recently added (as of `09/01/2024`) method for computing QSP phases using iterative methods for symmetric QSP protocols.
 
@@ -189,7 +283,8 @@ Other benefits of the `sym_qsp` method appear when we approximate a scaled versi
     <img src="https://github.com/ichuang/pyqsp/blob/master/docs/ex_qsp_inverse_approx.png" alt="QSP response function approximating scaled 1/x" width="75%"/>
 </p>
 
-> :round_pushpin: Previously the computation of QSP phases to approximate 1/x was limited by two factors: (1) the instability of direct polynomial completion methods in the `laurent` approach, and (2) integer overflow errors resulting from computing coefficients of the analytic polynomial approximation in a naïve way. The plot above has been generated in a way which avoids both issues, and its degree can be easily pushed into the hundreds. The plot above uses `d = 155`.
+> [!NOTE]
+> Previously the computation of QSP phases to approximate 1/x was limited by two factors: (1) the instability of direct polynomial completion methods in the `laurent` approach, and (2) integer overflow errors resulting from computing coefficients of the analytic polynomial approximation in a naïve way. The plot above has been generated in a way which avoids both issues, and its degree can be easily pushed into the hundreds. The plot above uses `d = 155`.
 
 Finally, we can move away from functions for which we have analytic descriptions of their Chebyshev expansions to general piecewise continuous functions for which we numerically compute Chebyshev interpolants. One such example is the step function, plotted analogously below.
 
@@ -199,7 +294,8 @@ Finally, we can move away from functions for which we have analytic descriptions
 
 As in the case of trigonometric cosine and inverse, the step function's approximation is also excellent within the specified region, and far more forgiving in its generation than with the earlier `laurent` method.
 
-> :round_pushpin: The final plot given above is generated in a fairly simple way, but relies on a few, user-programmable inputs which we discuss with a subsection of the code given in `pyqsp/sym_qsp_plotting.py` below. The code given here is prefaced in the original file by proper imports, and the QSP phases generated by the Newton solver are used to generate the plots with further methods.
+> [!NOTE]
+> The final plot given above is generated in a fairly simple way, but relies on a few, user-programmable inputs which we discuss with a subsection of the code given in `pyqsp/sym_qsp_plotting.py` below. The code given here is prefaced in the original file by proper imports, and the QSP phases generated by the Newton solver are used to generate the plots with further methods.
 >
 > :warning: Note that the arguments `chebyshev_basis` (a Boolean) and `cheb_samples` are both used here. The `chebyshev_basis` flag ensures that the behind-the-scenes optimization methods used in finding polynomial approximations work in the more stable Chebyshev basis, and that Chebyshev basis coefficients are returned. The `cheb_samples` argument chooses the number of Chebyshev node interpolation points with which this classical fit is computed; to prevent aliasing issues *it is best to choose `cheb_samples` to be greater than `degree`, which specifies the degree of the polynomial approximant*. Here `delta` scales as the approximate inverse gap between the regions where the desired function takes the extreme values 1 and -1.
 
@@ -230,7 +326,7 @@ This as well as many other polynomial families given in `pyqsp/poly.py` allow fo
 
 A wide selection of the functionalities provided by this package can also be run from the command line using a series of arguments and flags. We detail these below, noting that there exist new methods under active development not covered here, though these changes will be backwards compatible to the methods given below.
 
-```
+```bash
 usage: pyqsp [-h] [-v] [-o OUTPUT] [--signal_operator SIGNAL_OPERATOR] [--plot] [--hide-plot] [--return-angles] [--poly POLY] [--func FUNC]
              [--polydeg POLYDEG] [--tau TAU] [--epsilon EPSILON] [--seqname SEQNAME] [--seqargs SEQARGS] [--polyname POLYNAME] [--polyargs POLYARGS]
              [--plot-magnitude] [--plot-probability] [--plot-real-only] [--title TITLE] [--measurement MEASUREMENT] [--output-json]
@@ -323,9 +419,10 @@ optional arguments:
 
 ## Citing this repository
 
-To cite this repository please include a reference to [our paper](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040203), [Chao et al.](https://github.com/alibaba-edu/angle-sequence), and [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649).
+To cite this repository please include a reference to [our paper](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040203), [Chao et al.](https://github.com/alibaba-edu/angle-sequence), and [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649), or reference the file linked below.
 
-> :round_pushpin: A full, bibTeX-formatted list of references can be found [in this plaintext file](https://github.com/ichuang/pyqsp/blob/master/CITATION).
+> [!TIP]
+> A full, bibTeX-formatted list of references can be found [in this plaintext file](https://github.com/ichuang/pyqsp/blob/master/CITATION).
 
 ## Repository version history
 

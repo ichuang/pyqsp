@@ -110,7 +110,8 @@ def PlotQSPResponse(
         plot_real_only=False,
         plot_tight_y=False,
         show_qsp_model_plot=False,
-        sym_qsp=False):
+        sym_qsp=False,
+        simul_error_plot=False):
     """
     Plot QSP response.
 
@@ -133,6 +134,8 @@ def PlotQSPResponse(
         plot_tight_y: if True, set y-axis scale to be from min to max of real
             part; else go from +1.5 max to -1.5 max
         show_qsp_model_plot: if True, use qsp_model.plot_qsp_response
+        sym_qsp: if True, plots the real and imaginary components of the top-left unitary matrix in the standard basis, to match with the convention of symmetric QSP.
+        simul_error_plot: if True, generates two plots with a shared x-axis, showing the deviation (on a log plot) between the achieved and target function.
 
     Returns:
         Response object.
@@ -148,6 +151,7 @@ def PlotQSPResponse(
     else:
         adat = np.linspace(-1., 1., npts)
 
+    # Compute QSP response function directly according to method and convention.
     qspr = ComputeQSPResponse(adat,
                               phiset,
                               signal_operator=signal_operator,
@@ -155,6 +159,10 @@ def PlotQSPResponse(
                               sym_qsp=sym_qsp)
     pdat = qspr['pdat']
     plt.figure(figsize=[8, 5])
+
+    """
+    TODO: update here to specify cases for multiple plot option. Then in the below cases, have an individual switch statement, with bespoke error. Once this is complete, throw in a flag that can be passed along to command line options, at least in the symbolic setting.
+    """
 
     if pcoefs is not None:
         poly = pcoefs
@@ -185,7 +193,10 @@ def PlotQSPResponse(
         ymax = np.max(np.real(pdat))
         ymin = np.min(np.real(pdat))
 
-    # format plot
+    # Format plot
+    """
+    TODO: also update here to specify cases for multiple plot option.
+    """
 
     # Modify labels depending on plotting matrix element or amplitude
     if not sym_qsp:

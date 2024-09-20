@@ -156,14 +156,25 @@ def QuantumSignalProcessingPhases(
             measurement = "z"
 
     if method == "tf":
+        if chebyshev_basis:
+            raise ValueError("Working with the `tf` method requires setting chebyshev_basis to False, or not specifying it.")
+        else:
+            pass
         if not signal_operator == "Wx":
             raise ValueError(
                 f"Must use Wx signal operator model with tf method")
+        else:
+            pass
         return QuantumSignalProcessingPhasesWithTensorflow(poly,
                                                            measurement=measurement,
                                                            **kwargs)
     elif method == "laurent":
         model = (signal_operator, measurement)
+
+        if chebyshev_basis:
+            raise ValueError("Working with the `laurent` method requires setting chebyshev_basis to False, or not specifying it.")
+        else:
+            pass
 
         # Perform completion
         if model in {("Wx", "x"), ("Wz", "z")}:
@@ -203,7 +214,7 @@ def QuantumSignalProcessingPhases(
     elif method == "sym_qsp":
         # This method requires working in the Chebyshev basis.
         if not chebyshev_basis:
-            raise ValueError("Working with `sym_qsp` requires setting chebyshev_basis to True.")
+            raise ValueError("Working with the `sym_qsp` method requires setting chebyshev_basis to True.")
         else:
             pass
 
