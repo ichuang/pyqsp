@@ -157,70 +157,142 @@ def PlotQSPResponse(
                               signal_operator=signal_operator,
                               measurement=measurement,
                               sym_qsp=sym_qsp)
+
+    # Generate total response function.
     pdat = qspr['pdat']
-    plt.figure(figsize=[8, 5])
 
-    """
-    TODO: update here to specify cases for multiple plot option. Then in the below cases, have an individual switch statement, with bespoke error. Once this is complete, throw in a flag that can be passed along to command line options, at least in the symbolic setting.
-    """
+    # If standard option selected, show only response function.
+    if not simul_error_plot:
+        plt.figure(figsize=[8, 5])
 
-    if pcoefs is not None:
-        poly = pcoefs
-        if not isinstance(poly, np.polynomial.Polynomial):
-            poly = np.polynomial.Polynomial(pcoefs)
-        expected = poly(adat)
-        plt.plot(adat, expected, 'k-', label="target polynomial",
-                 linewidth=3, alpha=0.5)
+        if pcoefs is not None:
+            poly = pcoefs
+            if not isinstance(poly, np.polynomial.Polynomial):
+                poly = np.polynomial.Polynomial(pcoefs)
+            expected = poly(adat)
+            plt.plot(adat, expected, 'k-', label="target polynomial",
+                    linewidth=3, alpha=0.5)
 
-    if target is not None:
-        L = np.max(np.abs(adat))
-        xref = np.linspace(-L, L, 401)
-        plt.plot(xref, target(xref), 'k--', label="target function",
-                 linewidth=3, alpha=0.5)
+        if target is not None:
+            L = np.max(np.abs(adat))
+            xref = np.linspace(-L, L, 401)
+            plt.plot(xref, target(xref), 'k--', label="target function",
+                    linewidth=3, alpha=0.5)
 
-    if plot_magnitude:
-        plt.plot(adat, abs(pdat), 'k', label="abs[Poly(a)]")
-        ymax = np.max(np.abs(pdat))
-        ymin = np.min(np.abs(pdat))
-    elif plot_probability:
-        plt.plot(adat, abs(pdat)**2, 'k', label="abs[Poly(a)]^2")
-        ymax = np.max(np.abs(pdat))**2
-        ymin = np.min(np.abs(pdat))**2
+        if plot_magnitude:
+            plt.plot(adat, abs(pdat), 'k', label="abs[Poly(a)]")
+            ymax = np.max(np.abs(pdat))
+            ymin = np.min(np.abs(pdat))
+        elif plot_probability:
+            plt.plot(adat, abs(pdat)**2, 'k', label="abs[Poly(a)]^2")
+            ymax = np.max(np.abs(pdat))**2
+            ymin = np.min(np.abs(pdat))**2
+        else:
+            plt.plot(adat, np.real(pdat), 'k', label="Re[Poly(a)]")
+            if not plot_real_only:
+                plt.plot(adat, np.imag(pdat), 'b', label="Im[Poly(a)]")
+            ymax = np.max(np.real(pdat))
+            ymin = np.min(np.real(pdat))
+
+        # Format plot
+        """
+        TODO: also update here to specify cases for multiple plot option.
+        """
+
+        # Modify labels depending on plotting matrix element or amplitude
+        if not sym_qsp:
+            plt.ylabel("Response")
+        else:
+            plt.ylabel("Matrix element")
+
+        plt.xlabel("a")
+        plt.legend(loc="upper right")
+
+        if title is not None:
+            plt.title(title)
+
+        plt.xlim([np.min(adat), np.max(adat)])
+        if plot_tight_y:
+            plt.ylim([-0.1, 1.1 * ymax])
+        else:
+            # plt.ylim([-1.5 * ymax, 1.5 * ymax])
+            plt.ylim([-1.25, 1.25])
+
+        # Remove unecessary axes.
+        ax = plt.gca()
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+    # Else, show relative error and additional information for sym_qsp.
     else:
-        plt.plot(adat, np.real(pdat), 'k', label="Re[Poly(a)]")
-        if not plot_real_only:
-            plt.plot(adat, np.imag(pdat), 'b', label="Im[Poly(a)]")
-        ymax = np.max(np.real(pdat))
-        ymin = np.min(np.real(pdat))
+        fig, axs = plt.subplots(2,sharex=True)
+        fig.suptitle('Response function and error for symmetric QSP protocol')
 
-    # Format plot
-    """
-    TODO: also update here to specify cases for multiple plot option.
-    """
+        if pcoefs is not None:
+            poly = pcoefs
+            if not isinstance(poly, np.polynomial.chebyshev.Chebyshev):
+                poly = np.polynomial.chebyshev.Chebyshev(pcoefs)
+            expected = poly(adat)
+            axs[0].plot(adat, expected, 'k-', label="target polynomial",
+                    linewidth=3, alpha=0.5)
 
-    # Modify labels depending on plotting matrix element or amplitude
-    if not sym_qsp:
-        plt.ylabel("Response")
-    else:
-        plt.ylabel("Matrix element")
+            approx_error = np.abs(np.imag(pdat) - expected)
+            axs[1].plot(adat, approx_error, 'g', label="QSP/Poly error")
 
-    plt.xlabel("a")
-    plt.legend(loc="upper right")
+        if target is not None:
+            # L = np.max(np.abs(adat))
+            # xref = np.linspace(-L, L, 401)
+            # axs[0].plot(xref, target(xref), 'k--', label="target function",
+            #         linewidth=3, alpha=0.5)
+            axs[0].plot(adat, target(adat), 'k--', label="target function",
+                    linewidth=3, alpha=0.5)
 
-    if title is not None:
-        plt.title(title)
+            approx_error = np.abs(np.imag(pdat) - target(adat))
+            axs[1].plot(adat, approx_error, 'r', label="QSP/target error")
 
-    plt.xlim([np.min(adat), np.max(adat)])
-    if plot_tight_y:
-        plt.ylim([-0.1, 1.1 * ymax])
-    else:
-        # plt.ylim([-1.5 * ymax, 1.5 * ymax])
-        plt.ylim([-1.25, 1.25])
+        if plot_magnitude:
+            axs[0].plot(adat, abs(pdat), 'k', label="abs[Poly(a)]")
+            ymax = np.max(np.abs(pdat))
+            ymin = np.min(np.abs(pdat))
+        elif plot_probability:
+            axs[0].plot(adat, abs(pdat)**2, 'k', label="abs[Poly(a)]^2")
+            ymax = np.max(np.abs(pdat))**2
+            ymin = np.min(np.abs(pdat))**2
+        else:
+            axs[0].plot(adat, np.real(pdat), 'k', label="Re[Poly(a)]")
+            if not plot_real_only:
+                axs[0].plot(adat, np.imag(pdat), 'b', label="Im[Poly(a)]")
+            ymax = np.max(np.real(pdat))
+            ymin = np.min(np.real(pdat))
 
-    # Remove unecessary axes.
-    ax = plt.gca()
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+        # Modify labels depending on plotting matrix element or amplitude
+        if not sym_qsp:
+            raise ValueError(f"The 'simul_error_plot' flag is currently only supported when 'sym_qsp=True'.")
+        else:
+            axs[0].set_ylabel("Matrix element")
+
+        axs[1].set_ylabel("Absolute error")
+        axs[1].set_xlabel('Input signal')
+
+        if title is not None:
+            axs[0].title(title)
+
+        axs[0].set_xlim([np.min(adat), np.max(adat)])
+        if plot_tight_y:
+            axs[0].set_ylim([-0.1, 1.1 * ymax])
+        else:
+            # plt.ylim([-1.5 * ymax, 1.5 * ymax])
+            axs[0].set_ylim([-1.25, 1.25])
+
+        # Remove unecessary axes
+        axs[0].spines['top'].set_visible(False)
+        axs[0].spines['right'].set_visible(False)
+        axs[1].spines['top'].set_visible(False)
+        axs[1].spines['right'].set_visible(False)
+
+        axs[0].legend(loc="upper right")
+        axs[1].legend(loc="upper right")
+
+        axs[1].set_yscale('log')
 
     if show:
         plt.show()

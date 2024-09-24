@@ -85,10 +85,14 @@ from pyqsp.poly import (polynomial_generators, PolyTaylorSeries)
 
 # Specify definite-parity target function for QSP.
 func = lambda x: np.cos(3*x)
-polydeg = 6 # Desired QSP protocol length.
+polydeg = 12 # Desired QSP protocol length.
 max_scale = 0.9 # Maximum norm (<1) for rescaling.
+true_func = lambda x: max_scale * func(x) # For error, include scale.
 
-# Within PolyTaylorSeries class, compute /Chebyshev interpolant/ up to a specified degree (using twice as many Chebyshev nodes).
+"""
+With PolyTaylorSeries class, compute Chebyshev interpolant to degree
+'polydeg' (using twice as many Chebyshev nodes to prevent aliasing).
+"""
 poly = PolyTaylorSeries().taylor_series(
     func=func,
     degree=polydeg,
@@ -96,17 +100,23 @@ poly = PolyTaylorSeries().taylor_series(
     chebyshev_basis=True,
     cheb_samples=2*polydeg)
 
-# Compute full phases using symmetric QSP method.
-(phiset, reduced_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+# Compute full phases (and reduced phases, parity) using symmetric QSP.
+(phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
     poly,
     method='sym_qsp',
     chebyshev_basis=True)
 
-# Plot response according to full phases.
+"""
+Plot response according to full phases.
+Note that `pcoefs` are coefficients of the approximating polynomial,
+while `target` is the true function (rescaled) being approximated.
+"""
 response.PlotQSPResponse(
     phiset,
-    target=poly,
-    sym_qsp=True)
+    pcoefs=poly,
+    target=true_func,
+    sym_qsp=True,
+    simul_error_plot=True)
 ```
 
 The method specified above works well up to above `polydeg=100`, and is limited mainly by the out-of-the-box method `numpy` uses to compute Chebyshev interpolants. If the `Chebyshev` object fed into `QuantumSignalProcessingPhases` has had its coefficients computed some other way (e.g., analytically as in the approximation of the inverse function), this method can work well into the thousands of phases.
@@ -318,10 +328,10 @@ parity = 1
 coef = pcoefs[parity::2]
 
 # Iteratively optimize QSP phases using Newton solver, which takes parity-reduced Chebyshev coefs.
-(phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_Solver(coef, parity, crit=1e-12)
+(phases, err, total_iter, qsp_seq_opt) = sym_qsp_opt.newton_solver(coef, parity, crit=1e-12)
 ```
 
-This as well as many other polynomial families given in `pyqsp/poly.py` allow for the same `chebyshev_basis` and `cheb_samples` arguments, and can generate the same `pcoefs` results, which can be sliced according to parity and fed as an optimization target into `sym_qsp_opt.newton_Solver`, which implicitly generates and optimizes a `SymmetricQSPProtocol` object, up to the desired `crit` uniform maximum error.
+This as well as many other polynomial families given in `pyqsp/poly.py` allow for the same `chebyshev_basis` and `cheb_samples` arguments, and can generate the same `pcoefs` results, which can be sliced according to parity and fed as an optimization target into `sym_qsp_opt.newton_solver`, which implicitly generates and optimizes a `SymmetricQSPProtocol` object, up to the desired `crit` uniform maximum error.
 
 ## Command line usage
 
