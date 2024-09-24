@@ -79,7 +79,7 @@ Examples:
 
     pyqsp --plot --seqargs=80,0.1,3,0.5 --method sym_qsp poly_rect
 
-    pyqsp --plot --seqargs=41,0.1,3,0.5 --method sym_qsp invert_rect
+    pyqsp --plot --seqargs=6,2,3,0.1 --method sym_qsp invert_rect
 
     Need to address general use of polyargs, polyname, etc. Note that these are being called separately from the shortand above? Basically we need to check that chebyshev arguments are being passed through.
 
@@ -537,8 +537,8 @@ Examples:
             response.PlotQSPResponse(
                 phiset,
                 target=lambda x: scale *
-                1 - (np.sign(x + 1 / args.seqargs[2]) -
-                     np.sign(x - 1 / args.seqargs[2])) / 2,
+                (1 - (np.sign(x + 1 / args.seqargs[2]) -
+                     np.sign(x - 1 / args.seqargs[2])) / 2),
                 signal_operator="Wx",
                 title="Rect Function",
                 **plot_args)
@@ -559,7 +559,9 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
-                target=lambda x: scale * 1 / x,
+                target=lambda x: scale * (1 / x) *
+                (1 - (np.sign(x + 1 / args.seqargs[2]) -
+                     np.sign(x - 1 / args.seqargs[2])) / 2),
                 signal_operator="Wx",
                 title="Poly Rect * 1/x",
                 **plot_args)

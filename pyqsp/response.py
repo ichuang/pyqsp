@@ -239,10 +239,6 @@ def PlotQSPResponse(
             axs[1].plot(adat, approx_error, 'g', label="QSP/Poly error")
 
         if target is not None:
-            # L = np.max(np.abs(adat))
-            # xref = np.linspace(-L, L, 401)
-            # axs[0].plot(xref, target(xref), 'k--', label="target function",
-            #         linewidth=3, alpha=0.5)
             axs[0].plot(adat, target(adat), 'k--', label="target function",
                     linewidth=3, alpha=0.5)
 
@@ -258,7 +254,8 @@ def PlotQSPResponse(
             ymax = np.max(np.abs(pdat))**2
             ymin = np.min(np.abs(pdat))**2
         else:
-            axs[0].plot(adat, np.real(pdat), 'k', label="Re[Poly(a)]")
+            # Note: temporary silenced as sym_qsp real component means little.
+            # axs[0].plot(adat, np.real(pdat), 'k', label="Re[Poly(a)]")
             if not plot_real_only:
                 axs[0].plot(adat, np.imag(pdat), 'b', label="Im[Poly(a)]")
             ymax = np.max(np.real(pdat))

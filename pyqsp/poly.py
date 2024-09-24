@@ -299,6 +299,7 @@ class PolyOneOverXRect(PolyGenerator):
         coefs_rect, scale2 = PolyRect().generate(degree,
                                                  delta,
                                                  kappa,
+                                                 epsilon, # TODO: Added to avoid scaling error.
                                                  ensure_bounded,
                                                  return_scale=True,
                                                  chebyshev_basis=chebyshev_basis)
@@ -315,15 +316,6 @@ class PolyOneOverXRect(PolyGenerator):
 
             mult_result = np.polynomial.chebyshev.chebmul(poly_invert.coef, poly_rect.coef)
             pcoefs = mult_result
-
-            # div_result = np.polynomial.chebyshev.chebdiv(g_coef, [0, 1])[0]
-
-            # # Replace g with its divided value.
-            # g = np.polynomial.chebyshev.Chebyshev(div_result)
-
-            # print("POLYTEST")
-            # print(poly_invert)
-            # print(poly_rect)
 
         if return_scale:
             return pcoefs, scale1 * scale2
@@ -633,7 +625,12 @@ class PolyRect(PolyTaylorSeries):
         if (degree % 2):
             raise Exception("[PolyRect] degree must be even")
 
-        k = np.sqrt(2) / delta * np.sqrt(np.log(2 / (np.pi * epsilon**2)))
+        if np.log(2 / (np.pi * epsilon**2)) <= 0:
+            raise ValueError("epsilon must be specified smaller to ensure valid specification for erf approximation to rectangle function.")
+        else:
+            pass
+
+        k = (np.sqrt(2) / delta) * np.sqrt(np.log(2 / (np.pi * epsilon**2)))
 
         def erf_delta(x):
             return scipy.special.erf(x * k)
