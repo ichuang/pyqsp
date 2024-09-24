@@ -273,6 +273,8 @@ class PolyOneOverX(PolyGenerator):
 
 # -----------------------------------------------------------------------------
 
+# TODO: for the moment this is causing PolyRect to return a polynomial with NaN coefficients for half the terms and trivial coefficients for the others.
+
 class PolyOneOverXRect(PolyGenerator):
 
     def help(self):
@@ -301,10 +303,27 @@ class PolyOneOverXRect(PolyGenerator):
                                                  return_scale=True,
                                                  chebyshev_basis=chebyshev_basis)
 
-        poly_invert = np.polynomial.Polynomial(coefs_invert)
-        poly_rect = np.polynomial.Polynomial(coefs_rect)
+        # Modified to handle Chebyshev basis for convolution.
+        if not chebyshev_basis:
+            poly_invert = np.polynomial.Polynomial(coefs_invert)
+            poly_rect = np.polynomial.Polynomial(coefs_rect)
 
-        pcoefs = (poly_invert * poly_rect).coef
+            pcoefs = (poly_invert * poly_rect).coef
+        else:
+            poly_invert = np.polynomial.chebyshev.Chebyshev(coefs_invert)
+            poly_rect = np.polynomial.chebyshev.Chebyshev(coefs_rect)
+
+            mult_result = np.polynomial.chebyshev.chebmul(poly_invert.coef, poly_rect.coef)
+            pcoefs = mult_result
+
+            # div_result = np.polynomial.chebyshev.chebdiv(g_coef, [0, 1])[0]
+
+            # # Replace g with its divided value.
+            # g = np.polynomial.chebyshev.Chebyshev(div_result)
+
+            # print("POLYTEST")
+            # print(poly_invert)
+            # print(poly_rect)
 
         if return_scale:
             return pcoefs, scale1 * scale2
@@ -347,6 +366,7 @@ class PolyTaylorSeries(PolyGenerator):
             We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
         '''
         if chebyshev_basis:
+            cheb_samples = 2*degree # Set to prevent aliasing; note that all methods calling TaylorSeries implicitly have their cheb_samples specifications overruled here.
             # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.
             samples = np.polynomial.chebyshev.chebpts1(cheb_samples)
             scale = 1.0 # Binding variable.
@@ -609,9 +629,9 @@ class PolyRect(PolyTaylorSeries):
         Approximation to threshold function at a=1/2; use a bandpass built from two erf's
         '''
         degree = int(degree)
-        print(f"[pyqsp.poly.PolyThreshold] degree={degree}, delta={delta}")
+        print(f"[pyqsp.poly.PolyRect] degree={degree}, delta={delta}")
         if (degree % 2):
-            raise Exception("[PolyThreshold] degree must be even")
+            raise Exception("[PolyRect] degree must be even")
 
         k = np.sqrt(2) / delta * np.sqrt(np.log(2 / (np.pi * epsilon**2)))
 

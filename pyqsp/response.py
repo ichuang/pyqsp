@@ -274,7 +274,7 @@ def PlotQSPResponse(
         axs[1].set_xlabel('Input signal')
 
         if title is not None:
-            axs[0].title(title)
+            axs[0].set_title(title)
 
         axs[0].set_xlim([np.min(adat), np.max(adat)])
         if plot_tight_y:

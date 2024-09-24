@@ -50,6 +50,43 @@ Examples:
     pyqsp --poly=-1,0,2 --plot poly2angles
     pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot poly2angles
     pyqsp --plot --tau 10 hamsim
+
+    # Note that the above argument doesn't work; and below we've included the method explictly.
+
+    # Intended argument to add.
+    pyqsp --plot --seqargs=10,0.1 --method laurent hamsim
+    pyqsp --plot --seqargs=10,0.1 --method sym_qsp hamsim
+
+    pyqsp --plot --seqargs=19,10 poly_sign
+    pyqsp --plot --seqargs=19,10 --method sym_qsp poly_sign
+
+    pyqsp --plot --seqargs=18,10 poly_thresh
+    pyqsp --plot --seqargs=100,40 --method sym_qsp poly_thresh
+
+    pyqsp --plot --seqargs=19,0.25 --method sym_qsp poly_linear_amp
+
+    pyqsp --plot --seqargs=68,20 --method sym_qsp poly_phase
+
+    pyqsp --plot --seqargs 20,0.3 --method sym_qsp efilter
+
+    pyqsp --plot --seqargs=20,3.5 --method sym_qsp gibbs
+
+    pyqsp --plot --seqargs=20,0.6,15 --method sym_qsp relu
+
+    pyqsp --return-angles --poly=-1,0,2 --plot poly2angles
+
+    pyqsp --plot --seqargs=3,0.1 --method sym_qsp invert
+
+    pyqsp --plot --seqargs=80,0.1,3,0.5 --method sym_qsp poly_rect
+
+    pyqsp --plot --seqargs=41,0.1,3,0.5 --method sym_qsp invert_rect
+
+    Need to address general use of polyargs, polyname, etc. Note that these are being called separately from the shortand above? Basically we need to check that chebyshev arguments are being passed through.
+
+    require handling poly2angles and fpssearch, as well as whatever else might be in the test folder. We also need to update the references made in the preamble of the main file, and determine if there are more explicit ways to specify positional arguments.
+
+    # End inclusions.
+
     pyqsp --plot --tolerance=0.01 --seqargs 3 invert
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
@@ -224,6 +261,21 @@ Examples:
     if not args:
         args = parser.parse_args(arglist)
 
+    qspp_args = dict(signal_operator=args.signal_operator,
+                     method=args.method,
+                     tolerance=args.tolerance,
+                     nepochs=args.nepochs,
+                     npts_theta=args.npts_theta,
+                     )
+
+    # For symmetric QSP method, add additional dictionary entry to switch entirely to Chebyshev basis; entries are also added to plot_args.
+    if args.method == "sym_qsp" or (args.cmd == "sym_qsp_func"):
+        qspp_args["chebyshev_basis"] = True
+        is_sym_qsp = True
+    else:
+        qspp_args["chebyshev_basis"] = False
+        is_sym_qsp = False
+
     phiset = None
     plot_args = dict(plot_magnitude=args.plot_magnitude,
                      plot_probability=args.plot_probability,
@@ -233,13 +285,8 @@ Examples:
                      npts=args.plot_npts,
                      show=(not args.hide_plot),
                      show_qsp_model_plot=args.plot_qsp_model,
-                     )
-
-    qspp_args = dict(signal_operator=args.signal_operator,
-                     method=args.method,
-                     tolerance=args.tolerance,
-                     nepochs=args.nepochs,
-                     npts_theta=args.npts_theta,
+                     sym_qsp=is_sym_qsp,
+                     simul_error_plot=is_sym_qsp
                      )
 
     if args.cmd == "poly2angles":
@@ -251,7 +298,11 @@ Examples:
         if isinstance(coefs, str):
             coefs = list(map(float, coefs.split(",")))
         print(f"[pyqsp] polynomial coefficients={coefs}")
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            coefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             coefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -266,8 +317,15 @@ Examples:
             *args.seqargs,
             return_coef=True,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp) # Support for sym_qsp.
+
+        # Return types among two methods differ
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -282,8 +340,13 @@ Examples:
             *args.seqargs,
             return_coef=True,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp) # Support for sym_qsp.
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -310,8 +373,13 @@ Examples:
             *args.seqargs,
             return_coef=True,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -327,8 +395,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -343,8 +416,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             delta = args.seqargs[1] / 2.
@@ -361,8 +439,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -377,8 +460,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -393,8 +481,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -410,8 +503,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -427,15 +525,20 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
                 target=lambda x: scale *
-                1 - (np.sign(x + 1 / args.kappa) -
-                     np.sign(x - 1 / args.kappa)) / 2,
+                1 - (np.sign(x + 1 / args.seqargs[2]) -
+                     np.sign(x - 1 / args.seqargs[2])) / 2,
                 signal_operator="Wx",
                 title="Rect Function",
                 **plot_args)
@@ -445,8 +548,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -461,8 +569,13 @@ Examples:
         pcoefs, scale = pg.generate(
             *args.seqargs,
             ensure_bounded=True,
-            return_scale=True)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+            return_scale=True,
+            chebyshev_basis=is_sym_qsp)
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
@@ -481,9 +594,13 @@ Examples:
         if not args.polyargs:
             print(pg.help())
             return
-        pcoefs = pg.generate(*args.polyargs)
+        pcoefs = pg.generate(*args.polyargs, chebyshev_basis=is_sym_qsp)
         print(f"[pyqsp] polynomial coefs = {pcoefs}")
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
+        if is_sym_qsp:
+            (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
+            pcoefs, **qspp_args)
+        else:
+            phiset = angle_sequence.QuantumSignalProcessingPhases(
             pcoefs, **qspp_args)
         if args.plot:
             target = None
@@ -536,7 +653,7 @@ Examples:
             ensure_bounded=True,
             return_scale=True,
             max_scale=0.9,
-            chebyshev_basis=True,
+            chebyshev_basis=is_sym_qsp,
             cheb_samples=2*args.polydeg) # Set larger than polydeg to prevent aliasing.
 
         # Modify choice of method globally.
@@ -545,7 +662,6 @@ Examples:
         # Compute phases and derived objects from symmetric QSP method.
         (phiset, reduced_phases, parity) = angle_sequence.QuantumSignalProcessingPhases(
             poly,
-            chebyshev_basis=True,
             **qspp_args)
 
         # Finally, if plotting called for, plot while passing 'sym_qsp' flag.
@@ -554,7 +670,6 @@ Examples:
                 phiset,
                 target=poly,
                 signal_operator="Wx",
-                sym_qsp=True,
                 **plot_args)
 
     elif args.cmd == "polyfunc":
