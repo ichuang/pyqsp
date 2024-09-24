@@ -378,6 +378,12 @@ Examples:
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
     pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
 
+    # Note new techniques using --method sym_qsp, and sym_qsp_func.
+
+    pyqsp --plot --seqargs=10,0.1 --method sym_qsp hamsim
+    pyqsp --plot --seqargs=19,10 --method sym_qsp poly_sign
+    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 sym_qsp_func
+
 positional arguments:
   cmd                   command
 
@@ -413,7 +419,7 @@ optional arguments:
                         number of points to use in plotting
   --tolerance TOLERANCE
                         error tolerance for phase angle optimizer
-  --method METHOD       method to use for qsp phase angle generation, either 'laurent' (default) or 'tf' (for tensorflow + keras)
+  --method METHOD       method to use for qsp phase angle generation, one among 'laurent' (default), 'tf' (for tensorflow + keras), of 'sym_qsp' for symmetric quantum signal processing
   --plot-qsp-model      show qsp_model version of response plot instead of the default plot
   --phiset PHISET       comma delimited list of QSP phase angles, to be used in the 'response' command
   --nepochs NEPOCHS     number of epochs to use in tensorflow optimization

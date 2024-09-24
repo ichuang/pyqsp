@@ -51,41 +51,13 @@ Examples:
     pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot poly2angles
     pyqsp --plot --tau 10 hamsim
 
-    # Note that the above argument doesn't work; and below we've included the method explictly.
-
-    # Intended argument to add.
-    pyqsp --plot --seqargs=10,0.1 --method laurent hamsim
+    # Note examples using the new sym_qsp method
     pyqsp --plot --seqargs=10,0.1 --method sym_qsp hamsim
-
-    pyqsp --plot --seqargs=19,10 poly_sign
     pyqsp --plot --seqargs=19,10 --method sym_qsp poly_sign
-
-    pyqsp --plot --seqargs=18,10 poly_thresh
-    pyqsp --plot --seqargs=100,40 --method sym_qsp poly_thresh
-
     pyqsp --plot --seqargs=19,0.25 --method sym_qsp poly_linear_amp
-
     pyqsp --plot --seqargs=68,20 --method sym_qsp poly_phase
-
-    pyqsp --plot --seqargs 20,0.3 --method sym_qsp efilter
-
-    pyqsp --plot --seqargs=20,3.5 --method sym_qsp gibbs
-
     pyqsp --plot --seqargs=20,0.6,15 --method sym_qsp relu
-
-    pyqsp --return-angles --poly=-1,0,2 --plot poly2angles
-
     pyqsp --plot --seqargs=3,0.1 --method sym_qsp invert
-
-    pyqsp --plot --seqargs=80,0.1,3,0.5 --method sym_qsp poly_rect
-
-    pyqsp --plot --seqargs=6,2,3,0.1 --method sym_qsp invert_rect
-
-    Need to address general use of polyargs, polyname, etc. Note that these are being called separately from the shortand above? Basically we need to check that chebyshev arguments are being passed through.
-
-    require handling poly2angles and fpssearch, as well as whatever else might be in the test folder. We also need to update the references made in the preamble of the main file, and determine if there are more explicit ways to specify positional arguments.
-
-    # End inclusions.
 
     pyqsp --plot --tolerance=0.01 --seqargs 3 invert
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
