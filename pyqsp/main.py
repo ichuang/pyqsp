@@ -643,6 +643,7 @@ Examples:
             response.PlotQSPResponse(
                 phiset,
                 target=poly,
+                title=args.func, # Support to show function plotted.
                 signal_operator="Wx",
                 **plot_args)
 
