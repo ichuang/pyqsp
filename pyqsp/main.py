@@ -269,7 +269,11 @@ Examples:
             sys.exit(0)
         if isinstance(coefs, str):
             coefs = list(map(float, coefs.split(",")))
-        print(f"[pyqsp] polynomial coefficients={coefs}")
+
+        basis = "Chebyshev" if is_sym_qsp else "Monomial"
+        print(f"[pyqsp] {basis} polynomial coefficients={coefs}")
+        print(f"[CHECK] Coefficients expected in {basis} basis.")
+
         if is_sym_qsp:
             (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
             coefs, **qspp_args)
@@ -508,9 +512,12 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
+                # target=lambda x: scale *
+                # (1 - (np.sign(x + 1 / args.seqargs[2]) -
+                #      np.sign(x - 1 / args.seqargs[2])) / 2),
                 target=lambda x: scale *
-                (1 - (np.sign(x + 1 / args.seqargs[2]) -
-                     np.sign(x - 1 / args.seqargs[2])) / 2),
+                (1 - (np.sign(x + 3 / (4 * args.seqargs[2])) -
+                     np.sign(x - 3 / (4 * args.seqargs[2]))) / 2),
                 signal_operator="Wx",
                 title="Rect Function",
                 **plot_args)
@@ -564,11 +571,12 @@ Examples:
             print(
                 f'Known polynomial generators: {",".join(polynomial_generators.keys())}')
             return
+        # If one uses the poly argument, rather than a specific generator, then the name fed specifies the generator, and arguments fed are not seqargs but polyargs (which are in many cases the same format).
         pg = polynomial_generators[args.polyname]()
         if not args.polyargs:
             print(pg.help())
             return
-        pcoefs = pg.generate(*args.polyargs, chebyshev_basis=is_sym_qsp)
+        pcoefs, scale = pg.generate(*args.polyargs, return_scale=True, chebyshev_basis=is_sym_qsp)
         print(f"[pyqsp] polynomial coefs = {pcoefs}")
         if is_sym_qsp:
             (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(

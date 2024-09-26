@@ -246,7 +246,7 @@ def newton_solver(coef, parity, **kwargs):
     if 'maxiter' in kwargs:
         maxiter = kwargs['maxiter']
     else:
-        maxiter = 1e5
+        maxiter = 1e3
 
     # Currently deprecated, but real and imaginary parts can be alternately targeted by flipping overall sign of coef.
     # # targetPre = True
@@ -261,6 +261,8 @@ def newton_solver(coef, parity, **kwargs):
     qsp_seq_opt = SymmetricQSPProtocol(reduced_phases=reduced_phases, parity=parity)
     curr_iter = 0
 
+    print(f"[sym_qsp] Iterative optimization to err {crit:.3e} or max_iter {int(maxiter)}.")
+
     # Start the main loop
     while True:
         # Recover evaluated differences and Jacobian.
@@ -269,7 +271,8 @@ def newton_solver(coef, parity, **kwargs):
         err = np.linalg.norm(res, ord=1) # Take the one norm error.
         curr_iter = curr_iter + 1
 
-        print("iter: %s --- err: %.4g"%(str(curr_iter).zfill(3), err))
+        # Format string to show running error computation
+        print(f"iter: {curr_iter:03} --- err: {err:.3e}")
 
         # Invert Jacobian at evaluated point to determine direction of next step.
         lin_sol = np.linalg.solve(DFval, res)
@@ -278,10 +281,10 @@ def newton_solver(coef, parity, **kwargs):
 
         # Break conditions (beyond maxiter or within err.)
         if curr_iter >= maxiter:
-            print("Max iteration reached.\n")
+            print("[sym_qsp] Max iteration reached.")
             break
         if err < crit:
-            print("Stop criteria satisfied.\n")
+            print("[sym_qsp] Stop criteria satisfied.")
             break
 
     return (qsp_seq_opt.reduced_phases, err, curr_iter, qsp_seq_opt)

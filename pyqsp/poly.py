@@ -263,7 +263,7 @@ class PolyOneOverX(PolyGenerator):
                 pcoefs = g.coef
             else:
                 pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
-            print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
+            # print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -483,7 +483,7 @@ class PolySign(PolyTaylorSeries):
         pcoefs = the_poly.coef
         # force even coefficients to be zero, since the polynomial must be odd
         pcoefs[0::2] = 0
-        if ensure_bounded and return_scale:
+        if (ensure_bounded and return_scale) or chebyshev_basis:
             return pcoefs, scale
         else:
             return TargetPolynomial(pcoefs, target=lambda x: np.sign(x))
@@ -639,6 +639,10 @@ class PolyRect(PolyTaylorSeries):
             return 1 + (erf_delta(x - 3 / (4 * kappa)) +
                         erf_delta(-x - 3 / (4 * kappa))) / 2
 
+        # target=lambda x: scale *
+        # (1 - (np.sign(x + 1 / args.seqargs[2])
+        # - np.sign(x - 1 / args.seqargs[2])) / 2)
+
         if ensure_bounded and return_scale:
             the_poly, scale = self.taylor_series(
                 rect,
@@ -770,7 +774,7 @@ class PolyGibbs(PolyTaylorSeries):
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
         pcoefs[1::2] = 0
-        if ensure_bounded and return_scale:
+        if (ensure_bounded and return_scale) or chebyshev_basis:
             return pcoefs, scale
         else:
             return TargetPolynomial(pcoefs, target=lambda x: gibbs(x))
