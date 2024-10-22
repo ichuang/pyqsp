@@ -245,7 +245,7 @@ class PolyOneOverX(PolyGenerator):
         g = np.polynomial.chebyshev.Chebyshev(div_result)
 
         if ensure_bounded:
-            # TODO: determine the meaning of this minimization.
+            # Given explicit form, the one-sided optimization is enough; compare to Taylor series setting.
             res = scipy.optimize.minimize(g, (-0.1,), bounds=[(-0.8, 0.8)])
             pmin = res.x
             print(
@@ -344,7 +344,7 @@ class PolyTaylorSeries(PolyGenerator):
             ensure_bounded=True,
             return_scale=False,
             npts=100,
-            max_scale=0.5,
+            max_scale=0.9,
             chebyshev_basis=False,
             cheb_samples=20):
         '''
@@ -374,14 +374,15 @@ class PolyTaylorSeries(PolyGenerator):
                 # Minimize polynomial and negative of polynomial to find overall bound on absolute value.
                 res_1 = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
                 res_2 = scipy.optimize.minimize(cheb_poly, (0.1,), bounds=[(-1, 1)])
-                pmax_1 = res_1.x
-                pmax_2 = res_2.x
+                pmax_1 = res_1.x[0]
+                pmax_2 = res_2.x[0]
 
-                # Generate arrays and max indices to report findings.
+                # Compute the smaller of the two rescaling values.
                 arg_array = np.array([pmax_1, pmax_2])
-                max_index = np.argmin([1 / abs(cheb_poly(pmax_1)), 1 / abs(cheb_poly(pmax_2))])
-                scale = np.min([1 / abs(cheb_poly(pmax_1)), 1 / abs(cheb_poly(pmax_2))])
+                max_index = np.argmax([abs(cheb_poly(pmax_1)), abs(cheb_poly(pmax_2))])
+                scale = 1.0/np.max([abs(cheb_poly(pmax_1)), abs(cheb_poly(pmax_2))])
 
+                # Compute overal rescaling factor and apply to poly approx.
                 scale = scale * max_scale
                 print(f"[PolyTaylorSeries] (Cheb) max {scale} is at {arg_array[max_index]}: normalizing")
                 cheb_poly = scale * cheb_poly
@@ -389,7 +390,7 @@ class PolyTaylorSeries(PolyGenerator):
             # Determine average error on interval and print.
             adat = np.linspace(-1, 1, npts)
             pdat = cheb_poly(adat)
-            edat = func(adat)
+            edat = scale * func(adat) # Compare to rescaled function.
             avg_err = abs(edat - pdat).mean()
             print(
                 f"[PolyTaylorSeries] (Cheb) average error = {avg_err} in the domain [-1, 1] using degree {degree}")
@@ -402,12 +403,10 @@ class PolyTaylorSeries(PolyGenerator):
         else:
             the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
             the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
-            if ensure_bounded:
-                # Deprecated (and incorrect) maximum finding method.
-                # res = scipy.optimize.minimize(-the_poly, (0.1,), bounds=[(-1, 1)])
-                # pmax = res.x
-                # scale = 1 / abs(the_poly(pmax))
+            scale = 1.0 # Binding variable.
 
+            if ensure_bounded:
+                # Compute minima of function and its negation.
                 res_1 = scipy.optimize.minimize(-1*the_poly, (0.1,), bounds=[(-1, 1)])
                 res_2 = scipy.optimize.minimize(the_poly, (0.1,), bounds=[(-1, 1)])
                 pmax_1 = res_1.x
@@ -415,8 +414,8 @@ class PolyTaylorSeries(PolyGenerator):
 
                 # Generate arrays and max indices to report findings.
                 arg_array = np.array([pmax_1, pmax_2])
-                max_index = np.argmin([1 / abs(the_poly(pmax_1)), 1 / abs(the_poly(pmax_2))])
-                scale = np.min([1 / abs(the_poly(pmax_1)), 1 / abs(the_poly(pmax_2))])
+                max_index = np.argmax([abs(the_poly(pmax_1)), abs(the_poly(pmax_2))])
+                scale = 1.0/np.max([abs(the_poly(pmax_1)), abs(the_poly(pmax_2))])
 
                 # use this for the new QuantumSignalProcessingWxPhases code, which
                 # employs np.polynomial.chebyshev.poly2cheb(pcoefs)
@@ -425,7 +424,7 @@ class PolyTaylorSeries(PolyGenerator):
                 the_poly = scale * the_poly
             adat = np.linspace(-1, 1, npts)
             pdat = the_poly(adat)
-            edat = func(adat)
+            edat = scale * func(adat) # Compare to scaled function.
             avg_err = abs(edat - pdat).mean()
             print(
                 f"[PolyTaylorSeries] average error = {avg_err} in the domain [-1, 1] using degree {degree}")
@@ -685,7 +684,7 @@ class PolyLinearAmplification(PolyTaylorSeries):
                 return_scale=False,
                 chebyshev_basis=False,
                 cheb_samples=20,
-                max_scale=1.0):
+                max_scale=0.9):
         '''
         Approximation to the truncated linear function described in Low's thesis (2017)
         '''
@@ -743,7 +742,7 @@ class PolyGibbs(PolyTaylorSeries):
                 return_scale=False,
                 chebyshev_basis=False,
                 cheb_samples=20,
-                max_scale=1.0):
+                max_scale=0.9):
         degree = int(degree)
         print(f"[pyqsp.poly.PolyGibbs] degree={degree}, beta={beta}")
         if (degree % 2):
@@ -852,7 +851,7 @@ class PolyRelu(PolyTaylorSeries):
             self,
             degree=6,
             delta=0.2,
-            max_scale=0.99,
+            max_scale=0.9,
             ensure_bounded=True,
             return_scale=False,
             chebyshev_basis=False,
@@ -898,7 +897,7 @@ class PolySoftPlus(PolyTaylorSeries):
             degree=6,
             delta=0.2,
             kappa=1,
-            max_scale=0.90,
+            max_scale=0.9,
             ensure_bounded=True,
             return_scale=False,
             chebyshev_basis=False,

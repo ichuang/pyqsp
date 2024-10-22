@@ -3,6 +3,8 @@ import unittest
 
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.optimize
+import scipy.special
 
 import pyqsp
 from pyqsp import sym_qsp_opt, poly
@@ -216,3 +218,58 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         # Take the one norm of the difference and assure small.
         diff = np.linalg.norm(np.abs(exp_value - evaluation), ord=1)
         assert (diff < 10-6)
+
+    def test_sym_qsp_sign_norm_violation(self):
+        # Test inserted to investigate problems when finding the extrema of polynomial approximations to the sign function over the interval [-1,1] as determined by the following command-line call
+        # pyqsp --plot --func "np.sign(x)" --polydeg 151 sym_qsp_func
+        #
+        # Running this test individually and verbosely can be done with:
+        # pytest pyqsp/test/test_sym_qsp_optimization.py -s -k 'test_sym_qsp_sign_norm_violation'
+        #
+        # As it stands, this optimization reveals that the naïve, scipy-based methods for extrema calculation over the interval fail for even modestly high-degree approximations to the sign function. This causes a failure of both the `sym_qsp` iterative and `laurent` completion methods if fed to them, and (incorrectly) does not throw errors.
+        degree = 151
+        test_fun = lambda x: np.sign(x)
+
+        # Instantiate Taylor series object and optimize toward test function.
+        poly_obj = poly.PolyTaylorSeries()
+        cheb_poly, scale = poly_obj.taylor_series(func=test_fun, degree=degree, chebyshev_basis=True, return_scale=True)
+
+        # Compute extremal properties of rescaled test function; find minimum of function and its negation to extremize absolute value over interval.
+        res_1 = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
+        res_2 = scipy.optimize.minimize(cheb_poly, (0.1,), bounds=[(-1, 1)])
+        pmax_1 = res_1.x[0]
+        pmax_2 = res_2.x[0]
+        max_abs_1 = np.abs(cheb_poly(pmax_1))
+        max_abs_2 = np.abs(cheb_poly(pmax_2))
+
+        # Note that the code below seems to suggest that the polynomial approximation `cheb_poly` has had its maximum rescaled to 0.9, as the value of `max_abs_1` suggests. Plainly, however, we see that plotting the resulting function shows that the rescaled polynomial exceeds norm 1 near the origin, indicating failure of the original optimization.
+        #
+        # In fact, we see that the initial location for optimization (0.1) is directly next to the local minimum at 0.103 which has been rescaled to the default `scale=0.9` parameter supplied to the Taylor series function.
+
+        # Print the locations and evaluations of the rescaled function's extrema.
+        print("Optimization results:")
+        print(f"Max arg 1: {pmax_1}")
+        print(f"Max arg 2: {pmax_2}")
+        print(f"Max val 1: {max_abs_1}")
+        print(f"Max val 2: {max_abs_2}")
+
+        # Plot the approximating polynomial, rescaled target function, and computed extrema to show clear improper optimization.
+        npts = 500
+        adat = np.linspace(-1, 1, npts)
+        pdat_0 = cheb_poly(adat)
+        pdat_1 = np.array(list(map(lambda x: max_abs_1, adat)))
+        pdat_2 = np.array(list(map(lambda x: max_abs_2, adat)))
+        pdat_3 = np.array(list(map(lambda x: 0.9*test_fun(x), adat)))
+
+        plt.plot(adat, pdat_3, 'k--', alpha=0.4)
+        plt.plot(adat, pdat_0)
+        plt.plot(adat, pdat_1)
+        plt.plot(adat, pdat_2)
+        plt.plot(adat, -1*pdat_1)
+        plt.plot(adat, -1*pdat_2)
+
+        plt.ylim([-1.1, 1.1])
+        ax = plt.gca()
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        # plt.show() # Comment out if desire to run all tests quietly.

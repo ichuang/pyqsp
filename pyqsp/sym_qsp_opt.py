@@ -240,9 +240,10 @@ def newton_solver(coef, parity, **kwargs):
 
     if 'crit' in kwargs:
         crit = kwargs['crit']
+        # crit = 5e-2 # TODO: remove after testing.
     else:
+        # crit = 5e-2 # TODO: replace with crit = 1e-12.
         crit = 1e-12
-
     if 'maxiter' in kwargs:
         maxiter = kwargs['maxiter']
     else:
