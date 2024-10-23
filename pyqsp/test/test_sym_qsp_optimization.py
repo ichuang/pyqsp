@@ -273,3 +273,16 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         # plt.show() # Comment out if desire to run all tests quietly.
+
+        # Changing the initial point (sensitive) shows norm violation.
+        ext_0 = scipy.optimize.minimize(-1*cheb_poly, (0.02,), bounds=[(0, 1)])
+        ext_1 = scipy.optimize.minimize(cheb_poly, (0.02,), bounds=[(0, 1)])
+        arg_0 = ext_0.x[0]
+        arg_1 = ext_1.x[0]
+        max_val_0 = np.abs(cheb_poly(arg_0))
+        max_val_1 = np.abs(cheb_poly(arg_1))
+
+        print(f"Alt max arg 0: {arg_0}")
+        print(f"Alt max arg 1: {arg_1}")
+        print(f"Alt max val 0: {max_val_0}")
+        print(f"Alt max val 1: {max_val_1}")

@@ -3,6 +3,8 @@ import scipy.optimize
 import scipy.special
 from scipy.interpolate import approximate_taylor_polynomial
 
+import matplotlib.pyplot as plt
+
 # -----------------------------------------------------------------------------
 
 class StringPolynomial:
@@ -257,6 +259,16 @@ class PolyOneOverX(PolyGenerator):
                 scale = scale * 0.5
                 print("[PolyOneOverX] bounding to 0.5")
             g = scale * g
+
+        # # Internal plotting for debugging purposes.
+        # npts = 500
+        # adat = np.linspace(-1, 1, npts)
+        # plt.plot(adat, g(adat))
+        # plt.ylim([-1.1, 1.1])
+        # ax = plt.gca()
+        # ax.spines['top'].set_visible(False)
+        # ax.spines['right'].set_visible(False)
+        # plt.show()
 
         if return_coef:
             if chebyshev_basis:

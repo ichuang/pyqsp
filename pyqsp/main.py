@@ -40,26 +40,30 @@ Commands:
     invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
-    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf)
-    sym_qsp_func    - generate QSP phase angles for the specified --func and --polydeg using symmetric QSP iterative method. Note that the desired polynomial is automatically scaled, and appears as the imaginary part of the top-left unitary matrix element in the standard basis.
+    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf). Note that the function appears as the top left element of the resulting unitary.
+    sym_qsp_func    - generate QSP phase angles for the specified --func and --polydeg using symmetric QSP iterative method. Note that the desired polynomial is automatically rescaled (unless a scalar --scale less than one is specified), and appears as the imaginary part of the top-left unitary matrix element in the standard basis.
     response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
 
 Examples:
 
+    # Simple examples for determining QSP phases from poly coefs.
     pyqsp --poly=-1,0,2 poly2angles
     pyqsp --poly=-1,0,2 --plot poly2angles
     pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot poly2angles
-    pyqsp --plot --tau 10 hamsim
 
-    # Note examples using the new sym_qsp method
+    # Note examples using the 'sym_qsp' method.
     pyqsp --plot --seqargs=10,0.1 --method sym_qsp hamsim
     pyqsp --plot --seqargs=19,10 --method sym_qsp poly_sign
     pyqsp --plot --seqargs=19,0.25 --method sym_qsp poly_linear_amp
     pyqsp --plot --seqargs=68,20 --method sym_qsp poly_phase
     pyqsp --plot --seqargs=20,0.6,15 --method sym_qsp relu
     pyqsp --plot --seqargs=3,0.1 --method sym_qsp invert
+    pyqsp --plot --func "np.sign(x)" --polydeg 151 --scale 0.5 sym_qsp_func
+    pyqsp --plot --func "np.sin(10*x)" --polydeg 31 sym_qsp_func
+    pyqsp --plot --func "np.sign(x - 0.5) + np.sign(-1*x - 0.5)" --polydeg 151 --scale 0.9 sym_qsp_func
 
-    pyqsp --plot --tolerance=0.01 --seqargs 3 invert
+    # Note older examples using the 'laurent' method.
+    pyqsp --plot --tolerance=0.1 --seqargs 2 invert
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles
@@ -67,6 +71,8 @@ Examples:
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
+
+    # Note older examples using the deprecated 'tf' method.
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
@@ -132,15 +138,21 @@ Examples:
         help="for tf method, degree of polynomial to use in generating approximation of specified function (see --func)",
         type=int)
     parser.add_argument(
-        "--tau",
-        help="time value for Hamiltonian simulation (hamsim command)",
+        "--scale",
+        help="Within 'sym_qsp' method, specifies a float to which the extreme point of the approximating polynomial is rescaled in absolute value. For highly oscillatory functions, try decreasing this parameter toward zero.",
         type=float,
-        default=100)
-    parser.add_argument(
-        "--epsilon",
-        help="parameter for polynomial approximation to 1/a, giving bound on error",
-        type=float,
-        default=0.3)
+        default=0.9)
+    # The arguments below have been deprecated and subsumed into --seqargs.
+    # parser.add_argument(
+    #     "--tau",
+    #     help="time value for Hamiltonian simulation (hamsim command)",
+    #     type=float,
+    #     default=100)
+    # parser.add_argument(
+    #     "--epsilon",
+    #     help="parameter for polynomial approximation to 1/a, giving bound on error",
+    #     type=float,
+    #     default=0.3)
     parser.add_argument(
         "--seqname",
         help="name of QSP phase angle sequence to generate using the 'angles' command, e.g. fpsearch",
@@ -207,7 +219,7 @@ Examples:
         default=0.1)
     parser.add_argument(
         "--method",
-        help="method to use for qsp phase angle generation, either 'laurent' (default) or 'tf' (for tensorflow + keras)",
+        help="method to use for qsp phase angle generation, either 'laurent' (default), 'sym_qsp' for iterative methods involving symmetric QSP, or 'tf' (for tensorflow + keras)",
         type=str,
         default='laurent')
     parser.add_argument(
@@ -622,10 +634,20 @@ Examples:
             raise ValueError(
                 f"Invalid function specifciation, failed to evaluate at x=0.5, err={err}")
 
+        # Note that the polynomial is renormalized once according to its maximum magnitude (both up and down), and then again according to specified scale in a multiplicative way. We ought to be able to specify this, or at least return the metadata.
+
+        # TODO: new addition for manual rescaling within sym_qsp method.
+        if args.scale:
+            if np.abs(args.scale >= 1) or (args.scale <= 0):
+                raise ValueError(
+                    f"Invalid scale specification (scale = {args.scale}); must be positive and less than 1.")
+            else:
+                max_scale = args.scale
+        else:
+            max_scale = 0.9
+
         # Generate anonymous function evaluated at x.
         func = lambda x: eval(args.func, globals(), {'x': x})
-
-        # Note that the polynomial is renormalized once according to its maximum magnitude (both up and down), and then again according to specified scale in a multiplicative way. We ought to be able to specify this, or at least return the metadata.
 
         # Note that QuantumSignalProcessingPhases will determine if the parity is not definite, allowing us to use below method raw.
         base_poly = PolyTaylorSeries()
@@ -634,7 +656,7 @@ Examples:
             degree=args.polydeg,
             ensure_bounded=True,
             return_scale=True,
-            max_scale=0.9,
+            max_scale=max_scale,
             chebyshev_basis=is_sym_qsp,
             cheb_samples=2*args.polydeg) # Set larger than polydeg to prevent aliasing.
 
@@ -646,11 +668,14 @@ Examples:
             poly,
             **qspp_args)
 
+        # Given polynomial approximation scale factor, generate new possibly rescaled target function for plotting purposes.
+        plot_func = lambda x: scale * eval(args.func, globals(), {'x': x})
+
         # Finally, if plotting called for, plot while passing 'sym_qsp' flag.
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
-                target=poly,
+                target=plot_func, # Plot against ideal function, not poly approx
                 title=args.func, # Support to show function plotted.
                 signal_operator="Wx",
                 **plot_args)

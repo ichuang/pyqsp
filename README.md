@@ -337,16 +337,15 @@ This as well as many other polynomial families given in `pyqsp/poly.py` allow fo
 A wide selection of the functionalities provided by this package can also be run from the command line using a series of arguments and flags. We detail these below, noting that there exist new methods under active development not covered here, though these changes will be backwards compatible to the methods given below.
 
 ```bash
-usage: pyqsp [-h] [-v] [-o OUTPUT] [--signal_operator SIGNAL_OPERATOR] [--plot] [--hide-plot] [--return-angles] [--poly POLY] [--func FUNC]
-             [--polydeg POLYDEG] [--tau TAU] [--epsilon EPSILON] [--seqname SEQNAME] [--seqargs SEQARGS] [--polyname POLYNAME] [--polyargs POLYARGS]
-             [--plot-magnitude] [--plot-probability] [--plot-real-only] [--title TITLE] [--measurement MEASUREMENT] [--output-json]
-             [--plot-positive-only] [--plot-tight-y] [--plot-npts PLOT_NPTS] [--tolerance TOLERANCE] [--method METHOD] [--plot-qsp-model]
-             [--phiset PHISET] [--nepochs NEPOCHS] [--npts-theta NPTS_THETA]
+usage: pyqsp [-h] [-v] [-o OUTPUT] [--signal_operator SIGNAL_OPERATOR] [--plot] [--hide-plot] [--return-angles] [--poly POLY] [--func FUNC] [--polydeg POLYDEG] [--scale SCALE]
+             [--seqname SEQNAME] [--seqargs SEQARGS] [--polyname POLYNAME] [--polyargs POLYARGS] [--plot-magnitude] [--plot-probability] [--plot-real-only] [--title TITLE]
+             [--measurement MEASUREMENT] [--output-json] [--plot-positive-only] [--plot-tight-y] [--plot-npts PLOT_NPTS] [--tolerance TOLERANCE] [--method METHOD]
+             [--plot-qsp-model] [--phiset PHISET] [--nepochs NEPOCHS] [--npts-theta NPTS_THETA]
              cmd
 
 usage: pyqsp [options] cmd
 
-Version: 0.1.4
+Version: 0.1.6
 Commands:
 
     poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
@@ -354,16 +353,30 @@ Commands:
     invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
-    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf)
+    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf). Note that the function appears as the top left element of the resulting unitary.
+    sym_qsp_func    - generate QSP phase angles for the specified --func and --polydeg using symmetric QSP iterative method. Note that the desired polynomial is automatically rescaled (unless a scalar --scale less than one is specified), and appears as the imaginary part of the top-left unitary matrix element in the standard basis.
     response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
 
 Examples:
 
+    # Simple examples for determining QSP phases from poly coefs.
     pyqsp --poly=-1,0,2 poly2angles
     pyqsp --poly=-1,0,2 --plot poly2angles
-    pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot  poly2angles
-    pyqsp --plot --tau 10 hamsim
-    pyqsp --plot --tolerance=0.01 --seqargs 3 invert
+    pyqsp --signal_operator=Wz --poly=0,0,0,1 --plot poly2angles
+
+    # Note examples using the 'sym_qsp' method.
+    pyqsp --plot --seqargs=10,0.1 --method sym_qsp hamsim
+    pyqsp --plot --seqargs=19,10 --method sym_qsp poly_sign
+    pyqsp --plot --seqargs=19,0.25 --method sym_qsp poly_linear_amp
+    pyqsp --plot --seqargs=68,20 --method sym_qsp poly_phase
+    pyqsp --plot --seqargs=20,0.6,15 --method sym_qsp relu
+    pyqsp --plot --seqargs=3,0.1 --method sym_qsp invert
+    pyqsp --plot --func "np.sign(x)" --polydeg 151 --scale 0.5 sym_qsp_func
+    pyqsp --plot --func "np.sin(10*x)" --polydeg 31 sym_qsp_func
+    pyqsp --plot --func "np.sign(x - 0.5) + np.sign(-1*x - 0.5)" --polydeg 151 --scale 0.9 sym_qsp_func
+
+    # Note older examples using the 'laurent' method.
+    pyqsp --plot --tolerance=0.1 --seqargs 2 invert
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles
@@ -371,22 +384,18 @@ Examples:
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign poly
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
+
+    # Note older examples using the deprecated 'tf' method.
     pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
     pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
     pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
 
-    # Note new techniques using --method sym_qsp, and sym_qsp_func.
-
-    pyqsp --plot --seqargs=10,0.1 --method sym_qsp hamsim
-    pyqsp --plot --seqargs=19,10 --method sym_qsp poly_sign
-    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 sym_qsp_func
-
 positional arguments:
   cmd                   command
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -v, --verbose         increase output verbosity (add more -v to increase versbosity)
   -o OUTPUT, --output OUTPUT
@@ -396,14 +405,13 @@ optional arguments:
   --plot                generate QSP response plot
   --hide-plot           do not show plot (but it may be saved to a file if --output is specified)
   --return-angles       return QSP phase angles to caller
-  --poly POLY           comma delimited list of floating-point coeficients for polynomial, as const, a, a^2, ...
+  --poly POLY           comma delimited list of floating-point coefficients for polynomial, as const, a, a^2, ...
   --func FUNC           for tf method, numpy expression specifying ideal function (of x) to be approximated by a polynomial, e.g. 'np.cos(3 * x)'
   --polydeg POLYDEG     for tf method, degree of polynomial to use in generating approximation of specified function (see --func)
-  --tau TAU             time value for Hamiltonian simulation (hamsim command)
-  --epsilon EPSILON     parameter for polynomial approximation to 1/a, giving bound on error
+  --scale SCALE         Within 'sym_qsp' method, specifies a float to which the extreme point of the approximating polynomial is rescaled in absolute value. For highly oscillatory functions, try decreasing this parameter toward zero.
   --seqname SEQNAME     name of QSP phase angle sequence to generate using the 'angles' command, e.g. fpsearch
   --seqargs SEQARGS     arguments to the phase angles generated by seqname (e.g. length,delta,gamma for fpsearch)
-  --polyname POLYNAME   name of polynomial generate using the 'poly' command, e.g. 'sign'
+  --polyname POLYNAME   name of polynomial generated using the 'poly' command, e.g. 'sign'
   --polyargs POLYARGS   arguments to the polynomial generated by poly (e.g. degree,kappa for 'sign')
   --plot-magnitude      when plotting only show magnitude, instead of separate imaginary and real components
   --plot-probability    when plotting only show squared magnitude, instead of separate imaginary and real components
@@ -418,13 +426,12 @@ optional arguments:
                         number of points to use in plotting
   --tolerance TOLERANCE
                         error tolerance for phase angle optimizer
-  --method METHOD       method to use for qsp phase angle generation, one among 'laurent' (default), 'tf' (for tensorflow + keras), of 'sym_qsp' for symmetric quantum signal processing
+  --method METHOD       method to use for qsp phase angle generation, either 'laurent' (default), 'sym_qsp' for iterative methods involving symmetric QSP, or 'tf' (for tensorflow + keras)
   --plot-qsp-model      show qsp_model version of response plot instead of the default plot
   --phiset PHISET       comma delimited list of QSP phase angles, to be used in the 'response' command
   --nepochs NEPOCHS     number of epochs to use in tensorflow optimization
   --npts-theta NPTS_THETA
-                        number of discretized values of theta to use in tensorflow optimization
-
+                        number of discretized values of theta to use in TensorFlow optimization
 ```
 
 <!-- *TODO: INCLUDE A SORT OF GALLERY OF COMMON EXAMPLES, ALONG WITH EXPECTED PARAMETERS AND OUTPUT PLOTS, ETC.* -->

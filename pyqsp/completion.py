@@ -127,7 +127,9 @@ def _fg_completion(F, seed):
     # Find all the roots of Id - (p * ~p) that lies within the upper unit
     # circle.
     poly = (Id - (F * ~F)).coefs
-    roots = np.roots(poly)
+    converted_poly = np.polynomial.Polynomial(poly)
+    roots = converted_poly.roots()
+
     # poly is a real, self-inverse Laurent polynomial with no root on the unit circle. All real roots come in reciprocal pairs,
     # and all complex roots come in quadruples (r, r*, 1/r, 1/r*).
     # For each pair of real roots, select the one within the unit circle.
@@ -135,13 +137,24 @@ def _fg_completion(F, seed):
     # circle.
     imag_roots = []
     real_roots = []
+    # TODO: print("ROOTS")
     for i in roots:
-        if (np.abs(i) < 1) and (np.imag(i) > -1e-8):
+        if (np.abs(i) < 1) and (np.imag(i) > -1e-14):
+            # TODO: print(f"ROOT: {i}")
             if np.imag(i) == 0.:
                 real_roots.append(np.real(i))
             else:
                 imag_roots.append(i)
+
+    # TODO: print(len(roots))
+    # TODO: print(len(imag_roots))
+    # TODO: print(len(real_roots))
+
     norm = poly[-1]
+
+    """
+    As it stands, the root randomization below seems to have a large and unstable effect on completion.
+    """
 
     # Randomly choose whether to pick the real root (the pair of complex roots)
     #   inside or outside the unit circle.
@@ -152,11 +165,11 @@ def _fg_completion(F, seed):
     if seed is None:
         seed = np.random.randint(2, size=len(imag_roots) + len(real_roots))
     for i, root in enumerate(imag_roots):
-        if seed[i]:
+        if 1: # seed[i]:
             root = 1 / root
         lst.append(LPoly([np.abs(root) ** 2, -2 * np.real(root), 1]))
     for i, root in enumerate(real_roots):
-        if seed[i + len(imag_roots)]:
+        if 1: # seed[i + len(imag_roots)]:
             root = 1 / root
         lst.append(LPoly([-root, 1]))
 
@@ -167,6 +180,9 @@ def _fg_completion(F, seed):
     coef_fft = np.exp(np.sum(coef_mat, axis=0))
     gcoefs = np.real(np.fft.fft(coef_fft, 1 << pp))[
         :degree + 1] / (1 << pp)
+
+    # TODO: print(f"NORM: {norm}")
+    # TODO: print(f"GCOEF: {gcoefs[0]}") # Growing too large at high degree.
 
     # Normalization
     G = LPoly(gcoefs * np.sqrt(norm / gcoefs[0]), -len(gcoefs) + 1)
