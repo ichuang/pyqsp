@@ -357,6 +357,9 @@ Examples:
 
     elif args.cmd == "invert":
         pg = pyqsp.poly.PolyOneOverX()
+
+        # TODO: currently changed so that we always return Chebyshev coefs.
+
         pcoefs, scale = pg.generate(
             *args.seqargs,
             return_coef=True,

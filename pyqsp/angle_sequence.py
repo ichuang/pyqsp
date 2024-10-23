@@ -76,7 +76,12 @@ def poly2laurent(pcoefs):
         AngleFindingError: if pcoefs does not have definite parity.
     """
     # convert polynomial coefficients to laurent
-    ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
+
+    ### TODO: current method to bypass casting to monomial basis.
+
+    ccoefs = pcoefs
+
+    ### ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
 
     # determine parity of polynomial
     is_even = np.max(np.abs(ccoefs[0::2])) > 1e-8
@@ -130,14 +135,23 @@ def QuantumSignalProcessingPhases(
 
     # Depending on the chebyshev_basis flag, convert coefficient list if provided to Polynomial/Chebyshev object.
     if not chebyshev_basis:
+        # if isinstance(poly, np.ndarray) or isinstance(poly, list):
+        #     poly = Polynomial(poly)
+        # # For TargetPolynomial class, cast back to parent object.
+        # elif isinstance(poly, Polynomial):
+        #     poly = Polynomial(poly.coef)
+        # else:
+        #     raise ValueError(
+        #         f"Must provide coefficient list/array, or Polynomial object.")
+        ### TODO: current bypass for chebyshev basis
         if isinstance(poly, np.ndarray) or isinstance(poly, list):
-            poly = Polynomial(poly)
-        # For TargetPolynomial class, cast back to parent object.
-        elif isinstance(poly, Polynomial):
-            poly = Polynomial(poly.coef)
+            poly = Chebyshev(poly)
+        elif isinstance(poly, Chebyshev):
+            # Currently, there should be no sub-class that we have to cast from in this branch.
+            pass
         else:
             raise ValueError(
-                f"Must provide coefficient list/array, or Polynomial object.")
+                f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
     else:
         # TODO: Currently TargetPolynomial is not handled in the Chebyshev basis; we can choose to accommodate this or not.
         if isinstance(poly, np.ndarray) or isinstance(poly, list):
@@ -179,8 +193,13 @@ def QuantumSignalProcessingPhases(
         # Perform completion
         if model in {("Wx", "x"), ("Wz", "z")}:
             # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
+
+            ### Currently commented for Chebyshev bypass
+            # poly = suc * \
+            #     (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
+
             poly = suc * \
-                (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
+                 (poly + Chebyshev([0, ] * poly.degree() + [eps / 2, ]))
 
             lcoefs = poly2laurent(poly.coef)
             lalg = completion_from_root_finding(lcoefs, coef_type="F")

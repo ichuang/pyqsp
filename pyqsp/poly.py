@@ -274,7 +274,11 @@ class PolyOneOverX(PolyGenerator):
             if chebyshev_basis:
                 pcoefs = g.coef
             else:
-                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+                ### TODO: current change to check what happens for chebyshev
+
+                pcoefs = g.coef
+
+                ### pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             # print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
             if ensure_bounded and return_scale:
                 return pcoefs, scale

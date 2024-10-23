@@ -165,11 +165,11 @@ def _fg_completion(F, seed):
     if seed is None:
         seed = np.random.randint(2, size=len(imag_roots) + len(real_roots))
     for i, root in enumerate(imag_roots):
-        if 1: # seed[i]:
+        if 1: # seed[i]: # Commented out as it seems to improve performance.
             root = 1 / root
         lst.append(LPoly([np.abs(root) ** 2, -2 * np.real(root), 1]))
     for i, root in enumerate(real_roots):
-        if 1: # seed[i + len(imag_roots)]:
+        if 1: # seed[i + len(imag_roots)]: # Commented out as it seems to improve performance.
             root = 1 / root
         lst.append(LPoly([-root, 1]))
 
