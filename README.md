@@ -7,7 +7,7 @@
 
 ## Recent news and updates
 
-> :round_pushpin: The codebase has recently been updated to work internally almost entirely with polynomials in the Chebyshev, rather than the monomial, basis. This improves the numerical stability of the `laurent` method substantially, and should present almost no visible differences for an end-user. Currently the `poly2angles` command-line function is the only major input for monomial basis targets, while the main `QuantumSignalProcessingPhases` method and various helper and plotting methods all accept only Chebyshev basis inputs with internal checks. For conversion between bases, see [below](#computing-qsp-phases-even-faster-with-the-sym-qsp-method).
+> :round_pushpin: The codebase has recently been updated to work internally almost entirely with polynomials in the Chebyshev, rather than the monomial, basis. This improves the numerical stability of the `laurent` method substantially, and should present almost no visible differences for an end-user. Currently the `poly2angles` command-line function is the only major input for monomial basis targets, while the main `QuantumSignalProcessingPhases` method and various helper and plotting methods all accept only Chebyshev basis inputs with internal checks. For conversion between bases, see [below](#computing-qsp-phases-even-faster-with-the-sym_qsp-method).
 
 ## Introduction
 
