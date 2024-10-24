@@ -252,7 +252,7 @@ def main():
     freq = 16
     pg = poly.PolySign()
 
-    # TODO: note that definition of PolySign has been changed to return bare pcoefs and not TargetPolynomial
+    # Note that definition of PolySign has been changed to return bare pcoefs and not TargetPolynomial, which is now deprecated.
     pcoefs, scale = pg.generate(
             degree=161,
             delta=25,

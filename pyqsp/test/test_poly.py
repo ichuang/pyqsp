@@ -40,7 +40,7 @@ class Test_poly(unittest.TestCase):
         assert diff < 0.1
 
     # Currently silenced given instability of high-degree completion.
-    def _test_poly_one_over_x_response1(self):
+    def test_poly_one_over_x_response1(self):
         pg = pyqsp.poly.PolyOneOverX()
         pcoefs = pg.generate(3, 0.3, return_coef=True, ensure_bounded=True)
         phiset = angle_sequence.QuantumSignalProcessingPhases(

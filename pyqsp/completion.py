@@ -126,8 +126,6 @@ def _fg_completion(F, seed):
     """
     # Find all the roots of Id - (p * ~p) that lies within the upper unit
     # circle.
-    #
-    # NOTE: the updated method and the old method both fed a Chebyshev polynomial into this method; when we transform into the Laurent polynomial picture the monomial coefficients are by construction the Chebyshev coefficients of the standard picture.
     poly = (Id - (F * ~F)).coefs
     converted_poly = np.polynomial.Polynomial(poly)
     roots = converted_poly.roots()
@@ -166,6 +164,7 @@ def _fg_completion(F, seed):
     lst = []
     if seed is None:
         seed = np.random.randint(2, size=len(imag_roots) + len(real_roots))
+    # Note: root inversion randomization has been disabled given new stability-ensuring methods implemented elsewhere.
     for i, root in enumerate(imag_roots):
         if 1: # seed[i]: # Commented out as it seems to improve performance.
             root = 1 / root
@@ -182,9 +181,6 @@ def _fg_completion(F, seed):
     coef_fft = np.exp(np.sum(coef_mat, axis=0))
     gcoefs = np.real(np.fft.fft(coef_fft, 1 << pp))[
         :degree + 1] / (1 << pp)
-
-    # TODO: print(f"NORM: {norm}")
-    # TODO: print(f"GCOEF: {gcoefs[0]}") # Growing too large at high degree.
 
     # Normalization
     G = LPoly(gcoefs * np.sqrt(norm / gcoefs[0]), -len(gcoefs) + 1)

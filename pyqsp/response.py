@@ -167,10 +167,7 @@ def PlotQSPResponse(
 
         if pcoefs is not None:
             poly = pcoefs
-            ### TODO: Chebyhsve plotting bypass
-            # if not isinstance(poly, np.polynomial.Polynomial):
-            #     poly = np.polynomial.Polynomial(pcoefs)
-            # NOTE: we cast instead to the expected Chebyshev type.
+            # Note: all polynomials are expected in the Chebyshev basis, and so we case the target polynomial accordingly.
             if not isinstance(poly, np.polynomial.chebyshev.Chebyshev):
                  poly = np.polynomial.chebyshev.Chebyshev(pcoefs)
             expected = poly(adat)

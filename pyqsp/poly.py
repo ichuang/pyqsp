@@ -39,7 +39,7 @@ class StringPolynomial:
 
 # -----------------------------------------------------------------------------
 
-### NOTE: Use of this is curently deprecated, but should be further excised for proper Chebyshev bypass.
+#Note: use of this class is deprecated, but retained here for legacy applications.
 class TargetPolynomial(np.polynomial.Polynomial):
     '''
     Polynomial with ideal target
@@ -121,12 +121,12 @@ class PolyCosineTX(PolyGenerator):
             print(f"[PolyCosineTX] rescaling by {scale}.")
 
         if return_coef:
-            if chebyshev_basis:
-                pcoefs = g.coef
-            else:
-                ### TODO: new bypass for Chebyshev coefficients.
-                pcoefs = g.coef
-                # pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            pcoefs = g.coef
+            # Note that now all approximating polynomials are in the Chebyshev basis, bypassing the branching conditional below.
+            # if chebyshev_basis:
+            #     pcoefs = g.coef
+            # else:
+            #     pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -177,12 +177,12 @@ class PolySineTX(PolyGenerator):
             print(f"[PolySineTX] rescaling by {scale}.")
 
         if return_coef:
-            if chebyshev_basis:
-                pcoefs = g.coef
-            else:
-                ### TODO: new bypass for Chebyshev coefficients.
-                pcoefs = g.coef
-                # pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            pcoefs = g.coef
+            # Note: all polynomials are expected in the Chebyshev basis, bypassing the conditional below.
+            # if chebyshev_basis:
+            #     pcoefs = g.coef
+            # else:
+            #     pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -265,7 +265,7 @@ class PolyOneOverX(PolyGenerator):
                 print("[PolyOneOverX] bounding to 0.5")
             g = scale * g
 
-        # # Internal plotting for debugging purposes.
+        # TODO: Internal plotting for debugging purposes.
         # npts = 500
         # adat = np.linspace(-1, 1, npts)
         # plt.plot(adat, g(adat))
@@ -276,14 +276,12 @@ class PolyOneOverX(PolyGenerator):
         # plt.show()
 
         if return_coef:
-            if chebyshev_basis:
-                pcoefs = g.coef
-            else:
-                ### TODO: current change to check what happens for chebyshev
-
-                pcoefs = g.coef
-
-                ### pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+            pcoefs = g.coef
+            # Note: as all polynomials are now treated in the Chebyshev basis, the conditional below has been bypassed.
+            # if chebyshev_basis:
+            #     pcoefs = g.coef
+            # else:
+            #     pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             # print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
             if ensure_bounded and return_scale:
                 return pcoefs, scale
@@ -293,8 +291,6 @@ class PolyOneOverX(PolyGenerator):
         return g
 
 # -----------------------------------------------------------------------------
-
-# TODO: for the moment this is causing PolyRect to return a polynomial with NaN coefficients for half the terms and trivial coefficients for the others.
 
 class PolyOneOverXRect(PolyGenerator):
 
@@ -320,25 +316,30 @@ class PolyOneOverXRect(PolyGenerator):
         coefs_rect, scale2 = PolyRect().generate(degree,
                                                  delta,
                                                  kappa,
-                                                 epsilon, # TODO: Added to avoid scaling error.
+                                                 epsilon,
                                                  ensure_bounded,
                                                  return_scale=True,
                                                  chebyshev_basis=chebyshev_basis)
 
-        # Modified to handle Chebyshev basis for convolution.
-        #
-        ### TODO: Chebyshev bypass
-        if 0: # not chebyshev_basis:
-            poly_invert = np.polynomial.Polynomial(coefs_invert)
-            poly_rect = np.polynomial.Polynomial(coefs_rect)
 
-            pcoefs = (poly_invert * poly_rect).coef
-        else:
-            poly_invert = np.polynomial.chebyshev.Chebyshev(coefs_invert)
-            poly_rect = np.polynomial.chebyshev.Chebyshev(coefs_rect)
+        poly_invert = np.polynomial.chebyshev.Chebyshev(coefs_invert)
+        poly_rect = np.polynomial.chebyshev.Chebyshev(coefs_rect)
 
-            mult_result = np.polynomial.chebyshev.chebmul(poly_invert.coef, poly_rect.coef)
-            pcoefs = mult_result
+        mult_result = np.polynomial.chebyshev.chebmul(poly_invert.coef, poly_rect.coef)
+        pcoefs = mult_result
+
+        # Note: all polynomials are now considered in Chebyshev basis, bypassing the original conditional below.
+        # if not chebyshev_basis:
+        #     poly_invert = np.polynomial.Polynomial(coefs_invert)
+        #     poly_rect = np.polynomial.Polynomial(coefs_rect)
+
+        #     pcoefs = (poly_invert * poly_rect).coef
+        # else:
+        #     poly_invert = np.polynomial.chebyshev.Chebyshev(coefs_invert)
+        #     poly_rect = np.polynomial.chebyshev.Chebyshev(coefs_rect)
+
+        #     mult_result = np.polynomial.chebyshev.chebmul(poly_invert.coef, poly_rect.coef)
+        #     pcoefs = mult_result
 
         if return_scale:
             return pcoefs, scale1 * scale2
@@ -381,8 +382,7 @@ class PolyTaylorSeries(PolyGenerator):
             We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
         '''
 
-        ### TOOD: Current chebyshev bypass.
-
+        # Note: PolyTaylorSeries now no longer generates approximating Taylor polynomials, but only Chebyshev interpolations as contained in the assured branch indicated below. This exhibits better stability and convergence.
         if 1: # chebyshev_basis:
             cheb_samples = 2*degree # Set to prevent aliasing; note that all methods calling TaylorSeries implicitly have their cheb_samples specifications overruled here.
             # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.

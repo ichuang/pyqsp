@@ -5,6 +5,10 @@
 
 <!-- *TODO: add some symbols for the main headings, add a title that matches the title of the repo, and overall remove extraneous lists of outputs and inputs outside of a dedicated example section.* -->
 
+## Recent news and updates
+
+> :round_pushpin: The codebase has recently been updated to work internally almost entirely with polynomials in the Chebyshev, rather than the monomial, basis. This improves the numerical stability of the `laurent` method substantially, and should present almost no visible differences for an end-user. Currently the `poly2angles` command-line function is the only major input for monomial basis targets, while the main `QuantumSignalProcessingPhases` method and various helper and plotting methods all accept only Chebyshev basis inputs with internal checks. For conversion between bases, see [below](#computing-qsp-phases-even-faster-with-the-sym-qsp-method).
+
 ## Introduction
 
 [Quantum signal processing](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.118.010501) (QSP) is a flexible quantum algorithm subsuming Hamiltonian simulation, quantum linear systems solvers, amplitude amplification, and many other common quantum algorithms. Moreover, for each of these applications, QSP often exhibits state-of-the-art space and time complexity, with comparatively simple analysis. QSP and its related algorithms, e.g., [Quantum singular value transformation](https://arxiv.org/abs/1806.01838) (QSVT), using basic alternating circuit ansätze originally inspired by composite pulse techniques in NMR, permit one to *transform the spectrum of linear operators by near arbitrary polynomial functions*, with the aforementioned good numerical properties and simple analytic treatment.
@@ -263,9 +267,9 @@ Note that here, unlike in the standard case, we return the full phases (analogou
 > ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
 > pcoefs = np.polynomial.chebyshev.cheb2poly(ccoefs)
 > ```
-> For numerical stability, however, casting between `Polynomial` and `Chebyshev` objects at high degrees is not recommended.
+> For numerical stability, however, casting between `Polynomial` and `Chebyshev` objects at high degrees is not recommended. As such, recent updates have forced almost all methods to work in the Chebyshev basis by default; notably, in our convention, this will also exactly correspond to the Laurent basis up to copying some of the coefficients.
 >
-> As it stands, the `sym_qsp` method works exclusively in the Chebyshev basis, and performs internal checks on passed objects, and numpy support for Chebyshev polynomial optimization and analysis is thorough.
+> As it stands, the `sym_qsp` and most of the `laurent` method now work exclusively in the Chebyshev basis, performing internal checks on passed objects.
 
 Plotting is also supported with the `sym_qsp` method, again calling
 
@@ -348,7 +352,7 @@ usage: pyqsp [options] cmd
 Version: 0.1.6
 Commands:
 
-    poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
+    poly2angles - compute QSP phase angles for the specified polynomial (use --poly). Currently, if using the `laurent` method, this polynomial is expected in monomial basis, while for `sym_qsp` method the Chebyshev basis is expected. Eventually a new flag will be added to specify basis for use with any method.
     hamsim      - compute QSP phase angles for Hamiltonian simulation using the Jacobi-Anger expansion of exp(-i tau sin(2 theta))
     invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
@@ -376,7 +380,8 @@ Examples:
     pyqsp --plot --func "np.sign(x - 0.5) + np.sign(-1*x - 0.5)" --polydeg 151 --scale 0.9 sym_qsp_func
 
     # Note older examples using the 'laurent' method.
-    pyqsp --plot --tolerance=0.1 --seqargs 2 invert
+    pyqsp --plot --tolerance=0.1 --seqargs 4 invert
+    pyqsp --plot --seqargs=10,0.1 hamsim
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles

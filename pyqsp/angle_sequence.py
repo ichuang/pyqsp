@@ -4,17 +4,12 @@ import numpy as np
 from numpy.polynomial.polynomial import Polynomial
 from numpy.polynomial.chebyshev import Chebyshev
 
-# TODO: add a Chebyshev import here, which is flip-flopped according to the option given to the main phase-finding method; there should never be a way that we confuse these two paths, which might require entirely deprecating one.
-
 from pyqsp.completion import completion_from_root_finding
 from pyqsp.decomposition import angseq
 from pyqsp.LPoly import LAlg, LPoly
 from pyqsp.poly import StringPolynomial, TargetPolynomial
 from pyqsp.response import ComputeQSPResponse
-
 from pyqsp.sym_qsp_opt import newton_solver
-# TODO: Determine eventually why this import is not wrt pyqsp.
-# import sym_qsp_opt
 
 class AngleFindingError(Exception):
     """Raised when angle finding step fails."""
@@ -75,13 +70,9 @@ def poly2laurent(pcoefs):
     Raises:
         AngleFindingError: if pcoefs does not have definite parity.
     """
-    # convert polynomial coefficients to laurent
-
-    ### TODO: current method to bypass casting to monomial basis.
-
+    # convert polynomial coefficients to laurent; as we are already in the Chebyshev basis, this transformation is trivial
     ccoefs = pcoefs
-
-    ### ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
+    # ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs) # Conversion in old monomial convention.
 
     # determine parity of polynomial
     is_even = np.max(np.abs(ccoefs[0::2])) > 1e-8
@@ -133,36 +124,34 @@ def QuantumSignalProcessingPhases(
         ValueError: Raised if invalid model (or method) is specified.
     """
 
-    # TODO: we can remove the conditional branch below eventually, as everything should be input as Chebyshev coefficients.
-
-    # Depending on the chebyshev_basis flag, convert coefficient list if provided to Polynomial/Chebyshev object.
-    if not chebyshev_basis:
-        # if isinstance(poly, np.ndarray) or isinstance(poly, list):
-        #     poly = Polynomial(poly)
-        # # For TargetPolynomial class, cast back to parent object.
-        # elif isinstance(poly, Polynomial):
-        #     poly = Polynomial(poly.coef)
-        # else:
-        #     raise ValueError(
-        #         f"Must provide coefficient list/array, or Polynomial object.")
-        ### TODO: current bypass for chebyshev basis
-        if isinstance(poly, np.ndarray) or isinstance(poly, list):
-            poly = Chebyshev(poly)
-        elif isinstance(poly, Chebyshev):
-            pass
-        else:
-            raise ValueError(
-                f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
+    # As all inputs are assured to be in the Chebyshev basis, we check whether we have been given a Chebyshev object or an ndarray of coefficients, and cast to Chebyshev object.
+    if isinstance(poly, np.ndarray) or isinstance(poly, list):
+        poly = Chebyshev(poly)
+    elif isinstance(poly, Chebyshev):
+        pass
     else:
-        # TODO: Currently TargetPolynomial is not handled in the Chebyshev basis; we can choose to accommodate this or not.
-        if isinstance(poly, np.ndarray) or isinstance(poly, list):
-            poly = Chebyshev(poly)
-        elif isinstance(poly, Chebyshev):
-            # Currently, there should be no sub-class that we have to cast from in this branch.
-            pass
-        else:
-            raise ValueError(
-                f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
+        raise ValueError(
+            f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
+
+    # Note: as all polynomials are now guaranteed to be in the Chebyshev basis, we bypass the conditional below.
+    # if not chebyshev_basis:
+    #     if isinstance(poly, np.ndarray) or isinstance(poly, list):
+    #         poly = Polynomial(poly)
+    #     # For TargetPolynomial class, cast back to parent object.
+    #     elif isinstance(poly, Polynomial):
+    #         poly = Polynomial(poly.coef)
+    #     else:
+    #         raise ValueError(
+    #             f"Must provide coefficient list/array, or Polynomial object.")
+    # else:
+    #     if isinstance(poly, np.ndarray) or isinstance(poly, list):
+    #         poly = Chebyshev(poly)
+    #     elif isinstance(poly, Chebyshev):
+    #         # Currently, there should be no sub-class that we have to cast from in this branch.
+    #         pass
+    #     else:
+    #         raise ValueError(
+    #             f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
 
     if measurement is None:
         if signal_operator == "Wx":
@@ -193,24 +182,15 @@ def QuantumSignalProcessingPhases(
 
         # Perform completion
         if model in {("Wx", "x"), ("Wz", "z")}:
-            # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability.
-
-            ### Currently commented for Chebyshev bypass
-            # poly = suc * \
-            #     (poly + Polynomial([0, ] * poly.degree() + [eps / 2, ]))
-
+            # Capitalization: eps/2 amount of error budget is put to the highest power for sake of numerical stability. We are assured to be in the Chebyshev basis.
             poly = suc * \
                  (poly + Chebyshev([0, ] * poly.degree() + [eps / 2, ]))
 
             lcoefs = poly2laurent(poly.coef)
             lalg = completion_from_root_finding(lcoefs, coef_type="F")
         elif model == ("Wx", "z"):
-            # TODO: unlike in the Laurent picture, the 'P' type coefficients are expected in the monomial basis.
-            #
-            # TODO: given the Chebyshev bypass, now is the only setting in which we need to convert back from the Chebyshev basis to the expected monomial basis
-
+            # Unlike in the Laurent picture, the 'P' type coefficients are expected in the monomial basis. Note this is now the only setting in which we need to convert back from the Chebyshev basis to the expected monomial basis, and should be used rarely.
             monomial_coef = np.polynomial.chebyshev.cheb2poly(poly.coef)
-
             lalg = completion_from_root_finding(monomial_coef, coef_type="P")
         else:
             raise ValueError(

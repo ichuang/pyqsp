@@ -35,7 +35,7 @@ def CommandLine(args=None, arglist=None):
 Version: {}
 Commands:
 
-    poly2angles - compute QSP phase angles for the specified polynomial (use --poly)
+    poly2angles - compute QSP phase angles for the specified polynomial (use --poly). Currently, if using the `laurent` method, this polynomial is expected in monomial basis, while for `sym_qsp` method the Chebyshev basis is expected. Eventually a new flag will be added to specify basis for use with any method.
     hamsim      - compute QSP phase angles for Hamiltonian simulation using the Jacobi-Anger expansion of exp(-i tau sin(2 theta))
     invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
@@ -63,7 +63,7 @@ Examples:
     pyqsp --plot --func "np.sign(x - 0.5) + np.sign(-1*x - 0.5)" --polydeg 151 --scale 0.9 sym_qsp_func
 
     # Note older examples using the 'laurent' method.
-    pyqsp --plot --tolerance=0.1 --seqargs 2 invert
+    pyqsp --plot --tolerance=0.1 --seqargs 4 invert
     pyqsp --plot --seqargs=10,0.1 hamsim
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
@@ -291,16 +291,16 @@ Examples:
             (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
             coefs, **qspp_args)
         else:
-            ### TODO: chebyshev bypass converts everything to Chebyshev; otherwise we should allow the user to specify the basis with a flag
-
+            # QuantumSignalProcessingPhases now expects input in Chebyshev basis in all cases, so we cast (assumed monomial basis) input.
             cheb_coefs = np.polynomial.chebyshev.poly2cheb(coefs)
-
             phiset = angle_sequence.QuantumSignalProcessingPhases(
             cheb_coefs, **qspp_args)
         if args.plot:
+            # Note: while the input to 'poly2angles' is expected in the monomial basis, PlotQSPResponse, like all other internal methods, expects input in the Chebyshev basis.
+            cheb_coefs = np.polynomial.chebyshev.poly2cheb(coefs)
             response.PlotQSPResponse(
                 phiset,
-                pcoefs=coefs,
+                pcoefs=cheb_coefs,
                 signal_operator=args.signal_operator,
                 **plot_args)
 
@@ -362,9 +362,7 @@ Examples:
 
     elif args.cmd == "invert":
         pg = pyqsp.poly.PolyOneOverX()
-
-        # TODO: currently changed so that we always return Chebyshev coefs.
-
+        # Note that in either case, approximating polynomial is returned in Chebyshev basis.
         pcoefs, scale = pg.generate(
             *args.seqargs,
             return_coef=True,
@@ -644,7 +642,7 @@ Examples:
 
         # Note that the polynomial is renormalized once according to its maximum magnitude (both up and down), and then again according to specified scale in a multiplicative way. We ought to be able to specify this, or at least return the metadata.
 
-        # TODO: new addition for manual rescaling within sym_qsp method.
+        # The parameter scale < 1 allows rescaling only within sym_qsp method.
         if args.scale:
             if np.abs(args.scale >= 1) or (args.scale <= 0):
                 raise ValueError(
