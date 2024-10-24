@@ -39,6 +39,7 @@ class StringPolynomial:
 
 # -----------------------------------------------------------------------------
 
+### NOTE: Use of this is curently deprecated, but should be further excised for proper Chebyshev bypass.
 class TargetPolynomial(np.polynomial.Polynomial):
     '''
     Polynomial with ideal target
@@ -123,7 +124,9 @@ class PolyCosineTX(PolyGenerator):
             if chebyshev_basis:
                 pcoefs = g.coef
             else:
-                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+                ### TODO: new bypass for Chebyshev coefficients.
+                pcoefs = g.coef
+                # pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -177,7 +180,9 @@ class PolySineTX(PolyGenerator):
             if chebyshev_basis:
                 pcoefs = g.coef
             else:
-                pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
+                ### TODO: new bypass for Chebyshev coefficients.
+                pcoefs = g.coef
+                # pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -321,7 +326,9 @@ class PolyOneOverXRect(PolyGenerator):
                                                  chebyshev_basis=chebyshev_basis)
 
         # Modified to handle Chebyshev basis for convolution.
-        if not chebyshev_basis:
+        #
+        ### TODO: Chebyshev bypass
+        if 0: # not chebyshev_basis:
             poly_invert = np.polynomial.Polynomial(coefs_invert)
             poly_rect = np.polynomial.Polynomial(coefs_rect)
 
@@ -373,7 +380,10 @@ class PolyTaylorSeries(PolyGenerator):
             taylor series, of specified degree.
             We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
         '''
-        if chebyshev_basis:
+
+        ### TOOD: Current chebyshev bypass.
+
+        if 1: # chebyshev_basis:
             cheb_samples = 2*degree # Set to prevent aliasing; note that all methods calling TaylorSeries implicitly have their cheb_samples specifications overruled here.
             # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.
             samples = np.polynomial.chebyshev.chebpts1(cheb_samples)

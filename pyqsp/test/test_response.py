@@ -18,7 +18,8 @@ class Test_response(unittest.TestCase):
         # coefs = [0, -3, 0, 4]
         # coefs = [-1, 0, 2]
         coefs = [1, 0, -8, 0, 8]
-        phiset = angle_sequence.QuantumSignalProcessingPhases(coefs)
+        cheb_coefs = np.polynomial.chebyshev.poly2cheb(coefs)
+        phiset = angle_sequence.QuantumSignalProcessingPhases(cheb_coefs)
         phiset = np.array(phiset)
         print(f"QSP angles = {phiset / np.pi} * pi")
         response.PlotQSPResponse(phiset, show=False)

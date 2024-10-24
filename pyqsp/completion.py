@@ -126,6 +126,8 @@ def _fg_completion(F, seed):
     """
     # Find all the roots of Id - (p * ~p) that lies within the upper unit
     # circle.
+    #
+    # NOTE: the updated method and the old method both fed a Chebyshev polynomial into this method; when we transform into the Laurent polynomial picture the monomial coefficients are by construction the Chebyshev coefficients of the standard picture.
     poly = (Id - (F * ~F)).coefs
     converted_poly = np.polynomial.Polynomial(poly)
     roots = converted_poly.roots()
@@ -219,6 +221,7 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
         Q = _pq_completion(P)
         deg = pcoefs.size - 1
 
+        # TODO: the size mismatch seems to be originating here. As this works for smaller instances, it is either due to an incorrect floor function somewhere, an improper calculation of roots, or something else. In the improper case, see the commented-out portion of `test_response_5` in `test_angle_sequence.py`, the degrees of P and Q differ by two rather than the expected one.
         pcheb = poly2cheb(pcoefs, kind='T')
         qcheb = np.r_[0., poly2cheb(Q.coef, kind='U')]
 
@@ -227,6 +230,13 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
 
         fcoefs = np.zeros(deg + 1)
         gcoefs = np.zeros(deg + 1)
+
+        print()
+        print(len(P.coef))
+        print(len(Q.coef))
+
+        print(f"Size of pcheb: {len(pcheb[:0:-1])}")
+        print(f"Size of qcheb: {len(qcheb[:0:-1])}")
 
         if deg % 2 == 0:
             fcoefs[:(deg + 1) // 2] = np.real(pcheb[:0:-1] - qcheb[:0:-1]) / 2

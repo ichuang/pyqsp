@@ -64,6 +64,7 @@ Examples:
 
     # Note older examples using the 'laurent' method.
     pyqsp --plot --tolerance=0.1 --seqargs 2 invert
+    pyqsp --plot --seqargs=10,0.1 hamsim
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
     pyqsp --plot-npts=100 --plot-positive-only --plot --seqargs=23 --seqname erf_step angles
@@ -290,8 +291,12 @@ Examples:
             (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
             coefs, **qspp_args)
         else:
+            ### TODO: chebyshev bypass converts everything to Chebyshev; otherwise we should allow the user to specify the basis with a flag
+
+            cheb_coefs = np.polynomial.chebyshev.poly2cheb(coefs)
+
             phiset = angle_sequence.QuantumSignalProcessingPhases(
-            coefs, **qspp_args)
+            cheb_coefs, **qspp_args)
         if args.plot:
             response.PlotQSPResponse(
                 phiset,

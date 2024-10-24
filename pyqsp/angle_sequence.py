@@ -133,6 +133,8 @@ def QuantumSignalProcessingPhases(
         ValueError: Raised if invalid model (or method) is specified.
     """
 
+    # TODO: we can remove the conditional branch below eventually, as everything should be input as Chebyshev coefficients.
+
     # Depending on the chebyshev_basis flag, convert coefficient list if provided to Polynomial/Chebyshev object.
     if not chebyshev_basis:
         # if isinstance(poly, np.ndarray) or isinstance(poly, list):
@@ -147,7 +149,6 @@ def QuantumSignalProcessingPhases(
         if isinstance(poly, np.ndarray) or isinstance(poly, list):
             poly = Chebyshev(poly)
         elif isinstance(poly, Chebyshev):
-            # Currently, there should be no sub-class that we have to cast from in this branch.
             pass
         else:
             raise ValueError(
@@ -204,7 +205,13 @@ def QuantumSignalProcessingPhases(
             lcoefs = poly2laurent(poly.coef)
             lalg = completion_from_root_finding(lcoefs, coef_type="F")
         elif model == ("Wx", "z"):
-            lalg = completion_from_root_finding(poly.coef, coef_type="P")
+            # TODO: unlike in the Laurent picture, the 'P' type coefficients are expected in the monomial basis.
+            #
+            # TODO: given the Chebyshev bypass, now is the only setting in which we need to convert back from the Chebyshev basis to the expected monomial basis
+
+            monomial_coef = np.polynomial.chebyshev.cheb2poly(poly.coef)
+
+            lalg = completion_from_root_finding(monomial_coef, coef_type="P")
         else:
             raise ValueError(
                 "Invalid model: {}".format(str(model))
