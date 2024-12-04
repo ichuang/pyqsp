@@ -67,7 +67,6 @@ class Test_angle_sequence(unittest.TestCase):
         QuantumSignalProcessingPhases(
             poly, signal_operator="Wx", measurement="z")
 
-    # Test now failing on new device due to broadcast error. Appears within same completion_from_root_finding mechanism.
     def test_response_5(self):
         pcoefs = [-1., 0., 50., 0., -400., 0., 1120., 0., -1280., 0., 512.]
         pcoefs = np.polynomial.chebyshev.poly2cheb(pcoefs)
@@ -75,10 +74,6 @@ class Test_angle_sequence(unittest.TestCase):
 
         QuantumSignalProcessingPhases(poly, signal_operator="Wx")
         QuantumSignalProcessingPhases(poly, signal_operator="Wz")
-
-        # TODO: currently silenced due to Chebyshev bypass.
-        # QuantumSignalProcessingPhases(
-        #     poly, signal_operator="Wx", measurement="z")
 
     def test_response_6(self):
         pcoefs = [-1., 0., (1 / 2) * (4 + 3j - (1 - 2j) * np.sqrt(3)),

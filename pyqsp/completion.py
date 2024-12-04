@@ -130,14 +130,10 @@ def _fg_completion(F, seed):
     converted_poly = np.polynomial.Polynomial(poly)
     roots = converted_poly.roots()
 
-    # poly is a real, self-inverse Laurent polynomial with no root on the unit circle. All real roots come in reciprocal pairs,
-    # and all complex roots come in quadruples (r, r*, 1/r, 1/r*).
-    # For each pair of real roots, select the one within the unit circle.
-    # For each quadruple of complex roots, select the pair within the unit
-    # circle.
+    # poly is a real, self-inverse Laurent polynomial with no root on the unit circle. All real roots come in reciprocal, conjugate pairs,
+    # For each quadruple of complex roots, select pair within the unit circle.
     imag_roots = []
     real_roots = []
-    # TODO: print("ROOTS")
     for i in roots:
         if (np.abs(i) < 1) and (np.imag(i) > -1e-14):
             # TODO: print(f"ROOT: {i}")
@@ -146,15 +142,13 @@ def _fg_completion(F, seed):
             else:
                 imag_roots.append(i)
 
-    # TODO: print(len(roots))
-    # TODO: print(len(imag_roots))
-    # TODO: print(len(real_roots))
-
     norm = poly[-1]
 
     """
     As it stands, the root randomization below seems to have a large and unstable effect on completion.
     """
+
+    # The stop-gap below has been deprecated, but remains because of interesting numerical considerations in non-unique QSP decompositions for the same target function.
 
     # Randomly choose whether to pick the real root (the pair of complex roots)
     #   inside or outside the unit circle.
@@ -217,7 +211,6 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
         Q = _pq_completion(P)
         deg = pcoefs.size - 1
 
-        # TODO: the size mismatch seems to be originating here. As this works for smaller instances, it is either due to an incorrect floor function somewhere, an improper calculation of roots, or something else. In the improper case, see the commented-out portion of `test_response_5` in `test_angle_sequence.py`, the degrees of P and Q differ by two rather than the expected one.
         pcheb = poly2cheb(pcoefs, kind='T')
         qcheb = np.r_[0., poly2cheb(Q.coef, kind='U')]
 
@@ -256,7 +249,7 @@ def completion_from_root_finding(coefs, coef_type="F", seed=None, tol=1e-6):
         raise CompletionError(
             "Invalid QSP coef_type specifier: {}".format(coef_type))
 
-    # check completion
+    # Check completion accuracy.
     ncoefs = (ipoly * ~ipoly + xpoly * ~xpoly).coefs
     ncoefs_expected = np.zeros(ncoefs.size)
     ncoefs_expected[ncoefs.size // 2] = 1.

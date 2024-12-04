@@ -245,7 +245,7 @@ def newton_solver(coef, parity, **kwargs):
     if 'maxiter' in kwargs:
         maxiter = kwargs['maxiter']
     else:
-        maxiter = 1e3
+        maxiter = 1e2
 
     # Currently deprecated, but real and imaginary parts can be alternately targeted by flipping overall sign of coef.
     # # targetPre = True

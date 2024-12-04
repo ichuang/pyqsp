@@ -3,11 +3,9 @@
 
 ![test workflow](https://github.com/ichuang/pyqsp/actions/workflows/run_tests.yml/badge.svg)
 
-<!-- *TODO: add some symbols for the main headings, add a title that matches the title of the repo, and overall remove extraneous lists of outputs and inputs outside of a dedicated example section.* -->
-
 ## Recent news and updates
 
-> :round_pushpin: The codebase has recently been updated to work internally almost entirely with polynomials in the Chebyshev, rather than the monomial, basis. This improves the numerical stability of the `laurent` method substantially, and should present almost no visible differences for an end-user. Currently the `poly2angles` command-line function is the only major input for monomial basis targets, while the main `QuantumSignalProcessingPhases` method and various helper and plotting methods all accept only Chebyshev basis inputs with internal checks. For conversion between bases, see [below](#computing-qsp-phases-even-faster-with-the-sym_qsp-method).
+> :round_pushpin: (10/24/2024) The codebase has recently been updated to work internally almost entirely with polynomials in the Chebyshev, rather than the monomial, basis. This improves the numerical stability of the `laurent` method substantially, and should present almost no visible differences for an end-user. Currently the `poly2angles` command-line function is the only major input for monomial basis targets, while the main `QuantumSignalProcessingPhases` method and various helper and plotting methods all accept only Chebyshev basis inputs with internal checks. For conversion between bases, see [below](#computing-qsp-phases-even-faster-with-the-sym_qsp-method).
 
 ## Introduction
 
@@ -22,7 +20,7 @@ In their most basic forms, QSP/QSVT give a recipe for a desired spectral transfo
 >
 > Regardless, the basic scheme of QSP and QSVT is relatively fixed: given a specific circuit ansatz and a theory for the polynomial transformations achievable for that ansatz, generate those conditions and algorithms relating the *achieved function* and *circuit parameterization*. Understanding the bidirectional map between phases and polynomial transforms, as well as the efficiency of loading linear systems into quantum processes, constitutes most of the theory of these algorithms.
 
-This package provides such conditions and algorithms, and automatically treats a few common conventions, with options to modify the code in basic ways to encompass others. These conventions are enumerated in the recent pedagogical work [A Grand Unification of Quantum Algorithms](https://arxiv.org/abs/2105.02859), and the QSP phase-finding algorithms we treat can be broken roughly into three types:
+This package provides such conditions and algorithms, and automatically treats a few common conventions, with options to modify the code in basic ways to encompass others. These conventions are enumerated in the pedagogical work [A Grand Unification of Quantum Algorithms](https://arxiv.org/abs/2105.02859), and the QSP phase-finding algorithms we treat can be broken roughly into three types:
 - :hammer: The `laurent` method employs techniques originated in [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extends code from [its attached repository](https://github.com/alibaba-edu/angle-sequence.). This method exactly computes phases by studying the properties of the desired polynomials using a divide-and-conquer approach.
 - :sparkles: The `tf` method employs TensorFlow + Keras, and finds QSP phase angles using straightforward (but sometimes slow) optimization techniques.
 - :key: The `sym_qsp` method employs an iterative, quasi-Newton method to find QSP phases for a special, lightly-restricted sub-class of QSP protocols whose phases are symmetric. In comparison with the above two techniques, this method is almost invariably quick, numerically stable, and should suit most applications. It is based off work in [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649), and Matlab implementations in the [QSPPACK repository](https://github.com/qsppack/QSPPACK). See the affiliated `CITATION` file for a full list of references.
@@ -121,7 +119,7 @@ response.PlotQSPResponse(
     simul_error_plot=True)
 ```
 
-The method specified above works well up to above `polydeg=100`, and is limited mainly by the out-of-the-box method `numpy` uses to compute Chebyshev interpolants. If the `Chebyshev` object fed into `QuantumSignalProcessingPhases` has had its coefficients computed some other way (e.g., analytically as in the approximation of the inverse function), this method can work well into the thousands of phases.
+The method specified above works well up to even very large `polydeg`, and is limited by the out-of-the-box method `numpy` uses to compute Chebyshev interpolants using double precision arithmetic. If the `Chebyshev` object fed into `QuantumSignalProcessingPhases` has had its coefficients computed some other way (e.g., analytically as in the approximation of the inverse function), this method can work well into the thousands of phases.
 
 <p align="center">
     <img src="https://github.com/ichuang/pyqsp/blob/master/docs/ex_min_example_cosine.png" alt="Example QSP response function approximating a cosine function" width="75%"/>
@@ -336,6 +334,20 @@ coef = pcoefs[parity::2]
 
 This as well as many other polynomial families given in `pyqsp/poly.py` allow for the same `chebyshev_basis` and `cheb_samples` arguments, and can generate the same `pcoefs` results, which can be sliced according to parity and fed as an optimization target into `sym_qsp_opt.newton_solver`, which implicitly generates and optimizes a `SymmetricQSPProtocol` object, up to the desired `crit` uniform maximum error.
 
+### An occasionally updated troubleshooting guide (12/03/2024)
+
+The numerical treatment of QSP can sometimes surface basic limitations of common Python methods for functional approximation. In this section we cover possible issues relating to this, and how to resolve them.
+
+:warning: **Improper automatic rescaling of polynomial approximants**: QSP expects target polynomials that are bounded by one in absolute value. This requirement is strict, and for stability reasons the target function is usually slightly *sub-normalized* to prevent unexpected behavior. A case where this can cause an error is in the approximation of discontinuous functions, like the sign function. For example, running the following
+```python
+    pyqsp --plot --func "np.sign(x)" --polydeg 151 sym_qsp_func
+````
+will not converge to the target sign function, despite the `PolyTaylorSeries` class in `poly.py` running a subroutine to find the maximum of the corresponding polynomial approximation and rescale this maximum to `0.9`. Close analyis shows that the Python method for finding extrema in this case (`scipy.optimize.minimize`) gets stuck in a local minima, violating the norm condition. In general, finding extrema of highly osciliatory functions (e.g., those exhibiting Runge's phenomenon) is numerically unstable, and sensitie to initial conditions. The solution in this case is to just manually rescale the target more aggressively:
+```python
+    pyqsp --plot --func "np.sign(x)" --polydeg 151 --scale 0.5 sym_qsp_func
+````
+which converges quickly without problem. This `--scale` argument will override the internal scaling subroutines used, though only up to the ability for `scipy.optimize.minimize` or similar to find proper global extrema.
+
 ## Command line usage
 
 A wide selection of the functionalities provided by this package can also be run from the command line using a series of arguments and flags. We detail these below, noting that there exist new methods under active development not covered here, though these changes will be backwards compatible to the methods given below.
@@ -380,7 +392,7 @@ Examples:
     pyqsp --plot --func "np.sign(x - 0.5) + np.sign(-1*x - 0.5)" --polydeg 151 --scale 0.9 sym_qsp_func
 
     # Note older examples using the 'laurent' method.
-    pyqsp --plot --tolerance=0.1 --seqargs 4 invert
+    pyqsp --plot --plot-real-only --tolerance=0.1 --seqargs 5 invert
     pyqsp --plot --seqargs=10,0.1 hamsim
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles

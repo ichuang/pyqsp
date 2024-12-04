@@ -39,7 +39,7 @@ class StringPolynomial:
 
 # -----------------------------------------------------------------------------
 
-#Note: use of this class is deprecated, but retained here for legacy applications.
+# Note: use of this class is deprecated, but retained here for legacy applications.
 class TargetPolynomial(np.polynomial.Polynomial):
     '''
     Polynomial with ideal target
@@ -258,22 +258,9 @@ class PolyOneOverX(PolyGenerator):
             print(
                 f"[PolyOneOverX] minimum {g(pmin)} is at {pmin}: normalizing")
             scale = 1 / abs(g(pmin))
-            if 1: # Choose to be less constrained
-                scale = scale * 0.9
-            else:
-                scale = scale * 0.5
-                print("[PolyOneOverX] bounding to 0.5")
+            scale = scale * 0.9
+            print("[PolyOneOverX] bounding to 0.9")
             g = scale * g
-
-        # TODO: Internal plotting for debugging purposes.
-        # npts = 500
-        # adat = np.linspace(-1, 1, npts)
-        # plt.plot(adat, g(adat))
-        # plt.ylim([-1.1, 1.1])
-        # ax = plt.gca()
-        # ax.spines['top'].set_visible(False)
-        # ax.spines['right'].set_visible(False)
-        # plt.show()
 
         if return_coef:
             pcoefs = g.coef
@@ -383,81 +370,48 @@ class PolyTaylorSeries(PolyGenerator):
         '''
 
         # Note: PolyTaylorSeries now no longer generates approximating Taylor polynomials, but only Chebyshev interpolations as contained in the assured branch indicated below. This exhibits better stability and convergence.
-        if 1: # chebyshev_basis:
-            cheb_samples = 2*degree # Set to prevent aliasing; note that all methods calling TaylorSeries implicitly have their cheb_samples specifications overruled here.
-            # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.
-            samples = np.polynomial.chebyshev.chebpts1(cheb_samples)
-            scale = 1.0 # Binding variable.
 
-            vals = np.array(list(map(func, samples)))
-            # Generate cheb fit for function.
-            cheb_coefs = np.polynomial.chebyshev.chebfit(samples, vals, degree)
-            # Generate chebyshev polynomial object from coefs.
-            cheb_poly = np.polynomial.chebyshev.Chebyshev(cheb_coefs)
+        cheb_samples = 2*degree # Set to prevent aliasing; note that all methods calling TaylorSeries implicitly have their cheb_samples specifications overruled here.
+        # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.
+        samples = np.polynomial.chebyshev.chebpts1(cheb_samples)
+        scale = 1.0 # Binding variable.
 
-            # Determine maximum over interval and rescale.
-            if ensure_bounded:
-                # Minimize polynomial and negative of polynomial to find overall bound on absolute value.
-                res_1 = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
-                res_2 = scipy.optimize.minimize(cheb_poly, (0.1,), bounds=[(-1, 1)])
-                pmax_1 = res_1.x[0]
-                pmax_2 = res_2.x[0]
+        vals = np.array(list(map(func, samples)))
+        # Generate cheb fit for function.
+        cheb_coefs = np.polynomial.chebyshev.chebfit(samples, vals, degree)
+        # Generate chebyshev polynomial object from coefs.
+        cheb_poly = np.polynomial.chebyshev.Chebyshev(cheb_coefs)
 
-                # Compute the smaller of the two rescaling values.
-                arg_array = np.array([pmax_1, pmax_2])
-                max_index = np.argmax([abs(cheb_poly(pmax_1)), abs(cheb_poly(pmax_2))])
-                scale = 1.0/np.max([abs(cheb_poly(pmax_1)), abs(cheb_poly(pmax_2))])
+        # Determine maximum over interval and rescale.
+        if ensure_bounded:
+            # Minimize polynomial and negative of polynomial to find overall bound on absolute value.
+            res_1 = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
+            res_2 = scipy.optimize.minimize(cheb_poly, (0.1,), bounds=[(-1, 1)])
+            pmax_1 = res_1.x[0]
+            pmax_2 = res_2.x[0]
 
-                # Compute overal rescaling factor and apply to poly approx.
-                scale = scale * max_scale
-                print(f"[PolyTaylorSeries] (Cheb) max {scale} is at {arg_array[max_index]}: normalizing")
-                cheb_poly = scale * cheb_poly
+            # Compute the smaller of the two rescaling values.
+            arg_array = np.array([pmax_1, pmax_2])
+            max_index = np.argmax([abs(cheb_poly(pmax_1)), abs(cheb_poly(pmax_2))])
+            scale = 1.0/np.max([abs(cheb_poly(pmax_1)), abs(cheb_poly(pmax_2))])
 
-            # Determine average error on interval and print.
-            adat = np.linspace(-1, 1, npts)
-            pdat = cheb_poly(adat)
-            edat = scale * func(adat) # Compare to rescaled function.
-            avg_err = abs(edat - pdat).mean()
-            print(
-                f"[PolyTaylorSeries] (Cheb) average error = {avg_err} in the domain [-1, 1] using degree {degree}")
+            # Compute overal rescaling factor and apply to poly approx.
+            scale = scale * max_scale
+            print(f"[PolyTaylorSeries] (Cheb) max {scale} is at {arg_array[max_index]}: normalizing")
+            cheb_poly = scale * cheb_poly
 
-            if ensure_bounded and return_scale:
-                return cheb_poly, scale
-            else:
-                return cheb_poly
+        # Determine average error on interval and print.
+        adat = np.linspace(-1, 1, npts)
+        pdat = cheb_poly(adat)
+        edat = scale * func(adat) # Compare to rescaled function.
+        avg_err = abs(edat - pdat).mean()
+        print(
+            f"[PolyTaylorSeries] (Cheb) average error = {avg_err} in the domain [-1, 1] using degree {degree}")
 
+        if ensure_bounded and return_scale:
+            return cheb_poly, scale
         else:
-            the_poly = approximate_taylor_polynomial(func, 0, degree, 1)
-            the_poly = np.polynomial.Polynomial(the_poly.coef[::-1])
-            scale = 1.0 # Binding variable.
-
-            if ensure_bounded:
-                # Compute minima of function and its negation.
-                res_1 = scipy.optimize.minimize(-1*the_poly, (0.1,), bounds=[(-1, 1)])
-                res_2 = scipy.optimize.minimize(the_poly, (0.1,), bounds=[(-1, 1)])
-                pmax_1 = res_1.x
-                pmax_2 = res_2.x
-
-                # Generate arrays and max indices to report findings.
-                arg_array = np.array([pmax_1, pmax_2])
-                max_index = np.argmax([abs(the_poly(pmax_1)), abs(the_poly(pmax_2))])
-                scale = 1.0/np.max([abs(the_poly(pmax_1)), abs(the_poly(pmax_2))])
-
-                # use this for the new QuantumSignalProcessingWxPhases code, which
-                # employs np.polynomial.chebyshev.poly2cheb(pcoefs)
-                scale = scale * max_scale
-                print(f"[PolyTaylorSeries] max {scale} is at {arg_array[max_index]}: normalizing")
-                the_poly = scale * the_poly
-            adat = np.linspace(-1, 1, npts)
-            pdat = the_poly(adat)
-            edat = scale * func(adat) # Compare to scaled function.
-            avg_err = abs(edat - pdat).mean()
-            print(
-                f"[PolyTaylorSeries] average error = {avg_err} in the domain [-1, 1] using degree {degree}")
-            if ensure_bounded and return_scale:
-                return the_poly, scale
-            else:
-                return the_poly
+            return cheb_poly
 
 # -----------------------------------------------------------------------------
 
@@ -900,7 +854,7 @@ class PolyRelu(PolyTaylorSeries):
             chebyshev_basis=chebyshev_basis,
             cheb_samples=cheb_samples)
         pcoefs = the_poly.coef
-        # force odd coefficients to be zero, since the polynomial must be even
+        # Force odd coefficients to be zero, since the polynomial must be even.
         pcoefs[1::2] = 0
         if ensure_bounded and return_scale:
             scale = max_scale
@@ -956,7 +910,7 @@ class PolySoftPlus(PolyTaylorSeries):
                 cheb_samples=cheb_samples)
 
         pcoefs = the_poly.coef
-        # force odd coefficients to be zero, since the polynomial must be even
+        # Force odd coefficients to be zero, since the polynomial must be even.
         pcoefs[1::2] = 0
         if ensure_bounded and return_scale:
             return pcoefs, scale

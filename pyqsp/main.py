@@ -61,9 +61,10 @@ Examples:
     pyqsp --plot --func "np.sign(x)" --polydeg 151 --scale 0.5 sym_qsp_func
     pyqsp --plot --func "np.sin(10*x)" --polydeg 31 sym_qsp_func
     pyqsp --plot --func "np.sign(x - 0.5) + np.sign(-1*x - 0.5)" --polydeg 151 --scale 0.9 sym_qsp_func
+    pyqsp --plot --func "np.sign(np.sin(2*np.pi*x))" --polydeg 101 --scale 0.9 sym_qsp_func
 
     # Note older examples using the 'laurent' method.
-    pyqsp --plot --tolerance=0.1 --seqargs 4 invert
+    pyqsp --plot --plot-real-only --tolerance=0.1 --seqargs 5 invert
     pyqsp --plot --seqargs=10,0.1 hamsim
     pyqsp --plot-npts=4000 --plot-positive-only --plot-magnitude --plot --seqargs=1000,1.0e-20 --seqname fpsearch angles
     pyqsp --plot-npts=100 --plot-magnitude --plot --seqargs=23 --seqname erf_step angles
@@ -143,17 +144,6 @@ Examples:
         help="Within 'sym_qsp' method, specifies a float to which the extreme point of the approximating polynomial is rescaled in absolute value. For highly oscillatory functions, try decreasing this parameter toward zero.",
         type=float,
         default=0.9)
-    # The arguments below have been deprecated and subsumed into --seqargs.
-    # parser.add_argument(
-    #     "--tau",
-    #     help="time value for Hamiltonian simulation (hamsim command)",
-    #     type=float,
-    #     default=100)
-    # parser.add_argument(
-    #     "--epsilon",
-    #     help="parameter for polynomial approximation to 1/a, giving bound on error",
-    #     type=float,
-    #     default=0.3)
     parser.add_argument(
         "--seqname",
         help="name of QSP phase angle sequence to generate using the 'angles' command, e.g. fpsearch",
@@ -530,9 +520,6 @@ Examples:
         if args.plot:
             response.PlotQSPResponse(
                 phiset,
-                # target=lambda x: scale *
-                # (1 - (np.sign(x + 1 / args.seqargs[2]) -
-                #      np.sign(x - 1 / args.seqargs[2])) / 2),
                 target=lambda x: scale *
                 (1 - (np.sign(x + 3 / (4 * args.seqargs[2])) -
                      np.sign(x - 3 / (4 * args.seqargs[2]))) / 2),
@@ -648,6 +635,7 @@ Examples:
                 raise ValueError(
                     f"Invalid scale specification (scale = {args.scale}); must be positive and less than 1.")
             else:
+                # Note, this is currently the only use-path for --scale argument; ideally it might also be useful to allow within --polyfunc of 'laurent' method, which may also yield Runge.
                 max_scale = args.scale
         else:
             max_scale = 0.9
