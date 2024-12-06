@@ -342,11 +342,11 @@ The numerical treatment of QSP can sometimes surface basic limitations of common
 ```python
     pyqsp --plot --func "np.sign(x)" --polydeg 151 sym_qsp_func
 ````
-will not converge to the target sign function, despite the `PolyTaylorSeries` class in `poly.py` running a subroutine to find the maximum of the corresponding polynomial approximation and rescale this maximum to `0.9`. Close analyis shows that the Python method for finding extrema in this case (`scipy.optimize.minimize`) gets stuck in a local minima, violating the norm condition. In general, finding extrema of highly osciliatory functions (e.g., those exhibiting Runge's phenomenon) is numerically unstable, and sensitie to initial conditions. The solution in this case is to just manually rescale the target more aggressively:
+will not converge to the target sign function, despite the `PolyTaylorSeries` class in `poly.py` running a subroutine to find the maximum of the corresponding polynomial approximation and rescale this maximum to `0.9`. Close analyis shows that the Python method for finding extrema in this case (`scipy.optimize.minimize`) gets stuck in a local minimum, violating the norm condition. In general, finding extrema of highly osciliatory functions (e.g., those exhibiting Runge's phenomenon) is numerically unstable, and sensitive to initial conditions. The solution in this case is to manually rescale the target more aggressively:
 ```python
     pyqsp --plot --func "np.sign(x)" --polydeg 151 --scale 0.5 sym_qsp_func
 ````
-which converges quickly without problem. This `--scale` argument will override the internal scaling subroutines used, though only up to the ability for `scipy.optimize.minimize` or similar to find proper global extrema.
+which converges without problem. This `--scale` argument will override the internal scaling parameters used (usually 0.9), though only up to the ability for `scipy.optimize.minimize` or similar to find proper global extrema.
 
 ## Command line usage
 
@@ -382,7 +382,7 @@ Examples:
 
     # Note examples using the 'sym_qsp' method.
     pyqsp --plot --seqargs=10,0.1 --method sym_qsp hamsim
-    pyqsp --plot --seqargs=19,10 --method sym_qsp poly_sign
+    pyqsp --plot --seqargs=19,10 --return-angles --method sym_qsp poly_sign
     pyqsp --plot --seqargs=19,0.25 --method sym_qsp poly_linear_amp
     pyqsp --plot --seqargs=68,20 --method sym_qsp poly_phase
     pyqsp --plot --seqargs=20,0.6,15 --method sym_qsp relu
@@ -450,12 +450,6 @@ options:
   --npts-theta NPTS_THETA
                         number of discretized values of theta to use in TensorFlow optimization
 ```
-
-<!-- *TODO: INCLUDE A SORT OF GALLERY OF COMMON EXAMPLES, ALONG WITH EXPECTED PARAMETERS AND OUTPUT PLOTS, ETC.* -->
-
-<!-- ### Example: plot response polynomial functions for sin(a) approximation
-
-    pyqsp --plot-qsp-model --phiset="[-1.63276817 0.20550406 -0.84198335  0.39732059 -0.26820613 2.41324245  0.04662674 -2.02847501 1.11311765  0.04662674 -0.72835021 -0.26820613 0.39732059 -0.84198335  0.20550406 -0.06197184]" response -->
 
 ## Citing this repository
 

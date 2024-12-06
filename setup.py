@@ -15,14 +15,14 @@ with open("README.md", "r") as fh:
 
 setup(
     name='pyqsp',
-    version='0.1.6',
+    version='0.2.0',
     author='I. Chuang, J. Docter, J.M. Martyn, Z. Rossi, A. Tan',
     author_email='ichuang@mit.edu',
     packages=['pyqsp', 'pyqsp.test', 'pyqsp.qsp_models'],
     scripts=[],
     url='https://github.com/ichuang/pyqsp',
     license='LICENSE.txt',
-    description='Generate phase angles for quantum signal processing algorithms',
+    description='Generate phase angles for quantum signal processing algorithms.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     include_package_data=True,
