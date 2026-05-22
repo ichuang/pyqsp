@@ -1,0 +1,7 @@
+cython
+matplotlib
+numpy
+protobuf
+scipy
+setuptools
+pytest

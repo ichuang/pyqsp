@@ -27,9 +27,10 @@ def CommandLine(args=None, arglist=None):
     '''
     Main command line.  Accepts args, to allow for simple unit testing.
     '''
-    import pkg_resources  # part of setuptools
+    # import pkg_resources  # part of setuptools
 
-    version = pkg_resources.require("pyqsp")[0].version
+    # version = pkg_resources.require("pyqsp")[0].version
+    version = "" # Temporary handling of deprecation of pkg_resources by setuptools
     help_text = """usage: pyqsp [options] cmd
 
 Version: {}
