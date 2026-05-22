@@ -13,6 +13,8 @@ from pyqsp.phases import phase_generators
 from pyqsp.poly import (StringPolynomial, TargetPolynomial,
                         polynomial_generators, PolyTaylorSeries)
 
+from importlib.metadata import version, PackageNotFoundError
+
 # -----------------------------------------------------------------------------
 
 class VAction(argparse.Action):
@@ -27,11 +29,14 @@ def CommandLine(args=None, arglist=None):
     '''
     Main command line.  Accepts args, to allow for simple unit testing.
     '''
-    # import pkg_resources  # part of setuptools
 
-    # version = pkg_resources.require("pyqsp")[0].version
-    version = "" # Temporary handling of deprecation of pkg_resources by setuptools
+    try:
+        pyqsp_version = version("pyqsp")
+    except PackageNotFoundError:
+        # Package version unable to be determined.
+        pyqsp_version = "unknown"
     help_text = """usage: pyqsp [options] cmd
+
 
 Version: {}
 Commands:
@@ -82,7 +87,7 @@ Examples:
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
     pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
 
-""".format(version)
+""".format(pyqsp_version)
 
     parser = argparse.ArgumentParser(
         description=help_text,
