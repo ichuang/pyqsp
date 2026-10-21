@@ -212,20 +212,7 @@ class PolyOneOverX(PolyGenerator):
         j0 = int(np.sqrt(b * np.log(4 * b / epsilon)))
         print(f"b={b}, j0={j0}")
 
-        """
-        # Analytic form for inverse function; note large integer divisions.
-        g = np.polynomial.chebyshev.Chebyshev([0])
-        for j in range(j0 + 1):
-            gcoef = 0
-            for i in range(j + 1, b + 1):
-                gcoef += scipy.special.binom(2 * b, b + i) / 2**(2 * b)
-            deg = 2 * j + 1
-            g += (-1)**j * gcoef * \
-                np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
-        g = 4 * g
-        """
-
-        # Iterative subroutine replacing above block to avoid integer overflow.
+        # Evaluate the analytic form iteratively to avoid integer overflow.
         # Following analytic form of Lemma 18 from https://arxiv.org/abs/1511.02306v2.
         # I.e., (1 - (1 - x**2)**b)/x, as per (77) on page (19) in cited work.
         g = np.polynomial.chebyshev.Chebyshev([1])
