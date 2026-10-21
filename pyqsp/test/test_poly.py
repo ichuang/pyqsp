@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import pytest
 
 import pyqsp
 from pyqsp import LPoly, angle_sequence, poly, response
@@ -93,35 +94,14 @@ class Test_poly(unittest.TestCase):
         assert (pfunc(0.9) < 0.3)
         assert (pfunc(0) > 0.9)
 
-    def test_poly_cosine(self):
-        tau = 10
-        epsilon = 0.1
-        pg = pyqsp.poly.PolyCosineTX()
-        pcoefs, scale = pg.generate(
-            tau,
-            epsilon,
-            return_coef=True,
-            ensure_bounded=True,
-            return_scale=True)
-        # Note recent conversion of all working polynomials to Chebyshev basis.
-        pfunc = np.polynomial.chebyshev.Chebyshev(pcoefs)
 
-        x = np.linspace(-1, 1)
-        self.assertTrue(
-            np.max(np.abs(pfunc(x) - scale * np.cos(tau * x))) < epsilon)
-
-    def test_poly_sine(self):
-        tau = 10
-        epsilon = 0.1
-        pg = pyqsp.poly.PolySineTX()
-        pcoefs, scale = pg.generate(
-            tau,
-            epsilon,
-            return_coef=True,
-            ensure_bounded=True,
-            return_scale=True)
-        pfunc = np.polynomial.chebyshev.Chebyshev(pcoefs)
-
-        x = np.linspace(-1, 1)
-        self.assertTrue(
-            np.max(np.abs(pfunc(x) - scale * np.sin(tau * x))) < epsilon)
+@pytest.mark.parametrize("generator, target", [
+    (poly.PolyCosineTX, np.cos), (poly.PolySineTX, np.sin),
+], ids=["cosine", "sine"])
+def test_trigonometric_recipe(generator, target):
+    tau, epsilon = 10, .1
+    coefficients, scale = generator().generate(
+        tau, epsilon, return_coef=True, ensure_bounded=True, return_scale=True)
+    polynomial = np.polynomial.chebyshev.Chebyshev(coefficients)
+    points = np.linspace(-1, 1)
+    assert np.max(np.abs(polynomial(points) - scale*target(tau*points))) < epsilon
