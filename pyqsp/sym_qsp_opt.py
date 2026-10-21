@@ -1,3 +1,5 @@
+import numbers
+
 import numpy as np
 
 class SymmetricQSPProtocol:
@@ -228,30 +230,44 @@ class SymmetricQSPProtocol:
 
 def newton_solver(coef, parity, **kwargs):
     """
-        External method for performing Newton iteration with respect to
-        some target polynomial, maxiter, and accuracy.
+    Perform Newton iteration for a real, definite-parity Chebyshev target.
 
-        If there are methods in original package for computing a
-        bounded polynomial approximation, these can be used to generate
-        a target function (n.b., in the Chebyshev basis, with zero-components
-        due to definite parity removed, from low to high order!), which can
-        then be passed to the Jacobian computation of the symmetric QSP class.
+    ``coef`` contains ascending coefficients with the opposite parity removed.
+    ``parity`` is 0 (even) or 1 (odd). ``crit`` defaults to 1e-12 and must be
+    nonnegative and finite. With ``crit=0``, the strict stopping test never
+    declares convergence; iteration continues to the budget or a numerical
+    failure. ``maxiter`` defaults to 100 and must be finite and nonnegative.
+    Fractional budgets are rounded up, preserving the legacy update budget.
+
+    Return ``(reduced_phases, err, iterations, protocol)``. ``err`` is the
+    coefficient one-norm residual at the returned phases, and ``iterations``
+    counts completed Newton updates. Exhaustion, nonfinite arithmetic, and a
+    singular Jacobian return diagnostic iterates rather than raising. Inspect
+    ``protocol.solver_status`` for ``converged``, ``maxiter``, ``nonfinite``, or
+    ``singular_jacobian``. Malformed inputs raise ``ValueError``.
     """
-
-    if 'crit' in kwargs:
-        crit = kwargs['crit']
-    else:
-        crit = 1e-12
-    if 'maxiter' in kwargs:
-        maxiter = kwargs['maxiter']
-    else:
-        maxiter = 1e2
-
-    # Currently deprecated, but real and imaginary parts can be alternately targeted by flipping overall sign of coef.
-    # # targetPre = True
-    # # Determines if targeting real or imaginary component.
-    # if targetPre:
-    #     coef = -1*coef
+    coef = np.asarray(coef)
+    if coef.ndim != 1 or coef.size == 0:
+        raise ValueError("coef must be a nonempty one-dimensional array.")
+    if np.iscomplexobj(coef) and np.any(coef.imag != 0):
+        raise ValueError("coef must contain real coefficients.")
+    try:
+        coef = np.asarray(coef.real, dtype=float)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("coef must contain real finite coefficients.") from exc
+    if not np.all(np.isfinite(coef)):
+        raise ValueError("coef must contain real finite coefficients.")
+    if not isinstance(parity, numbers.Integral) or parity not in (0, 1):
+        raise ValueError("parity must be 0 (even) or 1 (odd).")
+    crit = kwargs.get('crit', 1e-12)
+    if (not isinstance(crit, numbers.Real) or not np.isfinite(crit)
+            or crit < 0):
+        raise ValueError("crit must be nonnegative and finite.")
+    maxiter = kwargs.get('maxiter', 100)
+    if (not isinstance(maxiter, numbers.Real) or not np.isfinite(maxiter)
+            or maxiter < 0):
+        raise ValueError("maxiter must be nonnegative and finite.")
+    maxiter = int(np.ceil(maxiter))
 
     # Set an initial guess for the reduced phases which is approximately correct locally around the origin.
     reduced_phases = coef/2
@@ -260,30 +276,49 @@ def newton_solver(coef, parity, **kwargs):
     qsp_seq_opt = SymmetricQSPProtocol(reduced_phases=reduced_phases, parity=parity)
     curr_iter = 0
 
-    print(f"[sym_qsp] Iterative optimization to err {crit:.3e} or max_iter {int(maxiter)}.")
+    print(f"[sym_qsp] Iterative optimization to err {crit:.3e} or max_iter {maxiter}.")
 
     # Start the main loop
     while True:
         # Recover evaluated differences and Jacobian.
         (Fval,DFval) = qsp_seq_opt.gen_jacobian()
         res = Fval - coef
-        err = np.linalg.norm(res, ord=1) # Take the one norm error.
-        curr_iter = curr_iter + 1
+        err = np.linalg.norm(res, ord=1)
 
         # Format string to show running error computation
         print(f"iter: {curr_iter:03} --- err: {err:.3e}")
 
-        # Invert Jacobian at evaluated point to determine direction of next step.
-        lin_sol = np.linalg.solve(DFval, res)
-        # Note: update reduced and full phases together through specialized method, to prevent schism.
-        qsp_seq_opt.update_reduced_phases(qsp_seq_opt.reduced_phases - lin_sol)
-
-        # Break conditions (beyond maxiter or within err.)
-        if curr_iter >= maxiter:
-            print("[sym_qsp] Max iteration reached.")
+        if not np.isfinite(err):
+            status = "nonfinite"
+            print("[sym_qsp] Nonfinite residual encountered.")
             break
         if err < crit:
+            status = "converged"
             print("[sym_qsp] Stop criteria satisfied.")
             break
+        if curr_iter >= maxiter:
+            status = "maxiter"
+            print("[sym_qsp] Max iteration reached.")
+            break
+        if not np.all(np.isfinite(DFval)):
+            status = "nonfinite"
+            print("[sym_qsp] Nonfinite Jacobian encountered.")
+            break
 
+        # Keep the last evaluated iterate if the Newton step cannot be formed.
+        try:
+            lin_sol = np.linalg.solve(DFval, res)
+        except np.linalg.LinAlgError:
+            status = "singular_jacobian"
+            print("[sym_qsp] Newton update failed: singular Jacobian.")
+            break
+        next_phases = qsp_seq_opt.reduced_phases - lin_sol
+        if not np.all(np.isfinite(next_phases)):
+            status = "nonfinite"
+            print("[sym_qsp] Nonfinite Newton update encountered.")
+            break
+        qsp_seq_opt.update_reduced_phases(next_phases)
+        curr_iter += 1
+
+    qsp_seq_opt.solver_status = status
     return (qsp_seq_opt.reduced_phases, err, curr_iter, qsp_seq_opt)

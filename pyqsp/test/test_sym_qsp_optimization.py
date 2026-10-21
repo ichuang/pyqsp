@@ -2,6 +2,7 @@ import os
 import unittest
 
 import numpy as np
+import pytest
 import matplotlib.pyplot as plt
 import scipy.optimize
 import scipy.special
@@ -286,3 +287,118 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         print(f"Alt max arg 1: {arg_1}")
         print(f"Alt max val 0: {max_val_0}")
         print(f"Alt max val 1: {max_val_1}")
+
+
+@pytest.mark.parametrize("parity, budget", [(0, 1), (1, 1), (1, .5)])
+def test_one_newton_update_reports_returned_iterate_residual(parity, budget):
+    # Positive fractional budgets retain their historical rounding to one step.
+    result = sym_qsp_opt.newton_solver(np.array([.2]), parity, maxiter=budget)
+    assert isinstance(result, tuple) and len(result) == 4
+    phases, residual, iterations, protocol = result
+    # For one reduced phase, the only coefficient is sin(2*phi),
+    # both for the constant target and for the coefficient of T_1.
+    expected_phase = .1 - (np.sin(.2) - .2)/(2*np.cos(.2))
+    expected_residual = abs(np.sin(2*expected_phase) - .2)
+    np.testing.assert_allclose(phases, [expected_phase], atol=1e-16, rtol=0)
+    assert residual == pytest.approx(expected_residual, abs=1e-16)
+    assert iterations == 1
+    assert protocol.solver_status == "maxiter"
+    np.testing.assert_array_equal(phases, protocol.reduced_phases)
+    # Previously this returned the pre-update residual, about 1.33e-3.
+    assert 1e-7 < residual < 2e-7
+
+
+@pytest.mark.parametrize("budget", [0, 0.0])
+def test_zero_iteration_budget_preserves_initial_iterate(budget):
+    phases, residual, iterations, protocol = sym_qsp_opt.newton_solver(
+        np.array([.2]), 1, maxiter=budget)
+    np.testing.assert_array_equal(phases, [.1])
+    assert residual == pytest.approx(abs(np.sin(.2) - .2), abs=1e-16)
+    assert iterations == 0
+    assert protocol.solver_status == "maxiter"
+
+
+def test_initial_convergence_does_not_solve_or_update(monkeypatch):
+    def unexpected_solve(*args):
+        pytest.fail("An iterate already within crit must not take a Newton step")
+
+    monkeypatch.setattr(np.linalg, "solve", unexpected_solve)
+    phases, residual, iterations, protocol = sym_qsp_opt.newton_solver(
+        np.array([.2]), 1, crit=.01)
+    np.testing.assert_array_equal(phases, [.1])
+    assert residual == pytest.approx(abs(np.sin(.2) - .2), abs=1e-16)
+    assert iterations == 0
+    assert protocol.solver_status == "converged"
+
+
+def test_zero_criterion_runs_to_budget_without_claiming_convergence():
+    phases, residual, iterations, protocol = sym_qsp_opt.newton_solver(
+        np.array([0.]), 1, crit=0, maxiter=1)
+    np.testing.assert_array_equal(phases, [0.])
+    assert residual == 0
+    assert iterations == 1
+    assert protocol.solver_status == "maxiter"
+
+
+def test_low_level_exhaustion_retains_unsuccessful_iterate():
+    phases, residual, iterations, protocol = sym_qsp_opt.newton_solver(
+        np.array([1.1]), 1, maxiter=3)
+    assert iterations == 3
+    assert protocol.solver_status == "maxiter"
+    assert np.isfinite(phases).all()
+    assert residual == pytest.approx(abs(np.sin(2*phases[0]) - 1.1), abs=1e-14)
+    assert residual >= .1
+
+
+@pytest.mark.parametrize("coefficients", [[], [[.2]], [np.nan], [np.inf], [.2j]])
+def test_low_level_rejects_invalid_coefficients(coefficients):
+    with pytest.raises(ValueError):
+        sym_qsp_opt.newton_solver(np.array(coefficients), 1)
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"crit": -1}, {"crit": np.nan}, {"crit": np.inf},
+    {"maxiter": -1}, {"maxiter": np.inf},
+])
+def test_low_level_rejects_invalid_stopping_parameters(kwargs):
+    with pytest.raises(ValueError):
+        sym_qsp_opt.newton_solver(np.array([.2]), 1, **kwargs)
+
+
+@pytest.mark.parametrize("parity", [-1, 2, None])
+def test_low_level_rejects_invalid_parity(parity):
+    with pytest.raises(ValueError):
+        sym_qsp_opt.newton_solver(np.array([.2]), parity)
+
+
+@pytest.mark.parametrize("failure, expected_status", [
+    ("singular", "singular_jacobian"), ("nonfinite", "nonfinite"),
+])
+def test_failed_newton_step_retains_last_evaluated_iterate(monkeypatch, failure, expected_status):
+    def failed_solve(matrix, residual):
+        if failure == "singular":
+            raise np.linalg.LinAlgError("singular test system")
+        return np.full_like(residual, np.inf)
+
+    monkeypatch.setattr(np.linalg, "solve", failed_solve)
+    phases, residual, iterations, protocol = sym_qsp_opt.newton_solver(
+        np.array([.2]), 1)
+    np.testing.assert_array_equal(phases, [.1])
+    assert residual == pytest.approx(abs(np.sin(.2) - .2), abs=1e-16)
+    assert iterations == 0
+    assert protocol.solver_status == expected_status
+
+
+@pytest.mark.parametrize("bad_residual", [False, True])
+def test_nonfinite_evaluation_returns_diagnostic_iterate(monkeypatch, bad_residual):
+    def evaluation(protocol):
+        return (np.array([np.nan if bad_residual else np.sin(.2)]),
+                np.array([[np.nan]]))
+
+    monkeypatch.setattr(sym_qsp_opt.SymmetricQSPProtocol, "gen_jacobian", evaluation)
+    phases, residual, iterations, protocol = sym_qsp_opt.newton_solver(
+        np.array([.2]), 1)
+    np.testing.assert_array_equal(phases, [.1])
+    assert np.isnan(residual) if bad_residual else residual == pytest.approx(abs(np.sin(.2)-.2))
+    assert iterations == 0
+    assert protocol.solver_status == "nonfinite"
