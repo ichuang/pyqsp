@@ -47,7 +47,7 @@ Commands:
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
     polyfunc    - retired TensorFlow training command; use sym_qsp_func with its documented response convention.
-    sym_qsp_func    - generate QSP phase angles for the specified --func and --polydeg using symmetric QSP iterative method. Note that the desired polynomial is automatically rescaled (unless a scalar --scale less than one is specified), and appears as the imaginary part of the top-left unitary matrix element in the standard basis.
+    sym_qsp_func    - generate QSP phase angles for --func and --polydeg using symmetric Newton synthesis. The polynomial is rescaled toward estimated magnitude --scale (default 0.9), including expansion, and appears as the imaginary part of the top-left matrix element in the standard Wx basis.
     response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
 
 Examples:
@@ -280,16 +280,15 @@ Examples:
         print(f"[CHECK] Coefficients expected in {basis} basis.")
 
         if is_sym_qsp:
+            cheb_coefs = coefs
             (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(
-            coefs, **qspp_args)
+            cheb_coefs, **qspp_args)
         else:
             # QuantumSignalProcessingPhases now expects input in Chebyshev basis in all cases, so we cast (assumed monomial basis) input.
             cheb_coefs = np.polynomial.chebyshev.poly2cheb(coefs)
             phiset = angle_sequence.QuantumSignalProcessingPhases(
             cheb_coefs, **qspp_args)
         if args.plot:
-            # Note: while the input to 'poly2angles' is expected in the monomial basis, PlotQSPResponse, like all other internal methods, expects input in the Chebyshev basis.
-            cheb_coefs = np.polynomial.chebyshev.poly2cheb(coefs)
             response.PlotQSPResponse(
                 phiset,
                 pcoefs=cheb_coefs,
@@ -629,7 +628,7 @@ Examples:
             raise ValueError(
                 f"Invalid function specifciation, failed to evaluate at x=0.5, err={err}")
 
-        # Note that the polynomial is renormalized once according to its maximum magnitude (both up and down), and then again according to specified scale in a multiplicative way. We ought to be able to specify this, or at least return the metadata.
+        # The fitter applies its returned multiplier once; it may expand small targets.
 
         # The parameter scale < 1 allows rescaling only within sym_qsp method.
         if args.scale:
@@ -654,7 +653,7 @@ Examples:
             return_scale=True,
             max_scale=max_scale,
             chebyshev_basis=is_sym_qsp,
-            cheb_samples=2*args.polydeg) # Set larger than polydeg to prevent aliasing.
+            cheb_samples=2*args.polydeg) # Finite sampling does not rule out aliasing.
 
         # Modify choice of method globally.
         qspp_args['method'] = 'sym_qsp'

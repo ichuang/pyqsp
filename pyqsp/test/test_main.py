@@ -1,6 +1,10 @@
 import unittest
+import runpy
 
-from pyqsp import main, TensorFlowRetiredError
+import numpy as np
+import pytest
+
+from pyqsp import main, response, TensorFlowRetiredError
 
 # -----------------------------------------------------------------------------
 # unit tests
@@ -46,3 +50,40 @@ class Test_main(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 with self.assertRaises(TensorFlowRetiredError):
                     main.CommandLine(arglist=cmd.split(" "))
+
+
+@pytest.mark.parametrize("method", ["laurent", "sym_qsp"])
+def test_cli_plot_uses_the_synthesized_target_basis(method, monkeypatch):
+    captured = {}
+    monkeypatch.setattr(response, "PlotQSPResponse",
+                        lambda phases, **kwargs: captured.update(kwargs))
+    phases = main.CommandLine(arglist=[
+        "--poly=.1,0,.2", "--method=" + method, "--return-angles",
+        "--plot", "--hide-plot", "poly2angles"])
+    points = np.array([-1., -.7, 0., .3, 1.])
+    expected = .1 + .2*(2*points**2-1) if method == "sym_qsp" else .1+.2*points**2
+    plotted = np.polynomial.chebyshev.chebval(points, captured["pcoefs"])
+    np.testing.assert_allclose(plotted, expected, atol=1e-15, rtol=0)
+    assert captured["sym_qsp"] == (method == "sym_qsp")
+    measured = response.ComputeQSPResponse(points, phases,
+                                          sym_qsp=(method == "sym_qsp"))["pdat"]
+    if method == "sym_qsp":
+        np.testing.assert_allclose(measured.imag, expected, atol=1e-12, rtol=0)
+    else:
+        effective = (1-1e-4)*(expected+.5e-4*(2*points**2-1))
+        np.testing.assert_allclose(measured, effective, atol=1e-12, rtol=0)
+
+
+def test_symmetric_example_uses_returned_scale(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(response, "PlotQSPResponse",
+                        lambda phases, **kwargs: captured.update(kwargs))
+    example = runpy.run_module("pyqsp.sym_qsp_min_example", run_name="__main__")
+    points = np.array([-1., -.7, 0., .3, 1.])
+    expected = example["scale"]*np.cos(3*points)
+    np.testing.assert_allclose(captured["target"](points), expected, atol=0, rtol=0)
+    # The returned multiplier differs from the requested estimated magnitude.
+    assert abs(example["scale"]-example["max_scale"]) > 1e-10
+    measured = response.ComputeQSPResponse(
+        points, example["phiset"], sym_qsp=True)["pdat"].imag
+    np.testing.assert_allclose(measured, example["poly"](points), atol=1e-12, rtol=0)
