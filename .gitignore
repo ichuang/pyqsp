@@ -12,3 +12,8 @@ temp_requirements.txt
 qsp/
 pyqsp_venv/
 qspvenv/
+
+# Local agent worktrees and test caches
+/.worktrees/
+.pytest_cache/
+prompts/

@@ -1,0 +1,108 @@
+# Working on pyqsp
+
+pyqsp constructs polynomial approximations, synthesizes quantum signal processing
+(QSP) phases, and evaluates their responses. These instructions apply throughout
+the repository; read any more specific `AGENTS.md` in the paths you touch.
+Update affected instructions when changing a documented workflow.
+
+## Environment and checks
+
+Use an isolated environment with NumPy, SciPy, Matplotlib, pytest, and flake8.
+Check `setup.py` for runtime requirements and
+`.github/workflows/run_tests.yml` for CI configuration.
+`base_requirements.txt` and `tf_requirements.txt` include optional dependencies
+or historical pins; they are not both required for core development.
+
+Run source checks from the repository root. Confirm that imports resolve to this
+checkout, especially when using worktrees or an editable installation:
+
+```sh
+python -c "import pyqsp; print(pyqsp.__file__)"
+MPLBACKEND=Agg python -m pytest pyqsp/test/test_angle_sequence.py
+MPLBACKEND=Agg python -m pytest pyqsp/test
+python -m flake8 . --select=E9,F63,F7,F82 --show-source
+```
+
+- Start with tests for the affected behavior; the single-module command is an
+  example. Run the full core suite for shared numerical, dispatch, or import
+  changes. The flake8 selection matches blocking CI checks; broader style
+  checks are advisory.
+- For documentation changes, verify paths, instructions, and affected examples.
+  Numerical tests are unnecessary for prose-only edits.
+- For packaging changes, build and install the artifact in a clean environment.
+  Check imports and the `pyqsp` console entry point outside the source tree,
+  confirming that imports come from the installation.
+
+Before substantial numerical changes, record the relevant baseline, environment,
+and existing failures. Reuse successful checks while their inputs remain unchanged.
+`make test` installs dependencies and the package; it does not run tests.
+
+Core workflows must work without TensorFlow/Cirq. For changes to optional modeling,
+exercise the affected feature with its dependencies. Presence of
+`PYQSP_TEST_QSP_MODELS` enables TensorFlow cases in `pyqsp/test/test_main.py`;
+`pyqsp/test/test_qsp_models.py` is commented out. Neither skipped nor disabled
+cases count as coverage.
+
+## Where to work
+
+Read `README.md`, the relevant implementation and tests, and `CITATION` for
+algorithm references.
+
+- `pyqsp/poly.py`: targets, approximation, and normalization. Generator return
+  types and scale metadata vary.
+- `pyqsp/angle_sequence.py`: phase synthesis and method dispatch.
+- `pyqsp/LPoly.py`, `pyqsp/completion.py`, `pyqsp/decomposition.py`: Laurent
+  polynomials, Low algebra, completion, and factorization.
+- `pyqsp/sym_qsp_opt.py`: symmetric phases, Jacobians, and Newton solver.
+- `pyqsp/response.py`, `pyqsp/phases.py`: responses, plotting, and predefined phases.
+- `pyqsp/main.py`: CLI and registries; `setup.py`: packaging and console entry point.
+- `pyqsp/qsp_models/`: optional modeling; `pyqsp/test/`: tests.
+  Examples: `pyqsp/sym_qsp_min_example.py` and `docs/sym_qsp_aux_files/`.
+
+## Scope and compatibility
+
+- Keep changes tied to the requested outcome. Preserve unrelated work and avoid
+  unrelated formatting. Reuse existing utilities where they fit; introduce or
+  revise abstractions, dependencies, and tooling as needed for the task.
+- Inspect callers, examples, and CLI paths before treating an interface as internal.
+  For public API or CLI changes, check downstream impact and update affected tests
+  and documentation. Make incompatible changes explicit and provide migration
+  guidance; use compatibility adapters or deprecation where warranted.
+- Check declared dependency support before using newer APIs. Update metadata and
+  CI when intentionally changing support. Keep optional backend imports confined
+  to their features.
+- Document new or changed algorithms' assumptions, validity domain, and error or
+  convergence expectations, with references or derivations where available.
+  Exploratory methods can be supported by reproducible numerical evidence;
+  distinguish established guarantees, empirical behavior, and open questions.
+  Preserve citation and license credit.
+
+## Numerical validation
+
+- Use an independent expectation: a closed-form result, cited reference, or
+  separately derived computation. Round trips and structural invariants alone
+  can miss shared basis, sign, or scaling errors.
+- Test the quantity the API promises. For signed or complex amplitudes, magnitude
+  or probability checks alone can miss sign or phase errors. Phase sequences need
+  not be unique; compare their responses under the stated convention.
+  For bug fixes, retain the triggering input and show failure before the fix
+  when practical, including when generalizing an existing test.
+- Select edge cases and invariants relevant to the change: parity, degree,
+  endpoints, invalid inputs, finiteness, normalization, and unitarity.
+  For the existing formulations, completion checks include `F*~F + G*~G = 1`
+  in the real Laurent case and `|P(x)|**2 + (1-x**2)*|Q(x)|**2 = 1` in the
+  polynomial picture. Use the corresponding identities for new formulations.
+  Sampling or local optimization alone does not certify a global bound.
+- Justify tolerances against scale, conditioning, and promised accuracy.
+  Do not relax them or drop difficult cases to make tests pass. Use local random
+  generators with explicit seeds; performance claims need reproducible settings
+  and timings.
+- Inspect assertions as well as results. Returning phases does not establish
+  convergence. Iterative APIs that promise accuracy must distinguish success
+  from exhaustion or failure; unsupported inputs need actionable errors.
+
+## Completion
+
+Review the diff for unintended changes and generated artifacts. Briefly report
+what changed, validation actually performed, and remaining limitations or failures,
+distinguishing new failures from the baseline.
