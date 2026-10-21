@@ -8,7 +8,7 @@ import scipy.optimize
 import scipy.special
 
 import pyqsp
-from pyqsp import sym_qsp_opt, poly
+from pyqsp import angle_sequence, sym_qsp_opt, poly
 
 # from .. import sym_qsp_opt
 # from .. import poly
@@ -402,3 +402,119 @@ def test_nonfinite_evaluation_returns_diagnostic_iterate(monkeypatch, bad_residu
     assert np.isnan(residual) if bad_residual else residual == pytest.approx(abs(np.sin(.2)-.2))
     assert iterations == 0
     assert protocol.solver_status == "nonfinite"
+
+
+def imaginary_response(phases, points):
+    """Independent scalar Wx/Z-rotation products for the promised readout."""
+    values = []
+    for x in points:
+        signal = np.array([[x, 1j*np.sqrt(1-x*x)],
+                           [1j*np.sqrt(1-x*x), x]])
+        unitary = np.diag(np.exp(1j*np.array([phases[0], -phases[0]])))
+        for phase in phases[1:]:
+            rotation = np.diag(np.exp(1j*np.array([phase, -phase])))
+            unitary = unitary @ signal @ rotation
+        values.append(unitary[0, 0].imag)
+    return np.array(values)
+
+
+@pytest.mark.parametrize("coefficients, parity, target", [
+    ([-.4], 0, lambda x: -.4*np.ones_like(x)),
+    ([0, -.6], 1, lambda x: -.6*x),
+    ([.2, 0, -.1, 0, .15], 0,
+     lambda x: .2 - .1*(2*x*x - 1) + .15*(8*x**4 - 8*x*x + 1)),
+    ([0, -.2, 0, .15, 0, -.1], 1,
+     lambda x: -.2*x + .15*(4*x**3 - 3*x)
+     - .1*(16*x**5 - 20*x**3 + 5*x)),
+])
+def test_successful_public_symmetric_response(coefficients, parity, target):
+    result = angle_sequence.QuantumSignalProcessingPhases(
+        coefficients, method="sym_qsp", chebyshev_basis=True,
+        signal_operator="Wz", measurement="x", eps=.3, suc=.2,
+        tolerance=.01, crit=1., maxiter=0)
+    # These legacy options remain ignored by symmetric dispatch. Its fixed
+    # accuracy criterion and Wx imaginary readout still apply.
+    assert isinstance(result, tuple) and len(result) == 3
+    full, reduced, actual_parity = result
+    assert isinstance(full, np.ndarray) and isinstance(reduced, np.ndarray)
+    assert actual_parity == parity
+    assert len(full) == len(coefficients)
+    assert np.isfinite(full).all() and np.isfinite(reduced).all()
+    np.testing.assert_array_equal(full, full[::-1])
+    points = np.array([-1., -.91, -.37, 0., .23, .77, 1.])
+    np.testing.assert_allclose(imaginary_response(full, points), target(points),
+                               atol=1e-12, rtol=0)
+
+
+def test_public_symmetric_rejects_unattainable_target():
+    with pytest.raises(angle_sequence.AngleFindingError) as error:
+        angle_sequence.QuantumSignalProcessingPhases(
+            [0, 1.1], method="sym_qsp", chebyshev_basis=True)
+    message = str(error.value).lower()
+    assert "residual" in message and "iteration" in message
+    assert "100" in message
+
+
+@pytest.mark.parametrize("residual, status", [
+    (0., "singular_jacobian"),
+    (1e-6, "converged"),
+    (np.nan, "converged"),
+])
+def test_public_checks_status_and_residual(monkeypatch, residual, status):
+    protocol = sym_qsp_opt.SymmetricQSPProtocol([np.arcsin(.2)/2], parity=1)
+    protocol.solver_status = status
+    monkeypatch.setattr(
+        angle_sequence, "newton_solver",
+        lambda *args, **kwargs: (protocol.reduced_phases, residual, 7, protocol))
+    with pytest.raises(angle_sequence.AngleFindingError) as error:
+        angle_sequence.QuantumSignalProcessingPhases(
+            [0, .2], method="sym_qsp", chebyshev_basis=True, tolerance=.1)
+    message = str(error.value).lower()
+    assert "residual" in message and "iteration" in message and "7" in message
+
+
+@pytest.mark.parametrize("phase_attribute", ["reduced_phases", "full_phases"])
+def test_public_checks_phase_finiteness(monkeypatch, phase_attribute):
+    protocol = sym_qsp_opt.SymmetricQSPProtocol([np.arcsin(.2)/2], parity=1)
+    protocol.solver_status = "converged"
+    getattr(protocol, phase_attribute)[0] = np.nan
+    monkeypatch.setattr(
+        angle_sequence, "newton_solver",
+        lambda *args, **kwargs: (protocol.reduced_phases, 0., 7, protocol))
+    with pytest.raises(angle_sequence.AngleFindingError):
+        angle_sequence.QuantumSignalProcessingPhases(
+            [0, .2], method="sym_qsp", chebyshev_basis=True)
+
+
+@pytest.mark.parametrize("coefficients", [[0, np.nan], [0, np.inf], [0, .2j]])
+def test_public_symmetric_rejects_invalid_coefficients(coefficients):
+    with pytest.raises(ValueError):
+        angle_sequence.QuantumSignalProcessingPhases(
+            coefficients, method="sym_qsp", chebyshev_basis=True)
+
+
+def test_real_coefficients_in_complex_array_are_accepted():
+    full, reduced, parity = angle_sequence.QuantumSignalProcessingPhases(
+        np.array([0, -.2], dtype=complex), method="sym_qsp",
+        chebyshev_basis=True)
+    assert parity == 1
+    assert np.isrealobj(full) and np.isrealobj(reduced)
+    points = np.array([-1., -.3, 0., .8, 1.])
+    np.testing.assert_allclose(imaginary_response(full, points), -.2*points,
+                               atol=1e-12, rtol=0)
+
+
+@pytest.mark.parametrize("failure", ["singular", "nonfinite"])
+def test_public_symmetric_rejects_failed_newton_step(monkeypatch, failure):
+    def failed_solve(matrix, residual):
+        if failure == "singular":
+            raise np.linalg.LinAlgError("singular test system")
+        return np.full_like(residual, np.inf)
+
+    monkeypatch.setattr(np.linalg, "solve", failed_solve)
+    with pytest.raises(angle_sequence.AngleFindingError) as caught:
+        angle_sequence.QuantumSignalProcessingPhases(
+            [0, .2], method="sym_qsp", chebyshev_basis=True)
+    message = str(caught.value)
+    assert failure in message
+    assert "residual=" in message and "iterations=0" in message

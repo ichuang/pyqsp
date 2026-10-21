@@ -115,13 +115,17 @@ def QuantumSignalProcessingPhases(
         method: phase synthesis method ['laurent', 'sym_qsp']; 'tf' is retired
 
     Returns:
-        Array of QSP angles.
+        Ordinary synthesis returns scalar phase angles in radians. Symmetric
+        synthesis returns (full_phases, reduced_phases, parity), targeting
+        Im(U[0, 0]) in the Wx convention, only when its parity-reduced
+        coefficient one-norm residual is below 1e-12. Its fixed Newton controls
+        ignore signal_operator, measurement, eps, suc, tolerance and kwargs.
 
     Raises:
         CompletionError: Raised when polynomial cannot be completed in given
             model.
-        AngleFindingError: Raised if angle finding algorithm cannot find
-        sequence to specified tolerance.
+        AngleFindingError: Raised if synthesis cannot meet its accuracy
+            requirement, including unsuccessful symmetric Newton solves.
         ValueError: Raised if invalid model (or method) is specified.
     """
 
@@ -217,10 +221,15 @@ def QuantumSignalProcessingPhases(
 
         # Gather coefficients from pre-converted Chebyshev object above.
         coefs = poly.coef
+        if np.iscomplexobj(coefs) and np.any(coefs.imag != 0):
+            raise ValueError("Symmetric QSP requires real coefficients.")
+        coefs = coefs.real
+        if not np.all(np.isfinite(coefs)):
+            raise ValueError("Symmetric QSP requires finite coefficients.")
 
         # Check that the (non-reduced) phases have definite parity.
-        is_even = np.max(np.abs(coefs[0::2])) > 1e-8
-        is_odd = np.max(np.abs(coefs[1::2])) > 1e-8
+        is_even = np.any(np.abs(coefs[0::2]) > 1e-8)
+        is_odd = np.any(np.abs(coefs[1::2]) > 1e-8)
 
         # We could allow for the zero polynomial, but choose not to.
         if (is_even and is_odd) or (not is_even and not is_odd):
@@ -231,31 +240,22 @@ def QuantumSignalProcessingPhases(
         parity = 0 if is_even else 1
         reduced_coefs = coefs[parity::2]
 
-        # Call main method, currently with `crit` hardcoded.
-        (phases, err, total_iter, qsp_seq_opt) = newton_solver(reduced_coefs, parity, crit=1e-12)
-
-        """
-        Note that this method currently ignores choice of signal,
-        measurement, and eps, suc, tolerance. These can eventually be matched with the known internal parameters for the sym_qsp method, but many of them are instroduced for numerical stability in root finding methods, which are deprecated here.
-
-        TODO: we can also provide an internal check for good
-        agreement with the requested polynomial.
-
-        adat = np.linspace(-1., 1., 100)
-        response = ComputeQSPResponse(
-            adat,
-            phiset,
-            signal_operator=signal_operator,
-            measurement=measurement)["pdat"]
-        expected = poly(adat)
-
-        max_err = np.max(np.abs(response - expected))
-        if max_err > tolerance:
+        # Preserve the established solver criterion; ordinary synthesis options
+        # and additional keyword arguments do not configure symmetric Newton.
+        crit = 1e-12
+        (phases, err, total_iter, qsp_seq_opt) = newton_solver(
+            reduced_coefs, parity, crit=crit)
+        status = qsp_seq_opt.solver_status
+        if (status != "converged" or not np.isfinite(err) or err >= crit
+                or not np.all(np.isfinite(phases))
+                or not np.all(np.isfinite(qsp_seq_opt.full_phases))):
             raise AngleFindingError(
-                "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
-        """
+                "Symmetric QSP synthesis failed: {}; residual={:.6e}, "
+                "iterations={}, required residual < {:.1e}. Inspect "
+                "pyqsp.sym_qsp_opt.newton_solver for diagnostic iterates."
+                .format(status, err, total_iter, crit))
 
-        # For now, return reduced, full phases, and parity together.
+        # Preserve the successful full/reduced phase tuple and parity.
         return (qsp_seq_opt.full_phases, phases, parity)
 
     else:
