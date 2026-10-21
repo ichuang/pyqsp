@@ -1,4 +1,12 @@
-import cirq
+try:
+    import cirq
+except ImportError as error:
+    if error.name != "cirq":
+        raise
+    raise ImportError(
+        "QSPCircuit and circuit response plotting require the optional Cirq "
+        "dependency. Install the dependencies in optional_requirements.txt "
+        "with your environment manager.", name="cirq") from error
 import numpy as np
 import sympy
 from cirq.contrib.svg import SVGCircuit

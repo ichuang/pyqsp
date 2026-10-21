@@ -1,0 +1,2 @@
+# Optional Cirq circuit evaluation; the core package does not require Cirq.
+cirq

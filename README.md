@@ -22,7 +22,7 @@ In their most basic forms, QSP/QSVT give a recipe for a desired spectral transfo
 
 This package provides such conditions and algorithms, and automatically treats a few common conventions, with options to modify the code in basic ways to encompass others. These conventions are enumerated in the pedagogical work [A Grand Unification of Quantum Algorithms](https://arxiv.org/abs/2105.02859), and the QSP phase-finding algorithms we treat can be broken roughly into three types:
 - :hammer: The `laurent` method employs techniques originated in [Finding Angles for Quantum Signal Processing with Machine Precision](https://arxiv.org/abs/2003.02831), and extends code from [its attached repository](https://github.com/alibaba-edu/angle-sequence.). This method exactly computes phases by studying the properties of the desired polynomials using a divide-and-conquer approach.
-- :sparkles: The `tf` method employs TensorFlow + Keras, and finds QSP phase angles using straightforward (but sometimes slow) optimization techniques.
+- TensorFlow/TFQ training (`tf`) is retired. Use `laurent` or `sym_qsp` under their documented response conventions.
 - :key: The `sym_qsp` method employs an iterative, quasi-Newton method to find QSP phases for a special, lightly-restricted sub-class of QSP protocols whose phases are symmetric. In comparison with the above two techniques, this method is almost invariably quick, numerically stable, and should suit most applications. It is based off work in [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649), and Matlab implementations in the [QSPPACK repository](https://github.com/qsppack/QSPPACK). See the affiliated `CITATION` file for a full list of references.
 
 > :warning: As methods for numerically handling QSP protocols have been refined, we have tried to update this repository to reflect leading methods. Along the way, we have also had to lightly deprecate older methods (which may still be in use by others who use this repository). In the sections that follow, we try to give special attention to where a new user might begin to use this repository in the most frictionless way.
@@ -179,9 +179,9 @@ produces QSP phases for a degree `6` polynomial approximation of `cos(3*x)`, wit
 
 This last example also shows how an arbitrary function can be specified (using a `numpy` expression) as a string, and fit using an arbitrary order polynomial (with parity automatically detected, and the fit rejected in the case of indefinite parity), using optimization internal to `numpy`.
 
-> :construction: The above examples are all run using the `laurent` method introduced earlier.[^3] Recent additions to the codebase (as of `09/01/2024`) have allowed a third method, `sym_qsp` to be specified, as in the [previous full example](#a-guide-within-a-guide), which also comprises new classical approximation subroutines that search for the best Chebyshev expansion matching a desired piecewise continuous function at the *Chebyshev nodes* of a given order. This method generally outperforms the `laurent` and `tf` methods discussed above and in the footnote referenced at the opening of this paragraph, at the cost of achieving the polynomial as only the imaginary part of a single matrix element rather than as an amplitude directly.
+> :construction: Select `laurent` explicitly to reproduce historical root-finding examples. The `sym_qsp` method uses symmetric phases and a different readout: the target appears in `Im(U[0,0])`, rather than the ordinary selected complex amplitude.[^3]
 
-[^3]: In earlier version of this repository, direct optimizations over QSP protocols using TensorFlow and Keras could be performed by specifying `--method tf` within the command line. While functions related to this method still work when called (e.g., the plotting option `--plot-qsp-model`), their tests have been currently silenced and the dependent packages moved from `base_requirements.txt` to `tf_requirements.txt`. Overall, while generally effective, such methods are often slower and more prone to mis-optimization than `sym_qsp`, and so for a new user we recommend the latter. For a guide of sorts to using the `tf` methods, see the deprecated test file `pyqsp/test/test_qsp_models.py`.
+[^3]: Historical `tf` and `polyfunc` training commands now raise an actionable retirement error. The optional `--plot-qsp-model` route still evaluates stored phases with Cirq; it does not train a model.
 
 ## An overview of codebase structure
 
@@ -193,24 +193,29 @@ This last example also shows how an arbitrary function can be specified (using a
 - `response.py` computes QSP response functions and generates plots
 - `poly.py` provides some utility polynomials, namely the approximation of 1/a using a linear combination of Chebyshev polynomials
 - `main.py` is the main entry point for command line usage
-- `qsp_model` is the submodule providing generation of QSP phase angles using tensorflow + keras
+- `qsp_models/` retains optional Cirq evaluation and importable training stubs.
+  `phases.py` retains predefined phases; tests remain under `pyqsp/test/`.
 - `sym_qsp_opt` contains the optimization methods used for optimizing over symmetric QSP objects, which are also defined and handled in this module.
 
 > :construction: Recent additions to this codebase exist in the same folder as the above main `*.py` files, i.e., the abovementioned `sym_qsp_opt.py` and the currently exploratory `sym_qsp_plotting.py` and `sym_qsp_phase_gen.py`, as well as tests for these new files in `test/test_sym_qsp_optimization.py` which is automatically run with the other tests, and might serve as a good best-practices read-through for the curious. An executable full example as referenced in []() is also given in `sym_qsp_min_example.py`.
 >
 > The Chebyshev interpolation methods mentioned above have been added as internal arguments throughout `poly.py` using the `chebyshev_basis` (Boolean) flag and `cheb_samples` (positive integer) argument. When calling `sym_qsp` methods from the command line, these flags and arguments are automatically set.
 
-> :warning: The code is structured such that *TensorFlow* is not imported by default, as its dependencies, size, and overall use have become cumbersome for most applications. If `qsp_model` and its derived methods are used, then TensorFlow is required. Currently tests for this module have also been silenced, and *TensorFlow* dependent functionality is not being actively maintained, though has not been disabled.
+## Package requirements and tests
 
-## Package requirements
+Runtime dependencies are NumPy (`>1.19.1`), SciPy, and Matplotlib, as declared
+in `setup.py`. Prepare an isolated environment using your preferred tooling.
+Core tests use NumPy, SciPy, Matplotlib, pytest, and flake8.
 
-This package can be run entirely without TensorFlow if the `qsp_model` code is not used.  If `qsp_model` is desired, then also install the requirements specified in [tf_requirements.txt](https://github.com/ichuang/pyqsp/blob/master/tf_requirements.txt). Otherwise, the requirements given in [base_requirements.txt](https://github.com/ichuang/pyqsp/blob/master/base_requirements.txt) are sufficient.
+[optional_requirements.txt](optional_requirements.txt) lists Cirq for circuit
+evaluation; `tf_requirements.txt` is now a compatibility alias for that list.
+It does not restore training. Retirement tests always run. The Cirq tests skip
+when Cirq is absent; install that optional dependency to exercise those features.
+Core synthesis, plotting, and development need neither TensorFlow nor Cirq.
 
 ## Unit tests
 
 A series of unit tests is also provided. These can be run using `pytest pyqsp/test/`.
-
-> :warning: As the `qsp_model` code depends on having TensorFlow installed, the unit tests for this code take a while; as such they are turned off by default. To enable unit tests for this code, un-comment the corresponding file `test/test_qsp_models.py` after running `export PYQSP_TEST_QSP_MODELS=1`. The `qsp_model` code unit tests can be run by themselves, after un-commenting the file, using `python setup.py test -s pyqsp.test.test_qsp_models`.
 
 ## Programmatic usage
 
@@ -230,26 +235,35 @@ ang_seq = QuantumSignalProcessingPhases([a_{0}, a_{1}, ..., a_n], signal_operato
 print(ang_seq)
 ```
 
-By default, `QuantumSignalProcessingPhases` uses the `laurent` method, which is typically quite fast, but can become unstable for high-degree polynomials due to roundoff errors, requiring some randomization. `QuantumSignalProcessingPhases` can also be instructed to use the `tf` method, which employs TensorFlow with a Keras model to find phases by optimization. This stably finds very high-quality solutions, but can be slow, particularly compared with the `laurent` method. We can run this method using:
-
-```python
-ang_seq = QuantumSignalProcessingPhases(poly, signal_operator="Wx", method="tf")
-```
-
-Note that with the `tf` method, only the `Wx` signal_operator convention is supported. With this method, the polynomial can be a numpy Polynomial instance, or an instance of `pyqsp.poly.StringPolynomial`, e.g.
-
-    poly = StringPolynomial("np.cos(3*x)", 6)
-    ang_seq = QuantumSignalProcessingPhases(poly, method="tf")
-
 We can also plot the response given by a given QSP angle sequence, e.g. using:
 
 ```python
 pyqsp.response.PlotQSPResponse(ang_seq, target=poly, signal_operator="Wx")
 ```
 
+### TensorFlow retirement and retained circuits
+
+Selecting `method="tf"` or the `polyfunc` command raises
+`TensorFlowRetiredError` without loading TensorFlow/TFQ. The historical
+`QuantumSignalProcessingPhasesWithTensorflow`, `qsp_layers.QSP`,
+`construct_qsp_model`, and TFQ class imports remain available and raise the same
+error on use.
+Polynomial synthesis can use `laurent` or `sym_qsp` under their stated
+response conventions. Training, gradients, Keras models, histories, and training
+`return_all=True` records have no drop-in replacement.
+
+Optional Cirq `QSPCircuit`, phase/model `compute_qsp_response`,
+`plot_qsp_response`, and `plot_loss(history)` remain available. Existing model
+objects supply phases through `model.trainable_weights[0].numpy()` without a
+TensorFlow import; history plotting consumes `history.history["loss"]` and does
+not require Cirq. When Cirq is installed the original circuit class identity is
+preserved. The CLI retires effective training operations; `angles`, `response`,
+and forced-symmetric `sym_qsp_func` do not become training operations merely
+because an unused `--method tf` flag was supplied.
+
 ### Computing QSP phases even faster with the `sym_qsp` method
 
-In the same paradigm as the above `laurent` and `tf` methods, we have also introduced the iterative phase finding algorithm discussed earlier under the `sym_qsp` method. Using this method is compatible with the original `QuantumSignalProcessingPhases` method by passing the name of the method, and setting `chebyshev_basis=True`.
+In the same paradigm as the above `laurent` method, we have also introduced the iterative phase finding algorithm discussed earlier under the `sym_qsp` method. Using this method is compatible with the original `QuantumSignalProcessingPhases` method by passing the name of the method, and setting `chebyshev_basis=True`.
 
 ```python
 from pyqsp.angle_sequence import QuantumSignalProcessingPhases
@@ -369,7 +383,7 @@ Commands:
     invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
-    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf). Note that the function appears as the top left element of the resulting unitary.
+    polyfunc    - retired TensorFlow training command; use sym_qsp_func with its documented response convention.
     sym_qsp_func    - generate QSP phase angles for the specified --func and --polydeg using symmetric QSP iterative method. Note that the desired polynomial is automatically rescaled (unless a scalar --scale less than one is specified), and appears as the imaginary part of the top-left unitary matrix element in the standard basis.
     response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
 
@@ -402,12 +416,8 @@ Examples:
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
 
-    # Note older examples using the deprecated 'tf' method.
-    pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly
-    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
-    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
+    # Optional Cirq evaluation of stored phases.
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
-    pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
 
 positional arguments:
   cmd                   command
@@ -423,8 +433,8 @@ options:
   --hide-plot           do not show plot (but it may be saved to a file if --output is specified)
   --return-angles       return QSP phase angles to caller
   --poly POLY           comma delimited list of floating-point coefficients for polynomial, as const, a, a^2, ...
-  --func FUNC           for tf method, numpy expression specifying ideal function (of x) to be approximated by a polynomial, e.g. 'np.cos(3 * x)'
-  --polydeg POLYDEG     for tf method, degree of polynomial to use in generating approximation of specified function (see --func)
+  --func FUNC           numpy expression specifying an ideal function of x for sym_qsp_func, e.g. 'np.cos(3 * x)'
+  --polydeg POLYDEG     degree of polynomial approximation for sym_qsp_func (see --func)
   --scale SCALE         Within 'sym_qsp' method, specifies a float to which the extreme point of the approximating polynomial is rescaled in absolute value. For highly oscillatory functions, try decreasing this parameter toward zero.
   --seqname SEQNAME     name of QSP phase angle sequence to generate using the 'angles' command, e.g. fpsearch
   --seqargs SEQARGS     arguments to the phase angles generated by seqname (e.g. length,delta,gamma for fpsearch)
@@ -443,12 +453,12 @@ options:
                         number of points to use in plotting
   --tolerance TOLERANCE
                         error tolerance for phase angle optimizer
-  --method METHOD       method to use for qsp phase angle generation, either 'laurent' (default), 'sym_qsp' for iterative methods involving symmetric QSP, or 'tf' (for tensorflow + keras)
+  --method METHOD       phase synthesis: 'laurent' (default) or 'sym_qsp'; 'tf' is retired
   --plot-qsp-model      show qsp_model version of response plot instead of the default plot
   --phiset PHISET       comma delimited list of QSP phase angles, to be used in the 'response' command
-  --nepochs NEPOCHS     number of epochs to use in tensorflow optimization
+  --nepochs NEPOCHS     retained argument for retired TensorFlow training
   --npts-theta NPTS_THETA
-                        number of discretized values of theta to use in TensorFlow optimization
+                        retained argument for retired TensorFlow training
 ```
 
 ## Contributing

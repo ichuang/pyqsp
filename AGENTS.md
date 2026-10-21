@@ -10,8 +10,8 @@ Update affected instructions when changing a documented workflow.
 Use an isolated environment with NumPy, SciPy, Matplotlib, pytest, and flake8.
 Check `setup.py` for runtime requirements and
 `.github/workflows/run_tests.yml` for CI configuration.
-`base_requirements.txt` and `tf_requirements.txt` include optional dependencies
-or historical pins; they are not both required for core development.
+`optional_requirements.txt` lists Cirq; `tf_requirements.txt` aliases that list
+and does not restore retired training. Neither is needed for core development.
 
 Run source checks from the repository root. Confirm that imports resolve to this
 checkout, especially when using worktrees or an editable installation:
@@ -37,16 +37,18 @@ Before substantial numerical changes, record the relevant baseline, environment,
 and existing failures. Reuse successful checks while their inputs remain unchanged.
 `make test` installs dependencies and the package; it does not run tests.
 
-Core workflows must work without TensorFlow/Cirq. For changes to optional modeling,
-exercise the affected feature with its dependencies. Presence of
-`PYQSP_TEST_QSP_MODELS` enables TensorFlow cases in `pyqsp/test/test_main.py`;
-`pyqsp/test/test_qsp_models.py` is commented out. Neither skipped nor disabled
-cases count as coverage.
+Core workflows must work without TensorFlow/Cirq. Retirement tests always run:
+named training entry points remain importable and raise actionable errors without
+loading TensorFlow/TFQ. For optional circuit changes, run `test_qsp_models.py`
+with Cirq installed; its explicit skips otherwise do not count as feature coverage.
+Preserve phase evaluation/plotting, duck-typed phase extraction from existing
+model objects, and `plot_loss(history)` without importing TensorFlow.
 
 ## Where to work
 
 Read `README.md`, the relevant implementation and tests, and `CITATION` for
-algorithm references.
+algorithm references. Keep API conventions in docstrings and user examples in
+the README; keep change rationale and validation evidence in commit history.
 
 - `pyqsp/poly.py`: targets, approximation, and normalization. Generator return
   types and scale metadata vary.
@@ -56,7 +58,8 @@ algorithm references.
 - `pyqsp/sym_qsp_opt.py`: symmetric phases, Jacobians, and Newton solver.
 - `pyqsp/response.py`, `pyqsp/phases.py`: responses, plotting, and predefined phases.
 - `pyqsp/main.py`: CLI and registries; `setup.py`: packaging and console entry point.
-- `pyqsp/qsp_models/`: optional modeling; `pyqsp/test/`: tests.
+- `pyqsp/qsp_models/`: optional Cirq evaluation and retired training stubs;
+  `pyqsp/test/`: tests.
   Examples: `pyqsp/sym_qsp_min_example.py` and `docs/sym_qsp_aux_files/`.
 
 ## Scope and compatibility

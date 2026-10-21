@@ -1,10 +1,7 @@
-# visualization tools
-import seaborn as sns
-import pandas as pd
+"""Plot existing training histories and evaluate stored QSP phases."""
+
 import matplotlib.pyplot as plt
-import scipy
 import numpy as np
-from . import QSPCircuit
 
 
 def compute_qsp_response(
@@ -12,16 +9,16 @@ def compute_qsp_response(
         phis=None,
         return_all=False,
         show_svg=False):
-    """Compute the QSP response againts the desired function response.
+    """Compute the QSP response from phases or an existing model.
 
     Params
     ------
-    f : function float --> float
-            the desired function to be implemented by the QSP sequence
-    model : Keras `Model` with `QSP` layer
-            model trained to approximate f
+    model : object with ``trainable_weights[0].numpy()``
+            existing model supplying QSP phases; TensorFlow is not imported
     phis: numpy array of qsp phase angles (may be supplied instead of model)
     """
+    from .qsp_circuit import QSPCircuit
+
     all_th = np.arange(0, np.pi, np.pi / 300)
 
     # construct circuit
@@ -39,14 +36,14 @@ def compute_qsp_response(
 
 
 def plot_qsp_response(f, model=None, phis=None, title="QSP Response"):
-    """Plot the QSP response againts the desired function response.
+    """Plot the QSP response against the desired function response.
 
     Params
     ------
     f : function float --> float
             the desired function to be implemented by the QSP sequence
-    model : Keras `Model` with `QSP` layer
-            model trained to approximate f
+    model : object with ``trainable_weights[0].numpy()``
+            existing model supplying QSP phases; TensorFlow is not imported
     phis: numpy array of qsp phase angles (may be supplied instead of model)
     title: plot title (str)
     """
@@ -61,9 +58,15 @@ def plot_qsp_response(f, model=None, phis=None, title="QSP Response"):
         "QSP Response": np.real(qsp_response)}
     if f is not None:
         pdata["desired f"] = f(np.cos(all_th))
-    df = pd.DataFrame(pdata)
-    df = df.melt("x", var_name="src", value_name="value")
-    sns.lineplot(x="x", y="value", hue="src", data=df).set_title(title)
+    axes = plt.gca()
+    for label, values in pdata.items():
+        if label != "x":
+            axes.plot(pdata["x"], np.broadcast_to(values, all_th.shape),
+                      label=label)
+    axes.set_title(title)
+    axes.set_xlabel("x")
+    axes.set_ylabel("value")
+    axes.legend(title="src")
     plt.show()
 
 
@@ -72,7 +75,8 @@ def plot_loss(history):
 
     Params
     ------
-    history : tensorflow `History` object
+    history : object with a ``history`` mapping containing ``"loss"``
+            existing training history; TensorFlow is not imported
     """
     plt.plot(history.history['loss'])
     plt.title("Learning QSP Angles")

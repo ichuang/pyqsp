@@ -1,8 +1,3 @@
-cirq
-cython
-matplotlib
-numpy~=1.19.2
-protobuf~=3.13.0
-scipy
-seaborn
-tensorflow
+# Compatibility alias for retained circuit evaluation and plotting helpers.
+# TensorFlow/TFQ training has been retired; these dependencies do not restore it.
+-r optional_requirements.txt
