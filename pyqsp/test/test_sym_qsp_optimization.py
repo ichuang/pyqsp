@@ -44,9 +44,9 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         # Check that the second Chebyshev polynomial is evaluated.
         assert len(qsp_protocol.full_phases) == 3
         (s0, s1, s2) = (qsp_unitary[0], qsp_unitary[1], qsp_unitary[2])
-        assert (s0[0,0] - (2*samples[0]**2 - 1)) <= 10**(-3)
-        assert (s1[0,0] - (2*samples[1]**2 - 1)) <= 10**(-3)
-        assert (s2[0,0] - (2*samples[2]**2 - 1)) <= 10**(-3)
+        assert abs(s0[0,0] - (2*samples[0]**2 - 1)) <= 1e-3
+        assert abs(s1[0,0] - (2*samples[1]**2 - 1)) <= 1e-3
+        assert abs(s2[0,0] - (2*samples[2]**2 - 1)) <= 1e-3
 
         qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0],parity=1)
         samples = [0, 0.5, 1]
@@ -55,9 +55,9 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         # Check that the third Chebyshev polynomial is evaluated.
         assert len(qsp_protocol.full_phases) == 4
         (s0, s1, s2) = (qsp_unitary[0], qsp_unitary[1], qsp_unitary[2])
-        assert (s0[0,0] - (4*samples[0]**3 - 3*samples[0])) <= 10**(-3)
-        assert (s1[0,0] - (4*samples[1]**3 - 3*samples[1])) <= 10**(-3)
-        assert (s2[0,0] - (4*samples[2]**3 - 3*samples[2])) <= 10**(-3)
+        assert abs(s0[0,0] - (4*samples[0]**3 - 3*samples[0])) <= 1e-3
+        assert abs(s1[0,0] - (4*samples[1]**3 - 3*samples[1])) <= 1e-3
+        assert abs(s2[0,0] - (4*samples[2]**3 - 3*samples[2])) <= 1e-3
 
     def test_protocol_response(self):
         qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0],parity=0)
@@ -65,23 +65,23 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         qsp_response = qsp_protocol.gen_response_re(samples)
         # Check that the second Chebyshev polynomial is evaluated.
         (s0, s1, s2) = (qsp_response[0], qsp_response[1], qsp_response[2])
-        assert (s0 - (2*samples[0]**2 - 1)) <= 10**(-3)
-        assert (s1 - (2*samples[1]**2 - 1)) <= 10**(-3)
-        assert (s2 - (2*samples[2]**2 - 1)) <= 10**(-3)
+        assert abs(s0 - (2*samples[0]**2 - 1)) <= 1e-3
+        assert abs(s1 - (2*samples[1]**2 - 1)) <= 1e-3
+        assert abs(s2 - (2*samples[2]**2 - 1)) <= 1e-3
 
         qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,np.pi/8],parity=0)
         samples = [0, 0.5, 1]
         qsp_response_re = qsp_protocol.gen_response_re(samples)
         qsp_response_im = qsp_protocol.gen_response_im(samples)
-        # Check that that proper real part is evaluated for modified phases.
+        # Z(pi/8) W(x)**2 Z(pi/8) has U00 = exp(i*pi/4)*T_2(x).
         (s0, s1, s2) = (qsp_response_re[0], qsp_response_re[1], qsp_response_re[2])
         (t0, t1, t2) = (qsp_response_im[0], qsp_response_im[1], qsp_response_im[2])
-        assert (s0 - (2*samples[0]**2 - 1)/np.sqrt(2)) <= 10**(-3)
-        assert (s1 - (2*samples[1]**2 - 1)/np.sqrt(2)) <= 10**(-3)
-        assert (s2 - (2*samples[2]**2 - 1)/np.sqrt(2)) <= 10**(-3)
-        assert (t0 - 1/np.sqrt(2)) <= 10**(-3)
-        assert (t1 - 1/np.sqrt(2)) <= 10**(-3)
-        assert (t2 - 1/np.sqrt(2)) <= 10**(-3)
+        assert abs(s0 - (2*samples[0]**2 - 1)/np.sqrt(2)) <= 1e-3
+        assert abs(s1 - (2*samples[1]**2 - 1)/np.sqrt(2)) <= 1e-3
+        assert abs(s2 - (2*samples[2]**2 - 1)/np.sqrt(2)) <= 1e-3
+        assert abs(t0 - (2*samples[0]**2 - 1)/np.sqrt(2)) <= 1e-3
+        assert abs(t1 - (2*samples[1]**2 - 1)/np.sqrt(2)) <= 1e-3
+        assert abs(t2 - (2*samples[2]**2 - 1)/np.sqrt(2)) <= 1e-3
 
     def test_poly_jacobian_components_trivial(self):
         qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0,0], parity=0)
@@ -197,7 +197,7 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 
         # Take the one norm of the difference and assure small.
         diff = np.linalg.norm(np.abs(exp_value - evaluation), ord=1)
-        assert (diff < 10-6)
+        assert (diff < 1e-6)
 
     def test_cheb_poly_sine_approximation(self):
         # Generate second Chebyshev polynomial and fit.
@@ -218,7 +218,7 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 
         # Take the one norm of the difference and assure small.
         diff = np.linalg.norm(np.abs(exp_value - evaluation), ord=1)
-        assert (diff < 10-6)
+        assert (diff < 1e-6)
 
     def test_sym_qsp_sign_norm_violation(self):
         # Test inserted to investigate problems when finding the extrema of polynomial approximations to the sign function over the interval [-1,1] as determined by the following command-line call
