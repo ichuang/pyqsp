@@ -1,0 +1,37 @@
+name: Request review after tests
+
+on:
+  workflow_run:
+    workflows: [Run Tests]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  request-review:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: write
+    concurrency:
+      group: review-${{ github.event.workflow_run.head_branch }}
+      cancel-in-progress: false
+    steps:
+      # Only load code from the trusted default-branch commit for this event.
+      # Never check out the PR or download its artifacts in this workflow.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          PYQSP_REVIEWER: ${{ vars.PYQSP_REVIEWER || 'hironori-kondo' }}
+        with:
+          script: |
+            const requestReview = require('./.github/scripts/request-review.cjs');
+            await requestReview({github, context, core, reviewer: process.env.PYQSP_REVIEWER});
