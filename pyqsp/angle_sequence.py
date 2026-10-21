@@ -59,35 +59,34 @@ def angle_sequence(p, eps=1e-4, suc=1 - 1e-4):
 
 def poly2laurent(pcoefs):
     """
-    Convert polynomial coefficients to Laurent coefficients for polynomials
+    Convert Chebyshev coefficients to Laurent coefficients for polynomials
     with definite parity.
 
     Args:
-        pcoefs: array of polynomial coefficients
+        pcoefs: array of ascending Chebyshev coefficients, with pcoefs[k]
+            multiplying T_k
 
     Returns:
-        lcoefs: corresponding parity restricted Laurent coefficients
+        lcoefs: ascending stride-two Laurent coefficients representing
+            p((w + w**-1) / 2). Entry j multiplies w**(-d + 2*j), where
+            d = len(lcoefs) - 1.
 
     Raises:
         AngleFindingError: if pcoefs does not have definite parity.
     """
-    # convert polynomial coefficients to laurent; as we are already in the Chebyshev basis, this transformation is trivial
-    ccoefs = pcoefs
-    # ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs) # Conversion in old monomial convention.
-
     # determine parity of polynomial
-    is_even = np.max(np.abs(ccoefs[0::2])) > 1e-8
-    is_odd = np.max(np.abs(ccoefs[1::2])) > 1e-8
+    is_even = np.max(np.abs(pcoefs[0::2])) > 1e-8
+    is_odd = np.max(np.abs(pcoefs[1::2])) > 1e-8
 
     if is_even and is_odd:
         raise AngleFindingError(
             "Polynomial must have definite parity: {}".format(str(pcoefs)))
 
     if is_odd:
-        lcoefs = ccoefs[1::2] / 2
+        lcoefs = pcoefs[1::2] / 2
         lcoefs = np.r_[lcoefs[::-1], lcoefs]
     else:
-        lcoefs = ccoefs[0::2] / 2
+        lcoefs = pcoefs[0::2] / 2
         lcoefs = np.r_[lcoefs[-1:0:-1], 2 * lcoefs[0], lcoefs[1:]]
 
     return lcoefs
@@ -135,31 +134,9 @@ def QuantumSignalProcessingPhases(
     # As all inputs are assured to be in the Chebyshev basis, we check whether we have been given a Chebyshev object or an ndarray of coefficients, and cast to Chebyshev object.
     if isinstance(poly, np.ndarray) or isinstance(poly, list):
         poly = Chebyshev(poly)
-    elif isinstance(poly, Chebyshev):
-        pass
-    else:
+    elif not isinstance(poly, Chebyshev):
         raise ValueError(
             f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
-
-    # Note: as all polynomials are now guaranteed to be in the Chebyshev basis, we bypass the conditional below.
-    # if not chebyshev_basis:
-    #     if isinstance(poly, np.ndarray) or isinstance(poly, list):
-    #         poly = Polynomial(poly)
-    #     # For TargetPolynomial class, cast back to parent object.
-    #     elif isinstance(poly, Polynomial):
-    #         poly = Polynomial(poly.coef)
-    #     else:
-    #         raise ValueError(
-    #             f"Must provide coefficient list/array, or Polynomial object.")
-    # else:
-    #     if isinstance(poly, np.ndarray) or isinstance(poly, list):
-    #         poly = Chebyshev(poly)
-    #     elif isinstance(poly, Chebyshev):
-    #         # Currently, there should be no sub-class that we have to cast from in this branch.
-    #         pass
-    #     else:
-    #         raise ValueError(
-    #             f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
 
     if measurement is None:
         if signal_operator == "Wx":
