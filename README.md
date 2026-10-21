@@ -451,6 +451,11 @@ options:
                         number of discretized values of theta to use in TensorFlow optimization
 ```
 
+## Contributing
+
+See the [contributing guide](.github/CONTRIBUTING.md) for reporting issues,
+testing changes, and submitting pull requests.
+
 ## Citing this repository
 
 To cite this repository please include a reference to [our paper](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040203), [Chao et al.](https://github.com/alibaba-edu/angle-sequence), and [Efficient phase-factor evaluation in quantum signal processing](https://arxiv.org/abs/2002.11649), or reference the file linked below.
