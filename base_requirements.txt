@@ -1,7 +1,9 @@
-cython
 matplotlib
-numpy
-protobuf
+numpy>1.19.1
 scipy
 setuptools
+wheel
+build
+installer
 pytest
+flake8

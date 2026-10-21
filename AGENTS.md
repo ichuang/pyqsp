@@ -7,9 +7,10 @@ Update affected instructions when changing a documented workflow.
 
 ## Environment and checks
 
-Use an isolated environment with NumPy, SciPy, Matplotlib, pytest, and flake8.
-Check `setup.py` for runtime requirements and
-`.github/workflows/run_tests.yml` for CI configuration.
+Use an isolated environment with the core development dependencies in
+`base_requirements.txt`, prepared using your preferred tooling.
+Check `setup.py` for runtime support and `.github/workflows/run_tests.yml` for CI
+configuration.
 `optional_requirements.txt` lists Cirq; `tf_requirements.txt` aliases that list
 and does not restore retired training. Neither is needed for core development.
 
@@ -35,7 +36,12 @@ python -m flake8 . --select=E9,F63,F7,F82 --show-source
 
 Before substantial numerical changes, record the relevant baseline, environment,
 and existing failures. Reuse successful checks while their inputs remain unchanged.
-`make test` installs dependencies and the package; it does not run tests.
+`make test` runs the core suite and `make lint` runs blocking source checks.
+`make` (also `make build`, `make dist`, or `make core`) builds an sdist and wheel
+without installing dependencies or the package. Build dependencies must already
+be available. `PYTHON` selects the interpreter for Makefile targets. See the
+developer workflow migration note in `README.md` for the changed `make test`
+behavior.
 
 Core workflows must work without TensorFlow/Cirq. Retirement tests always run:
 named training entry points remain importable and raise actionable errors without

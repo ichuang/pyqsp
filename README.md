@@ -204,8 +204,9 @@ This last example also shows how an arbitrary function can be specified (using a
 ## Package requirements and tests
 
 Runtime dependencies are NumPy (`>1.19.1`), SciPy, and Matplotlib, as declared
-in `setup.py`. Prepare an isolated environment using your preferred tooling.
-Core tests use NumPy, SciPy, Matplotlib, pytest, and flake8.
+in `setup.py`. Core development additionally uses the tools listed in
+[base_requirements.txt](base_requirements.txt), including pytest, flake8, and
+the build tools. Prepare an isolated environment using your preferred tooling.
 
 [optional_requirements.txt](optional_requirements.txt) lists Cirq for circuit
 evaluation; `tf_requirements.txt` is now a compatibility alias for that list.
@@ -213,9 +214,34 @@ It does not restore training. Retirement tests always run. The Cirq tests skip
 when Cirq is absent; install that optional dependency to exercise those features.
 Core synthesis, plotting, and development need neither TensorFlow nor Cirq.
 
-## Unit tests
+## Developer workflow
 
-A series of unit tests is also provided. These can be run using `pytest pyqsp/test/`.
+After preparing the environment, run these commands from the repository root:
+
+```sh
+python -c "import pyqsp; print(pyqsp.__file__)"
+make test
+make lint
+make build
+```
+
+Check that the import path points to this checkout. `make test` runs the core
+pytest suite with a noninteractive plotting backend. `make lint` runs the
+blocking syntax and undefined-name checks used by CI. `make build` uses the
+environment's installed build tools to create an sdist and wheel in `dist/`.
+The default `make` target, `make dist`, and `make core` are aliases for the build.
+Set `PYTHON` to choose an interpreter, for example `make test PYTHON=python3`.
+None of these targets installs dependencies or the package.
+
+**Developer workflow migration:** previously, `make test` installed dependencies
+and the package without running tests, and the default target installed
+dependencies before building. Automation that relied on those side effects must
+prepare its environment and install the package explicitly before running the
+checks. `base_requirements.txt` now contains core development dependencies only;
+Cython and protobuf are no longer installed incidentally. This workflow change
+does not change pyqsp's runtime dependency requirements. The obsolete
+`python setup.py test` entry point is no longer supported; use
+`MPLBACKEND=Agg python -m pytest pyqsp/test` or `make test`.
 
 ## Programmatic usage
 
