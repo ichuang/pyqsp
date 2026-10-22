@@ -57,7 +57,7 @@ where $P$ and $Q$ are polynomials of degree $n$ and $n-1$ respectively, with def
 
 For the same phase list, the Hadamard relation gives
 $\langle 0|U_z|0\rangle=\langle +|U_x|+\rangle
-=\operatorname{Re}P_x(a)+i\sqrt{1-a^2}\operatorname{Re}Q_x(a)$.
+=\mathrm{Re}(P_x(a))+i\sqrt{1-a^2}\mathrm{Re}(Q_x(a))$.
 This follows by summing all four entries of the displayed $U_x$ matrix and
 dividing by two. The relation depends on both completed polynomials; prescribing
 only $P_x$ does not determine the other selected amplitude or the full unitary.
