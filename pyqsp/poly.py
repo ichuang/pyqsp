@@ -122,11 +122,6 @@ class PolyCosineTX(PolyGenerator):
 
         if return_coef:
             pcoefs = g.coef
-            # Note that now all approximating polynomials are in the Chebyshev basis, bypassing the branching conditional below.
-            # if chebyshev_basis:
-            #     pcoefs = g.coef
-            # else:
-            #     pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -178,11 +173,6 @@ class PolySineTX(PolyGenerator):
 
         if return_coef:
             pcoefs = g.coef
-            # Note: all polynomials are expected in the Chebyshev basis, bypassing the conditional below.
-            # if chebyshev_basis:
-            #     pcoefs = g.coef
-            # else:
-            #     pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -222,20 +212,7 @@ class PolyOneOverX(PolyGenerator):
         j0 = int(np.sqrt(b * np.log(4 * b / epsilon)))
         print(f"b={b}, j0={j0}")
 
-        """
-        # Analytic form for inverse function; note large integer divisions.
-        g = np.polynomial.chebyshev.Chebyshev([0])
-        for j in range(j0 + 1):
-            gcoef = 0
-            for i in range(j + 1, b + 1):
-                gcoef += scipy.special.binom(2 * b, b + i) / 2**(2 * b)
-            deg = 2 * j + 1
-            g += (-1)**j * gcoef * \
-                np.polynomial.chebyshev.Chebyshev([0] * deg + [1])
-        g = 4 * g
-        """
-
-        # Iterative subroutine replacing above block to avoid integer overflow.
+        # Evaluate the analytic form iteratively to avoid integer overflow.
         # Following analytic form of Lemma 18 from https://arxiv.org/abs/1511.02306v2.
         # I.e., (1 - (1 - x**2)**b)/x, as per (77) on page (19) in cited work.
         g = np.polynomial.chebyshev.Chebyshev([1])
@@ -264,12 +241,6 @@ class PolyOneOverX(PolyGenerator):
 
         if return_coef:
             pcoefs = g.coef
-            # Note: as all polynomials are now treated in the Chebyshev basis, the conditional below has been bypassed.
-            # if chebyshev_basis:
-            #     pcoefs = g.coef
-            # else:
-            #     pcoefs = np.polynomial.chebyshev.cheb2poly(g.coef)
-            # print(f"[pyqsp.PolyOneOverX] pcoefs={pcoefs}")
             if ensure_bounded and return_scale:
                 return pcoefs, scale
             else:
@@ -315,19 +286,6 @@ class PolyOneOverXRect(PolyGenerator):
         mult_result = np.polynomial.chebyshev.chebmul(poly_invert.coef, poly_rect.coef)
         pcoefs = mult_result
 
-        # Note: all polynomials are now considered in Chebyshev basis, bypassing the original conditional below.
-        # if not chebyshev_basis:
-        #     poly_invert = np.polynomial.Polynomial(coefs_invert)
-        #     poly_rect = np.polynomial.Polynomial(coefs_rect)
-
-        #     pcoefs = (poly_invert * poly_rect).coef
-        # else:
-        #     poly_invert = np.polynomial.chebyshev.Chebyshev(coefs_invert)
-        #     poly_rect = np.polynomial.chebyshev.Chebyshev(coefs_rect)
-
-        #     mult_result = np.polynomial.chebyshev.chebmul(poly_invert.coef, poly_rect.coef)
-        #     pcoefs = mult_result
-
         if return_scale:
             return pcoefs, scale1 * scale2
         else:
@@ -335,17 +293,11 @@ class PolyOneOverXRect(PolyGenerator):
 
 # -----------------------------------------------------------------------------
 
-"""
-    As an addendum, we can add a boolean parameter in the taylor series method to compute, instead of the monomial expansion, the chebyshev expansion, which can be passed down through the inheriting classes. This requires understanding the reversal of coefficients before instantiating a numpy polynomial. It's also worth determining whether numpy polynomial objects can themselves be implemented with chebyshev coefficients, in which case the normalization that occurs can be handled in situ.
-
-    # Another question; we only attempt to optimize for the minimum that the negative of the polynomial acquires (which is the same as maximizing on the interval); we have definite parity, so this would always seem to give the maximum magnitude regardless (unless the polynomial is of even parity and is highly negative?). This seems to be a bug.
-
-    It looks like we can directly instantiate a Chebyshev expansion object. This can be paired with the chebfit method to directly determine coefficients.
-"""
-
 class PolyTaylorSeries(PolyGenerator):
     '''
-    Base class for PolySign and PolyThreshold
+    Chebyshev approximation helper used by the target recipes.
+
+    The historical name is retained; this class does not compute Taylor series.
     '''
 
     def taylor_series(
@@ -359,19 +311,24 @@ class PolyTaylorSeries(PolyGenerator):
             chebyshev_basis=False,
             cheb_samples=20):
         '''
-        If chebyshev_basis is True:
-            Return numpy Chebyshev approximation for func, using numpy methods for Chebyshev approximation of specified degree.
-            We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
+        Fit func on [-1, 1] and return a NumPy Chebyshev object of given degree.
 
-        If chebyshev_basis is False:
-            Return numpy Polynomial approximation for func, constructed using
-            taylor series, of specified degree.
-            We also evaluate the mean absolute difference on equispaced points over the interval [-1,1].
+        The fit uses 2*degree first-kind Chebyshev nodes. The compatibility
+        arguments chebyshev_basis and cheb_samples do not change the basis or
+        this sample count. Coefficients are ordered from T_0 upward.
+
+        With ensure_bounded, estimate the largest absolute value using local
+        optimization and scale toward max_scale. This estimate is not a global
+        bound, and scaling may expand a small target. If both ensure_bounded
+        and return_scale are True, return (polynomial, scale); otherwise return
+        only the polynomial.
+
+        Print the mean absolute error against scale*func on npts equispaced
+        points; this sampled diagnostic is not a uniform error bound.
         '''
 
-        # Note: PolyTaylorSeries now no longer generates approximating Taylor polynomials, but only Chebyshev interpolations as contained in the assured branch indicated below. This exhibits better stability and convergence.
-
-        cheb_samples = 2*degree # Set to prevent aliasing; note that all methods calling TaylorSeries implicitly have their cheb_samples specifications overruled here.
+        # Preserve the historical sample count, irrespective of cheb_samples.
+        cheb_samples = 2*degree
         # Generate x and y values for fit according to func; note use of chebyshev nodes of the first kind.
         samples = np.polynomial.chebyshev.chebpts1(cheb_samples)
         scale = 1.0 # Binding variable.
@@ -440,24 +397,20 @@ class PolySign(PolyTaylorSeries):
         def erf_delta(x):
             return scipy.special.erf(x * delta)
 
-        if ensure_bounded and return_scale:
-            the_poly, scale = self.taylor_series(
-                erf_delta,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+        with_scale = True if ensure_bounded and return_scale else False
+        result = self.taylor_series(
+            erf_delta,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
+
+        if with_scale:
+            the_poly, scale = result
         else:
-            the_poly = self.taylor_series(
-                erf_delta,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+            the_poly = result
 
         pcoefs = the_poly.coef
         # force even coefficients to be zero, since the polynomial must be odd
@@ -496,24 +449,20 @@ class PolyThreshold(PolyTaylorSeries):
         def threshold(x):
             return (erf_delta(x + 0.5) - erf_delta(x - 0.5)) / 2
 
-        if ensure_bounded and return_scale:
-            the_poly, scale = self.taylor_series(
-                threshold,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+        with_scale = True if ensure_bounded and return_scale else False
+        result = self.taylor_series(
+            threshold,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
+
+        if with_scale:
+            the_poly, scale = result
         else:
-            the_poly = self.taylor_series(
-                threshold,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+            the_poly = result
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -552,24 +501,20 @@ class PolyPhaseEstimation(PolyTaylorSeries):
         def threshold(x):
             return (-1 + erf_delta(1/np.sqrt(2) - x) + erf_delta(1/np.sqrt(2) + x))
 
-        if ensure_bounded and return_scale:
-            the_poly, scale = self.taylor_series(
-                threshold,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+        with_scale = True if ensure_bounded and return_scale else False
+        result = self.taylor_series(
+            threshold,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
+
+        if with_scale:
+            the_poly, scale = result
         else:
-            the_poly = self.taylor_series(
-                threshold,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+            the_poly = result
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -622,24 +567,20 @@ class PolyRect(PolyTaylorSeries):
         # (1 - (np.sign(x + 1 / args.seqargs[2])
         # - np.sign(x - 1 / args.seqargs[2])) / 2)
 
-        if ensure_bounded and return_scale:
-            the_poly, scale = self.taylor_series(
-                rect,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+        with_scale = True if ensure_bounded and return_scale else False
+        result = self.taylor_series(
+            rect,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
+
+        if with_scale:
+            the_poly, scale = result
         else:
-            the_poly = self.taylor_series(
-                rect,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+            the_poly = result
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -731,24 +672,20 @@ class PolyGibbs(PolyTaylorSeries):
         def gibbs(x):
             return np.exp(-beta * abs(x))
 
-        if ensure_bounded and return_scale:
-            the_poly, scale = self.taylor_series(
-                gibbs,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+        with_scale = True if ensure_bounded and return_scale else False
+        result = self.taylor_series(
+            gibbs,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
+
+        if with_scale:
+            the_poly, scale = result
         else:
-            the_poly = self.taylor_series(
-                gibbs,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+            the_poly = result
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -790,24 +727,20 @@ class PolyEigenstateFiltering(PolyTaylorSeries):
         def efpoly(x):
             return scale * cheb(x)
 
-        if ensure_bounded and return_scale:
-            the_poly, scale = self.taylor_series(
-                efpoly,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+        with_scale = True if ensure_bounded and return_scale else False
+        result = self.taylor_series(
+            efpoly,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
+
+        if with_scale:
+            the_poly, scale = result
         else:
-            the_poly = self.taylor_series(
-                efpoly,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+            the_poly = result
 
         pcoefs = the_poly.coef
         # force odd coefficients to be zero, since the polynomial must be even
@@ -890,24 +823,20 @@ class PolySoftPlus(PolyTaylorSeries):
 
         def func(x):
             return np.log(1 + np.exp(kappa * (abs(x) - delta))) / kappa
-        if ensure_bounded and return_scale:
-            the_poly, scale = self.taylor_series(
-                func,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+        with_scale = True if ensure_bounded and return_scale else False
+        result = self.taylor_series(
+            func,
+            degree,
+            ensure_bounded=ensure_bounded,
+            return_scale=return_scale,
+            max_scale=max_scale,
+            chebyshev_basis=chebyshev_basis,
+            cheb_samples=cheb_samples)
+
+        if with_scale:
+            the_poly, scale = result
         else:
-            the_poly = self.taylor_series(
-                func,
-                degree,
-                ensure_bounded=ensure_bounded,
-                return_scale=return_scale,
-                max_scale=max_scale,
-                chebyshev_basis=chebyshev_basis,
-                cheb_samples=cheb_samples)
+            the_poly = result
 
         pcoefs = the_poly.coef
         # Force odd coefficients to be zero, since the polynomial must be even.

@@ -1,0 +1,2 @@
+include AGENTS.md CITATION Makefile base_requirements.txt tf_requirements.txt
+include optional_requirements.txt

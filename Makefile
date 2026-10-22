@@ -1,20 +1,17 @@
-all:
-	python -m pip install cython
-	python -m pip install -r base_requirements.txt
-	python setup.py sdist
-	python setup.py bdist_wheel --universal
+PYTHON ?= python
 
-core:
-	dist
+.PHONY: all core dist build test lint upload
 
-dist:	
-	python setup.py sdist
-	python setup.py bdist_wheel --universal
+all core dist: build
+
+build:
+	$(PYTHON) -m build --no-isolation
 
 test:
-	python -m pip install cython
-	python -m pip install -r base_requirements.txt
-	python setup.py install
+	MPLBACKEND=Agg $(PYTHON) -m pytest pyqsp/test
 
-upload:	
-	twine upload dist/*
+lint:
+	$(PYTHON) -m flake8 . --select=E9,F63,F7,F82 --show-source
+
+upload:
+	$(PYTHON) -m twine upload dist/*

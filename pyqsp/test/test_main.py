@@ -87,3 +87,118 @@ def test_symmetric_example_uses_returned_scale(monkeypatch):
     measured = response.ComputeQSPResponse(
         points, example["phiset"], sym_qsp=True)["pdat"].imag
     np.testing.assert_allclose(measured, example["poly"](points), atol=1e-12, rtol=0)
+
+
+@pytest.mark.parametrize("method", ["laurent", "sym_qsp"])
+@pytest.mark.parametrize("command, generator, title, expected", [
+    ("invert", "PolyOneOverX", "Inversion", [-.8, 1.6, .4/.75]),
+    ("gibbs", "PolyGibbs", "Gibbs distribution", .4*np.exp([.25, -.125, -.375])),
+    ("efilter", "PolyEigenstateFiltering", "Eigenstate filtering", [0, .2, 0]),
+    ("relu", "PolySoftPlus", "ReLU Function", [0, 0, .1]),
+    ("poly_sign", "PolySign", "Sign Function", [-.4, .4, .4]),
+    ("poly_thresh", "PolyThreshold", "Threshold Function", [.2, .4, 0]),
+    ("poly_phase", "PolyPhaseEstimation", "Phase Estimation Polynomial", [.4, .4, -.4]),
+    ("poly_rect", "PolyRect", "Rect Function", [.4, 0, .4]),
+    ("invert_rect", "PolyOneOverXRect", "Poly Rect * 1/x", [-.4, 0, .4/.75]),
+    ("poly_linear_amp", "PolyLinearAmplification", "Linear Amplification Polynomial", [-.2, .1, .3]),
+])
+def test_named_command_generation_and_plot_contract(
+        command, generator, title, expected, method, monkeypatch):
+    symmetric = method == "sym_qsp"
+    phases = np.array([.1, .2, .3]) if symmetric else [.1, .2, .3]
+    coefficients, captured = [.2, 0, .1], {}
+
+    def generate(self, *values, **options):
+        assert values == (4, .5, 2)
+        expected_options = dict(ensure_bounded=True, return_scale=True,
+                                chebyshev_basis=symmetric)
+        if command == "invert":
+            expected_options["return_coef"] = True
+        assert options == expected_options
+        return coefficients, .4
+
+    def synthesize(actual, **options):
+        assert actual is coefficients
+        assert options == dict(signal_operator="Wz", method=method, tolerance=.1,
+                               nepochs=5000, npts_theta=30, chebyshev_basis=symmetric)
+        return (phases, [], 0) if symmetric else phases
+
+    def plot(actual, **options):
+        assert actual is phases
+        captured.update(options)
+
+    monkeypatch.setattr(getattr(main.pyqsp.poly, generator), "generate", generate)
+    monkeypatch.setattr(main.angle_sequence, "QuantumSignalProcessingPhases", synthesize)
+    monkeypatch.setattr(main.response, "PlotQSPResponse", plot)
+    actual = main.CommandLine(arglist=[command, "--seqargs=4,.5,2", "--method", method,
+                                      "--signal_operator=Wz", "--measurement=x",
+                                      "--plot", "--hide-plot", "--return-angles"])
+    assert actual is phases
+    np.testing.assert_allclose(captured.pop("target")(np.array([-.5, .25, .75])), expected,
+                               atol=1e-15, rtol=0)
+    assert captured["signal_operator"] == "Wx" and captured["title"] == title
+    assert captured.get("measurement") == ("z" if command == "invert" else None)
+    assert captured["sym_qsp"] is symmetric and captured["show"] is False
+
+
+def test_named_command_resolves_rebound_generator_classes(monkeypatch):
+    calls = []
+    phases = [.1, .2, .3]
+
+    def synthesize(coefficients, **options):
+        calls.append(coefficients)
+        assert options['method'] == 'laurent'
+        return phases
+
+    monkeypatch.setattr(main.angle_sequence, 'QuantumSignalProcessingPhases', synthesize)
+    for coefficients in ([0, .2], [0, -.3]):
+        class ReboundSign:
+            def generate(self, *values, **options):
+                assert values == (3, .5)
+                return coefficients, .4
+
+        monkeypatch.setattr(main.pyqsp.poly, 'PolySign', ReboundSign)
+        actual = main.CommandLine(arglist=[
+            'poly_sign', '--seqargs=3,.5', '--method=laurent', '--return-angles'])
+        assert actual is phases
+        assert calls[-1] is coefficients
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize('method', ['laurent', 'sym_qsp'])
+def test_custom_registry_preserves_target_polynomial_metadata(method, monkeypatch):
+    symmetric = method == 'sym_qsp'
+    phases = np.array([.1, .2, .3]) if symmetric else [.1, .2, .3]
+    target = lambda x: .2*x*x - .1
+    metadata = object()
+    coefficients = main.TargetPolynomial([.2, 0, .1], target=target, scale=metadata)
+    captured = {}
+
+    class CustomRecipe:
+        def generate(self, *values, **options):
+            assert values == (2, .25)
+            assert options == dict(return_scale=True, chebyshev_basis=symmetric)
+            return coefficients, .7
+
+    def synthesize(actual, **options):
+        assert actual is coefficients
+        assert options['method'] == method
+        return (phases, [], 0) if symmetric else phases
+
+    def plot(actual, **options):
+        assert actual is phases
+        captured.update(options)
+
+    assert main.polynomial_generators is main.pyqsp.poly.polynomial_generators
+    monkeypatch.setitem(main.polynomial_generators, 'custom_contract', CustomRecipe)
+    monkeypatch.setattr(main.angle_sequence, 'QuantumSignalProcessingPhases', synthesize)
+    monkeypatch.setattr(main.response, 'PlotQSPResponse', plot)
+    actual = main.CommandLine(arglist=[
+        'poly', '--polyname=custom_contract', '--polyargs=2,.25', '--method', method,
+        '--signal_operator=Wz', '--plot', '--hide-plot', '--return-angles'])
+    assert actual is phases
+    assert coefficients.scale is metadata
+    assert captured['pcoefs'] is coefficients
+    assert captured['target'] is target
+    assert captured['signal_operator'] == 'Wx'
+    assert captured['sym_qsp'] is symmetric

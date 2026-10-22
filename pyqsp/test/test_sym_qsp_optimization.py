@@ -1,17 +1,10 @@
-import os
 import unittest
 
 import numpy as np
 import pytest
-import matplotlib.pyplot as plt
-import scipy.optimize
-import scipy.special
 
-import pyqsp
 from pyqsp import angle_sequence, sym_qsp_opt, poly
-
-# from .. import sym_qsp_opt
-# from .. import poly
+from pyqsp.test import qsp_matrix
 
 # -----------------------------------------------------------------------------
 """
@@ -25,9 +18,6 @@ from pyqsp import angle_sequence, sym_qsp_opt, poly
 
 class Test_sym_qsp_optimization(unittest.TestCase):
 
-    def _test_unitary_form(self):
-        pass
-
     def test_gen_sym_qsp_obj(self):
         # Generate a symmetric QSP object with default arguments.
         sym_qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol()
@@ -37,102 +27,80 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         assert sym_qsp_protocol.poly_deg == None
 
     def test_trivial_protocol(self):
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0],parity=0)
-        samples = [0, 0.5, 1]
-        qsp_unitary = qsp_protocol.gen_unitary(samples)
-
-        # Check that the second Chebyshev polynomial is evaluated.
-        assert len(qsp_protocol.full_phases) == 3
-        (s0, s1, s2) = (qsp_unitary[0], qsp_unitary[1], qsp_unitary[2])
-        assert abs(s0[0,0] - (2*samples[0]**2 - 1)) <= 1e-3
-        assert abs(s1[0,0] - (2*samples[1]**2 - 1)) <= 1e-3
-        assert abs(s2[0,0] - (2*samples[2]**2 - 1)) <= 1e-3
-
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0],parity=1)
-        samples = [0, 0.5, 1]
-        qsp_unitary = qsp_protocol.gen_unitary(samples)
-
-        # Check that the third Chebyshev polynomial is evaluated.
-        assert len(qsp_protocol.full_phases) == 4
-        (s0, s1, s2) = (qsp_unitary[0], qsp_unitary[1], qsp_unitary[2])
-        assert abs(s0[0,0] - (4*samples[0]**3 - 3*samples[0])) <= 1e-3
-        assert abs(s1[0,0] - (4*samples[1]**3 - 3*samples[1])) <= 1e-3
-        assert abs(s2[0,0] - (4*samples[2]**3 - 3*samples[2])) <= 1e-3
+        samples = np.array([-1, -0.5, 0, 0.5, 1])
+        # W(x)**2 and W(x)**3 have closed-form diagonal/off-diagonal entries.
+        root = np.sqrt(1 - samples**2)
+        for parity, diagonal, off_diagonal in (
+                (0, 2*samples**2 - 1, 2j*samples*root),
+                (1, 4*samples**3 - 3*samples, 1j*(4*samples**2 - 1)*root)):
+            qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(
+                reduced_phases=[0, 0], parity=parity)
+            qsp_unitary = qsp_protocol.gen_unitary(samples)
+            assert len(qsp_protocol.full_phases) == 3 + parity
+            expected = np.empty((len(samples), 2, 2), dtype=complex)
+            expected[:, 0, 0] = expected[:, 1, 1] = diagonal
+            expected[:, 0, 1] = expected[:, 1, 0] = off_diagonal
+            np.testing.assert_allclose(qsp_unitary, expected, rtol=0, atol=1e-12)
 
     def test_protocol_response(self):
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0],parity=0)
-        samples = [0, 0.5, 1]
-        qsp_response = qsp_protocol.gen_response_re(samples)
-        # Check that the second Chebyshev polynomial is evaluated.
-        (s0, s1, s2) = (qsp_response[0], qsp_response[1], qsp_response[2])
-        assert abs(s0 - (2*samples[0]**2 - 1)) <= 1e-3
-        assert abs(s1 - (2*samples[1]**2 - 1)) <= 1e-3
-        assert abs(s2 - (2*samples[2]**2 - 1)) <= 1e-3
+        samples = np.array([-1, -0.5, 0, 0.5, 1])
+        second_chebyshev = 2*samples**2 - 1
+        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(
+            reduced_phases=[0, 0], parity=0)
+        np.testing.assert_allclose(
+            qsp_protocol.gen_response_re(samples), second_chebyshev,
+            rtol=0, atol=1e-12)
+        np.testing.assert_allclose(
+            qsp_protocol.gen_response_im(samples), 0, rtol=0, atol=1e-12)
 
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,np.pi/8],parity=0)
-        samples = [0, 0.5, 1]
-        qsp_response_re = qsp_protocol.gen_response_re(samples)
-        qsp_response_im = qsp_protocol.gen_response_im(samples)
+        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(
+            reduced_phases=[0, np.pi/8], parity=0)
         # Z(pi/8) W(x)**2 Z(pi/8) has U00 = exp(i*pi/4)*T_2(x).
-        (s0, s1, s2) = (qsp_response_re[0], qsp_response_re[1], qsp_response_re[2])
-        (t0, t1, t2) = (qsp_response_im[0], qsp_response_im[1], qsp_response_im[2])
-        assert abs(s0 - (2*samples[0]**2 - 1)/np.sqrt(2)) <= 1e-3
-        assert abs(s1 - (2*samples[1]**2 - 1)/np.sqrt(2)) <= 1e-3
-        assert abs(s2 - (2*samples[2]**2 - 1)/np.sqrt(2)) <= 1e-3
-        assert abs(t0 - (2*samples[0]**2 - 1)/np.sqrt(2)) <= 1e-3
-        assert abs(t1 - (2*samples[1]**2 - 1)/np.sqrt(2)) <= 1e-3
-        assert abs(t2 - (2*samples[2]**2 - 1)/np.sqrt(2)) <= 1e-3
+        expected = second_chebyshev / np.sqrt(2)
+        np.testing.assert_allclose(
+            qsp_protocol.gen_response_re(samples), expected,
+            rtol=0, atol=1e-12)
+        np.testing.assert_allclose(
+            qsp_protocol.gen_response_im(samples), expected,
+            rtol=0, atol=1e-12)
 
     def test_poly_jacobian_components_trivial(self):
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0,0], parity=0)
+        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(
+            reduced_phases=[0, 0, 0], parity=0)
+        # At zero phases, differentiating each mirrored phase pair gives
+        # 2*T_{2k}(x); the central phase is itself doubled.
+        for argument in (0, np.pi/4):
+            result = qsp_protocol.gen_poly_jacobian_components(argument)
+            expected = [[2, 2*(2*argument**2 - 1),
+                         2*(8*argument**4 - 8*argument**2 + 1), 0]]
+            assert result.shape == (1, 4)
+            if argument == 0:
+                np.testing.assert_array_equal(result, expected)
+            else:
+                np.testing.assert_allclose(result, expected, rtol=0, atol=1e-12)
 
-        argument = 0
-        result = qsp_protocol.gen_poly_jacobian_components(argument)
-
-        assert result.shape == (1, 4)
-        assert result[0,0] == 2
-        assert result[0,1] == -2
-        assert result[0,2] == 2
-        assert result[0,3] == 0
-
-        # Same protocol at different evaluation point; note parity is being treated as even for these cases.
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0,0], parity=0)
-
+        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(
+            reduced_phases=[np.pi/4, np.pi/4, np.pi/4], parity=0)
         argument = np.pi/4
         result = qsp_protocol.gen_poly_jacobian_components(argument)
-
+        # Directly multiplying Z(pi/4) W Z(pi/4) W Z(pi/2) W
+        # Z(pi/4) W Z(pi/4) gives Im(U00) = 1 - 2*x**2.
+        # Differentiating its reduced phases gives the first three entries.
+        expected = [[8*argument**2*(1 - argument**2), 0, 0,
+                     1 - 2*argument**2]]
         assert result.shape == (1, 4)
-        assert np.abs((result[0,0] - 2)) < 1e-3
-        assert np.abs((result[0,1] - 0.4674)) < 1e-3
-        assert np.abs((result[0,2] - -1.7815)) < 1e-3
-        assert np.abs((result[0,3] - 0)) < 1e-3
-
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[np.pi/4,np.pi/4,np.pi/4], parity=0)
-
-        argument = np.pi/4
-        result = qsp_protocol.gen_poly_jacobian_components(argument)
-
-        assert result.shape == (1, 4)
-        assert np.abs((result[0,0] - 1.8908)) < 1e-3
-        assert np.abs((result[0,1] - 0)) < 1e-3
-        assert np.abs((result[0,2] - 0)) < 1e-3
-        assert np.abs((result[0,3] - -0.2337)) < 1e-3
+        np.testing.assert_allclose(result, expected, rtol=0, atol=1e-12)
 
     def test_jacobian_full_trivial(self):
-        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(reduced_phases=[0,0,0], parity=0)
-
+        qsp_protocol = sym_qsp_opt.SymmetricQSPProtocol(
+            reduced_phases=[0, 0, 0], parity=0)
         f, df = qsp_protocol.gen_jacobian()
-
         assert f.shape == (3,)
         assert df.shape == (3, 3)
-
-        assert np.abs((f[0] - 0)) < 1e-3
-        assert np.abs((f[1] - 0)) < 1e-3
-        assert np.abs((f[2] - 0)) < 1e-3
-
-        assert np.abs((df[0,0] - 2)) < 1e-3
-        assert np.abs((df[1,1] - 2)) < 1e-3
-        assert np.abs((df[2,2] - 2)) < 1e-3
+        # The derivatives above are exactly the Chebyshev basis functions,
+        # so the coefficient Jacobian is twice the identity, including zeros.
+        np.testing.assert_allclose(f, 0, rtol=0, atol=1e-12)
+        np.testing.assert_allclose(df, 2*np.eye(3), rtol=0, atol=1e-12)
 
     def test_qsp_newton_solver(self):
         coef = np.array([0.2,0.1,0.3])
@@ -142,7 +110,14 @@ class Test_sym_qsp_optimization(unittest.TestCase):
 
         print("phases: %s\nerror: %s\niter: %s\n"%(str(phases), str(err), str(total_iter)))
 
-        assert (np.abs(err) < 1e-3)
+        assert np.isfinite(err) and 0 <= err < 1e-12
+        assert np.all(np.isfinite(phases))
+        samples = np.linspace(-1, 1, 101)
+        expected = (0.2 + 0.1*(2*samples**2 - 1)
+                    + 0.3*(8*samples**4 - 8*samples**2 + 1))
+        np.testing.assert_allclose(
+            qsp_seq_opt.gen_response_im(samples), expected,
+            rtol=0, atol=1e-12)
 
     def test_cosine_newton_solver(self):
         freq = 16
@@ -178,116 +153,38 @@ class Test_sym_qsp_optimization(unittest.TestCase):
         assert (approx_to_true_err < 1e-10)
         assert (qsp_to_approx_err < 1e-10)
 
-    def test_cheb_poly_approximation(self):
-        # Generate second Chebyshev polynomial and fit.
-        degree = 4
-        test_fun = lambda x: 2*(x**2) - 1
-
-        # Use taylor series with cheb basis, over 20 equispaced samples, and with no subnormalization.
-        poly_obj = poly.PolyTaylorSeries()
-        cheb_approx = poly_obj.taylor_series(func=test_fun, degree=degree, npts=20, chebyshev_basis=True, cheb_samples=20, max_scale=1.0)
-
-        smp_pts = 100
-        samples = np.linspace(-1,1,smp_pts)
-
-        # Map chebyshev function over samples
-        evaluation = cheb_approx(samples)
-        # Expecting second chebyshev polynomial
-        exp_value = np.array(list(map(test_fun, samples)))
-
-        # Take the one norm of the difference and assure small.
-        diff = np.linalg.norm(np.abs(exp_value - evaluation), ord=1)
-        assert (diff < 1e-6)
-
-    def test_cheb_poly_sine_approximation(self):
-        # Generate second Chebyshev polynomial and fit.
-        degree = 20
-        test_fun = lambda x: np.cos(3*x)
-
-        # Use taylor series with cheb basis, over 100 equispaced samples, and with no subnormalization.
-        poly_obj = poly.PolyTaylorSeries()
-        cheb_approx = poly_obj.taylor_series(func=test_fun, degree=degree, npts=20, chebyshev_basis=True, cheb_samples=100, max_scale=1.0)
-
-        smp_pts = 100
-        samples = np.linspace(-1,1,smp_pts)
-
-        # Map chebyshev function over samples
-        evaluation = cheb_approx(samples)
-        # Expecting second chebyshev polynomial
-        exp_value = np.array(list(map(test_fun, samples)))
-
-        # Take the one norm of the difference and assure small.
-        diff = np.linalg.norm(np.abs(exp_value - evaluation), ord=1)
-        assert (diff < 1e-6)
 
     def test_sym_qsp_sign_norm_violation(self):
-        # Test inserted to investigate problems when finding the extrema of polynomial approximations to the sign function over the interval [-1,1] as determined by the following command-line call
-        # pyqsp --plot --func "np.sign(x)" --polydeg 151 sym_qsp_func
-        #
-        # Running this test individually and verbosely can be done with:
-        # pytest pyqsp/test/test_sym_qsp_optimization.py -s -k 'test_sym_qsp_sign_norm_violation'
-        #
-        # As it stands, this optimization reveals that the naïve, scipy-based methods for extrema calculation over the interval fail for even modestly high-degree approximations to the sign function. This causes a failure of both the `sym_qsp` iterative and `laurent` completion methods if fed to them, and (incorrectly) does not throw errors.
         degree = 151
-        test_fun = lambda x: np.sign(x)
+        fitted, scale = poly.PolyTaylorSeries().taylor_series(
+            np.sign, degree, chebyshev_basis=True, return_scale=True)
+        theta = (np.arange(2*degree) + .5)*np.pi/(2*degree)
+        modes = np.arange(degree + 1)
+        # First-kind-node cosine orthogonality gives the least-squares fit.
+        coefficients = 2*np.mean(
+            np.sign(np.cos(theta))[:, None]
+            * np.cos(theta[:, None]*modes), axis=0)
+        coefficients[0] /= 2
+        assert np.isfinite(scale) and scale > 0
+        # This checks the returned scale, not a certified global bound.
+        np.testing.assert_allclose(
+            fitted.coef, scale*coefficients, atol=1e-12, rtol=0)
 
-        # Instantiate Taylor series object and optimize toward test function.
-        poly_obj = poly.PolyTaylorSeries()
-        cheb_poly, scale = poly_obj.taylor_series(func=test_fun, degree=degree, chebyshev_basis=True, return_scale=True)
 
-        # Compute extremal properties of rescaled test function; find minimum of function and its negation to extremize absolute value over interval.
-        res_1 = scipy.optimize.minimize(-1*cheb_poly, (0.1,), bounds=[(-1, 1)])
-        res_2 = scipy.optimize.minimize(cheb_poly, (0.1,), bounds=[(-1, 1)])
-        pmax_1 = res_1.x[0]
-        pmax_2 = res_2.x[0]
-        max_abs_1 = np.abs(cheb_poly(pmax_1))
-        max_abs_2 = np.abs(cheb_poly(pmax_2))
+@pytest.mark.parametrize("degree, cheb_samples, target", [
+    (4, 20, lambda x: 2*(x**2) - 1),
+    (20, 100, lambda x: np.cos(3*x)),
+], ids=["chebyshev_T2", "cosine"])
+def test_cheb_poly_approximation(degree, cheb_samples, target):
+    fitted = poly.PolyTaylorSeries().taylor_series(
+        target, degree, npts=20, chebyshev_basis=True,
+        cheb_samples=cheb_samples, max_scale=1.0)
+    samples = np.linspace(-1, 1, 100)
+    expected = np.array(list(map(target, samples)))
+    assert np.linalg.norm(np.abs(expected - fitted(samples)), ord=1) < 1e-6
 
-        # Note that the code below seems to suggest that the polynomial approximation `cheb_poly` has had its maximum rescaled to 0.9, as the value of `max_abs_1` suggests. Plainly, however, we see that plotting the resulting function shows that the rescaled polynomial exceeds norm 1 near the origin, indicating failure of the original optimization.
-        #
-        # In fact, we see that the initial location for optimization (0.1) is directly next to the local minimum at 0.103 which has been rescaled to the default `scale=0.9` parameter supplied to the Taylor series function.
 
-        # Print the locations and evaluations of the rescaled function's extrema.
-        print("Optimization results:")
-        print(f"Max arg 1: {pmax_1}")
-        print(f"Max arg 2: {pmax_2}")
-        print(f"Max val 1: {max_abs_1}")
-        print(f"Max val 2: {max_abs_2}")
-
-        # Plot the approximating polynomial, rescaled target function, and computed extrema to show clear improper optimization.
-        npts = 500
-        adat = np.linspace(-1, 1, npts)
-        pdat_0 = cheb_poly(adat)
-        pdat_1 = np.array(list(map(lambda x: max_abs_1, adat)))
-        pdat_2 = np.array(list(map(lambda x: max_abs_2, adat)))
-        pdat_3 = np.array(list(map(lambda x: 0.9*test_fun(x), adat)))
-
-        plt.plot(adat, pdat_3, 'k--', alpha=0.4)
-        plt.plot(adat, pdat_0)
-        plt.plot(adat, pdat_1)
-        plt.plot(adat, pdat_2)
-        plt.plot(adat, -1*pdat_1)
-        plt.plot(adat, -1*pdat_2)
-
-        plt.ylim([-1.1, 1.1])
-        ax = plt.gca()
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        # plt.show() # Comment out if desire to run all tests quietly.
-
-        # Changing the initial point (sensitive) shows norm violation.
-        ext_0 = scipy.optimize.minimize(-1*cheb_poly, (0.02,), bounds=[(0, 1)])
-        ext_1 = scipy.optimize.minimize(cheb_poly, (0.02,), bounds=[(0, 1)])
-        arg_0 = ext_0.x[0]
-        arg_1 = ext_1.x[0]
-        max_val_0 = np.abs(cheb_poly(arg_0))
-        max_val_1 = np.abs(cheb_poly(arg_1))
-
-        print(f"Alt max arg 0: {arg_0}")
-        print(f"Alt max arg 1: {arg_1}")
-        print(f"Alt max val 0: {max_val_0}")
-        print(f"Alt max val 1: {max_val_1}")
-
+# Newton diagnostics and public symmetric synthesis accuracy contracts.
 
 @pytest.mark.parametrize("parity, budget", [(0, 1), (1, 1), (1, .5)])
 def test_one_newton_update_reports_returned_iterate_residual(parity, budget):
@@ -405,17 +302,7 @@ def test_nonfinite_evaluation_returns_diagnostic_iterate(monkeypatch, bad_residu
 
 
 def imaginary_response(phases, points):
-    """Independent scalar Wx/Z-rotation products for the promised readout."""
-    values = []
-    for x in points:
-        signal = np.array([[x, 1j*np.sqrt(1-x*x)],
-                           [1j*np.sqrt(1-x*x), x]])
-        unitary = np.diag(np.exp(1j*np.array([phases[0], -phases[0]])))
-        for phase in phases[1:]:
-            rotation = np.diag(np.exp(1j*np.array([phase, -phase])))
-            unitary = unitary @ signal @ rotation
-        values.append(unitary[0, 0].imag)
-    return np.array(values)
+    return np.array([qsp_matrix(phases, x)[0, 0].imag for x in points])
 
 
 @pytest.mark.parametrize("coefficients, parity, target", [

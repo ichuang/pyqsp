@@ -18,6 +18,30 @@ class SymmetricQSPProtocol:
         self.reduced_phases = np.array(reduced_phases)
         self.parity = parity
 
+        SymmetricQSPProtocol._update_full_phases(self)
+
+        # Currently vestigial, but can eventually allow for immediate self-optimization upon instantiation with target poly of proper dimension.
+        if target_poly:
+            self.target_poly = target_poly
+        else:
+            self.target_poly = None
+
+    def help(self):
+        return("Class for storing classical description (i.e., reduced phases, parity) of symmetric QSP protocol, with auxiliary methods for generating derived quantities (e.g., response function, gradients and Jacobians).")
+
+    def signal(self, a):
+        # QSP signal unitary at scalar arguement a.
+        return np.array(
+            [[a, 1j * np.sqrt(1 - a**2)],
+             [1j * np.sqrt(1 - a**2), a]])
+
+    def phase(self, phi):
+        # QSP phase unitary at scalar phase phi.
+        return np.array(
+            [[np.exp(1j * phi), 0.],
+             [0., np.exp(-1j * phi)]])
+
+    def _update_full_phases(self):
         if (len(self.reduced_phases) != 0) and (self.parity != None):
             if self.parity == 1:
                 # Append reduced phases to reversed reduced phases.
@@ -41,75 +65,26 @@ class SymmetricQSPProtocol:
             self.full_phases = None
             self.poly_deg = None
 
-        # Currently vestigial, but can eventually allow for immediate self-optimization upon instantiation with target poly of proper dimension.
-        if target_poly:
-            self.target_poly = target_poly
-        else:
-            self.target_poly = None
-
-    def help(self):
-        return("Class for storing classical description (i.e., reduced phases, parity) of symmetric QSP protocol, with auxiliary methods for generating derived quantities (e.g., response function, gradients and Jacobians).")
-
-    def signal(self, a):
-        # QSP signal unitary at scalar arguement a.
-        return np.array(
-            [[a, 1j * np.sqrt(1 - a**2)],
-             [1j * np.sqrt(1 - a**2), a]])
-
-    def phase(self, phi):
-        # QSP phase unitary at scalar phase phi.
-        return np.array(
-            [[np.exp(1j * phi), 0.],
-             [0., np.exp(-1j * phi)]])
-
     def update_reduced_phases(self, new_reduced_phases):
         # Update reduced phases and full phases simultaneously with a single call
         self.reduced_phases = np.array(new_reduced_phases)
 
-        if (len(self.reduced_phases) != 0) and (self.parity != None):
-            if self.parity == 1:
-                # Append reduced phases to reversed reduced phases.
-                phi_front = np.flip(np.copy(self.reduced_phases),0)
-                phi_back = np.copy(self.reduced_phases)
-                self.full_phases = np.concatenate((phi_front, phi_back), axis=0)
-            else:
-                if len(self.reduced_phases) == 1:
-                    # For trivial case of length 'zero' QSP protocol, double the only phase.
-                    self.full_phases = 2*self.reduced_phases
-                else:
-                    # Otherwise create new middle phase which is twice the initial phase.
-                    phi_front = np.flip(np.copy(self.reduced_phases)[1:])
-                    phi_back = np.copy(self.reduced_phases)[1:]
-                    middle_phase = 2*np.array([self.reduced_phases[0]])
-                    self.full_phases = np.concatenate((phi_front,middle_phase,phi_back), axis=0)
-            # Set the overall degree of P.
-            self.poly_deg = len(self.full_phases) - 1
-        else:
-            # TODO: Otherwise, instantiate all to null. We could also throw an error here.
-            self.full_phases = None
-            self.poly_deg = None
+        SymmetricQSPProtocol._update_full_phases(self)
 
     def gen_unitary(self, samples):
-        # From full phases, generate overall QSP unitary mapped over sample signal values (i.e., the argument a in the signal method).
-        phi_mats = []
+        # Preserve phase and signal callbacks and their original product order.
+        phi_mats = [self.phase(phi) for phi in self.full_phases]
         u_mats = []
-        for phi in self.full_phases:
-            phi_mats.append(self.phase(phi))
-
-        if len(self.full_phases) == 1:
-            for s in samples:
-                U = phi_mats[0]
-                u_mats.append(U)
-        else:
-            for s in samples:
+        has_signal = len(self.full_phases) != 1
+        for s in samples:
+            if has_signal:
                 W = self.signal(s)
-                U = phi_mats[0]
+            U = phi_mats[0]
+            if has_signal:
                 for mat in phi_mats[1:]:
                     U = U @ W @ mat
-                u_mats.append(U)
-
-        u_mats = np.array(u_mats)
-        return u_mats
+            u_mats.append(U)
+        return np.array(u_mats)
 
     def gen_response_re(self, samples):
         # Return real part of (0,0) matrix element of QSP protocol over samples.

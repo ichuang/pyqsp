@@ -70,21 +70,13 @@ def ComputeQSPResponse(
     for phi in phiset:
         pmats.append(qsp_op(phi))
 
-    if not sym_qsp:
-        for a in adat:
-            W = sig_op(a)
-            U = pmats[0]
-            for pm in pmats[1:]:
-                U = U @ W @ pm
-            pdat.append((p_state.T @ U @ p_state)[0, 0])
-    else:
-        # For symmetric QSP, we plot matrix element directly, rather than the amplitude according to a measurement.
-        for a in adat:
-            W = sig_op(a)
-            U = pmats[0]
-            for pm in pmats[1:]:
-                U = U @ W @ pm
-            pdat.append(U[0, 0])
+    sym_qsp = bool(sym_qsp)
+    for a in adat:
+        W = sig_op(a)
+        U = pmats[0]
+        for pm in pmats[1:]:
+            U = U @ W @ pm
+        pdat.append(U[0, 0] if sym_qsp else (p_state.T @ U @ p_state)[0, 0])
 
     pdat = np.array(pdat, dtype=np.complex128)
 
