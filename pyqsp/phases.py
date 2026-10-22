@@ -31,7 +31,7 @@ class PhaseGenerator:
 
 class FPSearch(PhaseGenerator):
     '''
-    Return phases for fixed point quantum search, following https://arxiv.org/abs/1409.3305
+    Return phases for fixed point quantum search, following https://arxiv.org/abs/1409.3305 adopted to the Wx convention
 
     d = length of search sequence (length of phase vector returned = 2*d)
     delta:  error probability allowed = 1-delta^2, at the fixed point
@@ -40,7 +40,7 @@ class FPSearch(PhaseGenerator):
     '''
 
     def help(self):
-        txt = """Return phases for fixed point quantum search, following https://arxiv.org/abs/1409.3305
+        txt = """Return phases for fixed point quantum search, following https://arxiv.org/abs/1409.3305 adopted to the Wx convention
     Arguments are:
         d = length of search sequence (length of phase vector returned = 2*d)
         delta:  error probability allowed = 1-delta^2, at the fixed point
@@ -62,18 +62,18 @@ class FPSearch(PhaseGenerator):
         sg = np.sqrt(1 - gamma**2)
         if self.verbose:
             print("[phi_fp]: gamma=%s" % gamma)
-        avec = 2 * np.arctan2(1, (np.tan(2 * np.pi * kvec / L) * sg))
+        avec = 2 * np.arctan(np.tan(np.pi * (2 * kvec - 1) / L) * sg)
         if return_alpha:
             return avec
         bvec = - avec[::-1]
         self.avec = avec
         self.bvec = bvec
-        phivec = np.zeros(2 * d)
-        for k in range(d):
-            # reverse order & scale to match QSVT convention
-            phivec[2 * k] = -avec[d - k - 1] / 2
-            phivec[2 * k + 1] = bvec[d - k - 1] / 2
-
+        phivec = np.zeros(2 * d + 2)
+        for k in range(1,d+1):
+            # scale to match QSVT convention
+            phivec[2 * k - 1] = -avec[k-1] / 2
+            phivec[2 * k] = bvec[k-1] / 2
+        
         return phivec
 
 
