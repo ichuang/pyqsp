@@ -1,7 +1,6 @@
-import os
 import unittest
 
-from pyqsp import main
+from pyqsp import main, TensorFlowRetiredError
 
 # -----------------------------------------------------------------------------
 # unit tests
@@ -43,16 +42,7 @@ class Test_main(unittest.TestCase):
                 phiset = main.CommandLine(arglist=cmd.split(" "))
 
     def test_main_tf(self):
-        '''
-        These are slow tests, and run only if PYQSP_TEST_QSP_MODELS is set in the environment
-        '''
-        enabled = 'PYQSP_TEST_QSP_MODELS' in os.environ
-        if not enabled:
-            print(
-                "[pyqsp.test] Skipping qsp_model tests: export PYQSP_TEST_QSP_MODELS=1 to enable these tests")
-            return
-
-        for i, cmd in enumerate(test_cmds_tf):
-            with self.subTest(i=i):
-                print(f"[pyqsp.test_main testing '{cmd}'")
-                phiset = main.CommandLine(arglist=cmd.split(" "))
+        for cmd in test_cmds_tf:
+            with self.subTest(cmd=cmd):
+                with self.assertRaises(TensorFlowRetiredError):
+                    main.CommandLine(arglist=cmd.split(" "))

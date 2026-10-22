@@ -4,6 +4,7 @@ import numpy as np
 from numpy.polynomial.polynomial import Polynomial
 from numpy.polynomial.chebyshev import Chebyshev
 
+from pyqsp import raise_tensorflow_retired
 from pyqsp.completion import completion_from_root_finding
 from pyqsp.decomposition import angseq
 from pyqsp.LPoly import LAlg, LPoly
@@ -111,7 +112,7 @@ def QuantumSignalProcessingPhases(
         signal_operator: QSP signal-dependent operation ['Wx', 'Wz']
         measurement: measurement basis (defaults to signal operator basis)
         tolerance: error tolerance in final reconstruction
-        method: method to use for computing phase angles ['laurent', 'tf']
+        method: phase synthesis method ['laurent', 'sym_qsp']; 'tf' is retired
 
     Returns:
         Array of QSP angles.
@@ -123,6 +124,9 @@ def QuantumSignalProcessingPhases(
         sequence to specified tolerance.
         ValueError: Raised if invalid model (or method) is specified.
     """
+
+    if method == "tf":
+        raise_tensorflow_retired("QuantumSignalProcessingPhases(method='tf')")
 
     # As all inputs are assured to be in the Chebyshev basis, we check whether we have been given a Chebyshev object or an ndarray of coefficients, and cast to Chebyshev object.
     if isinstance(poly, np.ndarray) or isinstance(poly, list):
@@ -159,20 +163,7 @@ def QuantumSignalProcessingPhases(
         elif signal_operator == "Wz":
             measurement = "z"
 
-    if method == "tf":
-        if chebyshev_basis:
-            raise ValueError("Working with the `tf` method requires setting chebyshev_basis to False, or not specifying it.")
-        else:
-            pass
-        if not signal_operator == "Wx":
-            raise ValueError(
-                f"Must use Wx signal operator model with tf method")
-        else:
-            pass
-        return QuantumSignalProcessingPhasesWithTensorflow(poly,
-                                                           measurement=measurement,
-                                                           **kwargs)
-    elif method == "laurent":
+    if method == "laurent":
         model = (signal_operator, measurement)
 
         if chebyshev_basis:
@@ -277,60 +268,9 @@ def QuantumSignalProcessingPhasesWithTensorflow(
         verbose=0,
         measurement="z",
         return_all=False):
-    '''
-    Compute QSP phase angles using optimization, with tensorflow, via the qsp_model submodule
-    Running this imports pyqsp.qsp_models
-    This import is done in the procedure because qsp_models requires tensorflow, and is heavyweight.
-    We want to avoid requiring tensorflow to run pyqsp, if this is not needed.
+    """Retired training entry point, retained for import and call compatibility.
 
-    Args:
-        poly: polynomial object, or StringPolynomial instance
-        npts_theta: number of points to discretize theta axis into
-        nepochs: number of epochs of training to do
-        verbose: flag to give verbose debugging output during training
-        return_all: if True, return dict with model, training history, and more
-
-    Returns:
-        Array of QSP angles (or if return_all: dict with model, training history, ...)
-    '''
-    import pyqsp.qsp_models as qsp_models
-    import tensorflow as tf
-
-    if not (
-        isinstance(
-            poly,
-            Polynomial) or isinstance(
-            poly,
-            StringPolynomial)):
-        raise ValueError(
-            f"poly={poly} should be a Polynomial or StringPolynomial")
-
-    poly_deg = poly.degree()
-
-    # The intput theta training values
-    th_in = np.arange(0, np.pi, np.pi / npts_theta)
-    th_in = tf.reshape(th_in, (th_in.shape[0], 1))
-
-    # The desired real part of p(x) which is the upper left value in the unitary of the qsp sequence
-    # and the desired real part of q(x) = 0
-    expected_outputs = [poly(np.cos(th_in)), np.zeros(th_in.shape[0])]
-
-    # the tensorflow keras model
-    model = qsp_models.construct_qsp_model(poly_deg, measurement=measurement)
-    history = model.fit(
-        x=th_in,
-        y=expected_outputs,
-        epochs=nepochs,
-        verbose=verbose)
-    phis = model.trainable_weights[0].numpy()
-    if return_all:
-        data = {'model': model,
-                'history': history,
-                'phis': phis,
-                'th_in': th_in,
-                'expected_outputs': expected_outputs,
-                'poly': poly,
-                }
-        return data
-
-    return phis
+    Raises TensorFlowRetiredError without importing an optional backend. Existing
+    phases and model objects can still be evaluated through qsp_models.
+    """
+    raise_tensorflow_retired("QuantumSignalProcessingPhasesWithTensorflow")

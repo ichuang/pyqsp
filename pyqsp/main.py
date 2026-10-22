@@ -7,7 +7,7 @@ from numpy.polynomial.polynomial import Polynomial
 from numpy.polynomial.chebyshev import Chebyshev
 
 import pyqsp
-from pyqsp import angle_sequence, response
+from pyqsp import angle_sequence, response, raise_tensorflow_retired
 from pyqsp.phases import phase_generators
 
 from pyqsp.poly import (StringPolynomial, TargetPolynomial,
@@ -46,7 +46,7 @@ Commands:
     invert      - compute QSP phase angles for matrix inversion, i.e. a polynomial approximation to 1/a, for given delta and epsilon parameter values
     angles      - generate QSP phase angles for the specified --seqname and --seqargs
     poly        - generate QSP phase angles for the specified --polyname and --polyargs, e.g. sign and threshold polynomials
-    polyfunc    - generate QSP phase angles for the specified --func and --polydeg using tensorflow + keras optimization method (--tf). Note that the function appears as the top left element of the resulting unitary.
+    polyfunc    - retired TensorFlow training command; use sym_qsp_func with its documented response convention.
     sym_qsp_func    - generate QSP phase angles for the specified --func and --polydeg using symmetric QSP iterative method. Note that the desired polynomial is automatically rescaled (unless a scalar --scale less than one is specified), and appears as the imaginary part of the top-left unitary matrix element in the standard basis.
     response    - generate QSP polynomial response functions for the QSP phase angles specified by --phiset
 
@@ -80,12 +80,8 @@ Examples:
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs poly
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,0.2,0.9 --polyname efilter poly
 
-    # Note older examples using the deprecated 'tf' method.
-    pyqsp --plot-positive-only --plot --polyargs=19,10 --plot-real-only --polyname poly_sign --method tf poly
-    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 polyfunc
-    pyqsp --plot --func "np.cos(3*x)" --polydeg 6 --plot-qsp-model polyfunc
+    # Optional Cirq evaluation.
     pyqsp --plot-positive-only --plot-real-only --plot --polyargs 20,3.5 --polyname gibbs --plot-qsp-model poly
-    pyqsp --polydeg 16 --measurement="z" --func="-1+np.sign(1/np.sqrt(2)-x)+ np.sign(1/np.sqrt(2)+x)" --plot polyfunc
 
 """.format(pyqsp_version)
 
@@ -139,11 +135,11 @@ Examples:
         type=float_list)
     parser.add_argument(
         "--func",
-        help="for tf method, numpy expression specifying ideal function (of x) to be approximated by a polynomial, e.g. 'np.cos(3 * x)'",
+        help="for sym_qsp_func, numpy expression specifying ideal function (of x) to be approximated by a polynomial, e.g. 'np.cos(3 * x)'",
         type=str)
     parser.add_argument(
         "--polydeg",
-        help="for tf method, degree of polynomial to use in generating approximation of specified function (see --func)",
+        help="for sym_qsp_func, degree of polynomial to use in generating approximation of specified function (see --func)",
         type=int)
     parser.add_argument(
         "--scale",
@@ -216,7 +212,7 @@ Examples:
         default=0.1)
     parser.add_argument(
         "--method",
-        help="method to use for qsp phase angle generation, either 'laurent' (default), 'sym_qsp' for iterative methods involving symmetric QSP, or 'tf' (for tensorflow + keras)",
+        help="method to use for qsp phase angle generation, either 'laurent' (default), 'sym_qsp' for iterative methods involving symmetric QSP, or 'tf' (retired)",
         type=str,
         default='laurent')
     parser.add_argument(
@@ -230,12 +226,12 @@ Examples:
         type=float_list)
     parser.add_argument(
         "--nepochs",
-        help="number of epochs to use in tensorflow optimization",
+        help="retained argument for retired TensorFlow training",
         type=int,
         default=5000)
     parser.add_argument(
         "--npts-theta",
-        help="number of discretized values of theta to use in TensorFlow optimization",
+        help="retained argument for retired TensorFlow training",
         type=int,
         default=30)
 
@@ -681,23 +677,7 @@ Examples:
                 **plot_args)
 
     elif args.cmd == "polyfunc":
-        if (not args.func) or (not args.polydeg):
-            print(f"Must specify --func and --polydeg")
-            return
-        qspp_args['method'] = 'tf'
-        poly = StringPolynomial(args.func, args.polydeg)
-        phiset = angle_sequence.QuantumSignalProcessingPhases(
-            poly,
-            measurement=args.measurement,
-            **qspp_args)
-        if args.plot:
-            response.PlotQSPResponse(
-                phiset,
-                target=poly,
-                signal_operator="Wx",
-                measurement=args.measurement,
-                title=args.title,
-                **plot_args)
+        raise_tensorflow_retired("polyfunc")
 
     elif args.cmd == "response":
         if not args.phiset:
