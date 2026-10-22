@@ -52,7 +52,8 @@ the README; keep change rationale and validation evidence in commit history.
 
 - `pyqsp/poly.py`: targets, approximation, and normalization. Generator return
   types and scale metadata vary.
-- `pyqsp/angle_sequence.py`: phase synthesis and method dispatch.
+- `pyqsp/angle_sequence.py`: ordinary preprocessing, convention adapters, method
+  dispatch, exception translation and acceptance; symmetric public synthesis.
 - `pyqsp/LPoly.py`, `pyqsp/completion.py`, `pyqsp/decomposition.py`: Laurent
   polynomials, Low algebra, completion, and factorization.
 - `pyqsp/sym_qsp_opt.py`: symmetric phases, Jacobians, and Newton solver.
@@ -60,7 +61,9 @@ the README; keep change rationale and validation evidence in commit history.
 - `pyqsp/main.py`: CLI and registries; `setup.py`: packaging and console entry point.
 - `pyqsp/qsp_models/`: optional Cirq evaluation and retired training stubs;
   `pyqsp/test/`: tests.
-  Examples: `pyqsp/sym_qsp_min_example.py` and `docs/sym_qsp_aux_files/`.
+
+Run the maintained example with `python -m pyqsp.sym_qsp_min_example`.
+`docs/sym_qsp_aux_files/` contains historical exploratory scripts.
 
 ## Scope and compatibility
 

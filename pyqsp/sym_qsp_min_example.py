@@ -1,25 +1,26 @@
 # Import relevant modules and methods.
 import numpy as np
-import pyqsp
 from pyqsp import angle_sequence, response
-from pyqsp.poly import (polynomial_generators, PolyTaylorSeries)
+from pyqsp.poly import PolyTaylorSeries
 
 # Specify definite-parity target function for QSP.
 func = lambda x: np.cos(3*x)
 polydeg = 12 # Desired QSP protocol length.
-max_scale = 0.9 # Maximum norm (<1) for rescaling.
-true_func = lambda x: max_scale * func(x) # For error, include scale.
+max_scale = 0.9 # Desired magnitude at the estimated extremum.
 
 """
-Within PolyTaylorSeries class, compute /Chebyshev interpolant/ up to degree
-'polydeg' (using twice as many Chebyshev nodes to prevent aliasing).
+Fit Chebyshev coefficients through degree 'polydeg' at 2*polydeg nodes.
+This sampling rule does not rule out aliasing for an arbitrary callable.
 """
-poly = PolyTaylorSeries().taylor_series(
+poly, scale = PolyTaylorSeries().taylor_series(
     func=func,
     degree=polydeg,
     max_scale=max_scale,
+    return_scale=True,
     chebyshev_basis=True,
     cheb_samples=2*polydeg)
+# max_scale is an estimated magnitude; scale is the multiplier actually used.
+true_func = lambda x: scale * func(x)
 
 # Compute full phases (and reduced phases, parity) using symmetric QSP.
 (phiset, red_phiset, parity) = angle_sequence.QuantumSignalProcessingPhases(

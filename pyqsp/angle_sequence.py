@@ -59,35 +59,34 @@ def angle_sequence(p, eps=1e-4, suc=1 - 1e-4):
 
 def poly2laurent(pcoefs):
     """
-    Convert polynomial coefficients to Laurent coefficients for polynomials
+    Convert Chebyshev coefficients to Laurent coefficients for polynomials
     with definite parity.
 
     Args:
-        pcoefs: array of polynomial coefficients
+        pcoefs: array of ascending Chebyshev coefficients, with pcoefs[k]
+            multiplying T_k
 
     Returns:
-        lcoefs: corresponding parity restricted Laurent coefficients
+        lcoefs: ascending stride-two Laurent coefficients representing
+            p((w + w**-1) / 2). Entry j multiplies w**(-d + 2*j), where
+            d = len(lcoefs) - 1.
 
     Raises:
         AngleFindingError: if pcoefs does not have definite parity.
     """
-    # convert polynomial coefficients to laurent; as we are already in the Chebyshev basis, this transformation is trivial
-    ccoefs = pcoefs
-    # ccoefs = np.polynomial.chebyshev.poly2cheb(pcoefs) # Conversion in old monomial convention.
-
     # determine parity of polynomial
-    is_even = np.max(np.abs(ccoefs[0::2])) > 1e-8
-    is_odd = np.max(np.abs(ccoefs[1::2])) > 1e-8
+    is_even = np.max(np.abs(pcoefs[0::2])) > 1e-8
+    is_odd = np.max(np.abs(pcoefs[1::2])) > 1e-8
 
     if is_even and is_odd:
         raise AngleFindingError(
             "Polynomial must have definite parity: {}".format(str(pcoefs)))
 
     if is_odd:
-        lcoefs = ccoefs[1::2] / 2
+        lcoefs = pcoefs[1::2] / 2
         lcoefs = np.r_[lcoefs[::-1], lcoefs]
     else:
-        lcoefs = ccoefs[0::2] / 2
+        lcoefs = pcoefs[0::2] / 2
         lcoefs = np.r_[lcoefs[-1:0:-1], 2 * lcoefs[0], lcoefs[1:]]
 
     return lcoefs
@@ -115,13 +114,17 @@ def QuantumSignalProcessingPhases(
         method: phase synthesis method ['laurent', 'sym_qsp']; 'tf' is retired
 
     Returns:
-        Array of QSP angles.
+        Ordinary synthesis returns scalar phase angles in radians. Symmetric
+        synthesis returns (full_phases, reduced_phases, parity), targeting
+        Im(U[0, 0]) in the Wx convention, only when its parity-reduced
+        coefficient one-norm residual is below 1e-12. Its fixed Newton controls
+        ignore signal_operator, measurement, eps, suc, tolerance and kwargs.
 
     Raises:
         CompletionError: Raised when polynomial cannot be completed in given
             model.
-        AngleFindingError: Raised if angle finding algorithm cannot find
-        sequence to specified tolerance.
+        AngleFindingError: Raised if synthesis cannot meet its accuracy
+            requirement, including unsuccessful symmetric Newton solves.
         ValueError: Raised if invalid model (or method) is specified.
     """
 
@@ -131,31 +134,9 @@ def QuantumSignalProcessingPhases(
     # As all inputs are assured to be in the Chebyshev basis, we check whether we have been given a Chebyshev object or an ndarray of coefficients, and cast to Chebyshev object.
     if isinstance(poly, np.ndarray) or isinstance(poly, list):
         poly = Chebyshev(poly)
-    elif isinstance(poly, Chebyshev):
-        pass
-    else:
+    elif not isinstance(poly, Chebyshev):
         raise ValueError(
             f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
-
-    # Note: as all polynomials are now guaranteed to be in the Chebyshev basis, we bypass the conditional below.
-    # if not chebyshev_basis:
-    #     if isinstance(poly, np.ndarray) or isinstance(poly, list):
-    #         poly = Polynomial(poly)
-    #     # For TargetPolynomial class, cast back to parent object.
-    #     elif isinstance(poly, Polynomial):
-    #         poly = Polynomial(poly.coef)
-    #     else:
-    #         raise ValueError(
-    #             f"Must provide coefficient list/array, or Polynomial object.")
-    # else:
-    #     if isinstance(poly, np.ndarray) or isinstance(poly, list):
-    #         poly = Chebyshev(poly)
-    #     elif isinstance(poly, Chebyshev):
-    #         # Currently, there should be no sub-class that we have to cast from in this branch.
-    #         pass
-    #     else:
-    #         raise ValueError(
-    #             f"Must provide Chebyshev coefficient list/array, or Chebyshev polynomial object.")
 
     if measurement is None:
         if signal_operator == "Wx":
@@ -217,10 +198,15 @@ def QuantumSignalProcessingPhases(
 
         # Gather coefficients from pre-converted Chebyshev object above.
         coefs = poly.coef
+        if np.iscomplexobj(coefs) and np.any(coefs.imag != 0):
+            raise ValueError("Symmetric QSP requires real coefficients.")
+        coefs = coefs.real
+        if not np.all(np.isfinite(coefs)):
+            raise ValueError("Symmetric QSP requires finite coefficients.")
 
         # Check that the (non-reduced) phases have definite parity.
-        is_even = np.max(np.abs(coefs[0::2])) > 1e-8
-        is_odd = np.max(np.abs(coefs[1::2])) > 1e-8
+        is_even = np.any(np.abs(coefs[0::2]) > 1e-8)
+        is_odd = np.any(np.abs(coefs[1::2]) > 1e-8)
 
         # We could allow for the zero polynomial, but choose not to.
         if (is_even and is_odd) or (not is_even and not is_odd):
@@ -231,31 +217,22 @@ def QuantumSignalProcessingPhases(
         parity = 0 if is_even else 1
         reduced_coefs = coefs[parity::2]
 
-        # Call main method, currently with `crit` hardcoded.
-        (phases, err, total_iter, qsp_seq_opt) = newton_solver(reduced_coefs, parity, crit=1e-12)
-
-        """
-        Note that this method currently ignores choice of signal,
-        measurement, and eps, suc, tolerance. These can eventually be matched with the known internal parameters for the sym_qsp method, but many of them are instroduced for numerical stability in root finding methods, which are deprecated here.
-
-        TODO: we can also provide an internal check for good
-        agreement with the requested polynomial.
-
-        adat = np.linspace(-1., 1., 100)
-        response = ComputeQSPResponse(
-            adat,
-            phiset,
-            signal_operator=signal_operator,
-            measurement=measurement)["pdat"]
-        expected = poly(adat)
-
-        max_err = np.max(np.abs(response - expected))
-        if max_err > tolerance:
+        # Preserve the established solver criterion; ordinary synthesis options
+        # and additional keyword arguments do not configure symmetric Newton.
+        crit = 1e-12
+        (phases, err, total_iter, qsp_seq_opt) = newton_solver(
+            reduced_coefs, parity, crit=crit)
+        status = qsp_seq_opt.solver_status
+        if (status != "converged" or not np.isfinite(err) or err >= crit
+                or not np.all(np.isfinite(phases))
+                or not np.all(np.isfinite(qsp_seq_opt.full_phases))):
             raise AngleFindingError(
-                "The angle finding program failed on given instance, with an error of {}. Please relax the error budget and / or the success probability.".format(max_err))
-        """
+                "Symmetric QSP synthesis failed: {}; residual={:.6e}, "
+                "iterations={}, required residual < {:.1e}. Inspect "
+                "pyqsp.sym_qsp_opt.newton_solver for diagnostic iterates."
+                .format(status, err, total_iter, crit))
 
-        # For now, return reduced, full phases, and parity together.
+        # Preserve the successful full/reduced phase tuple and parity.
         return (qsp_seq_opt.full_phases, phases, parity)
 
     else:
